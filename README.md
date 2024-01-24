@@ -6,6 +6,8 @@ Viewer for structured log files in key=value format (and some others).
 
 Single file CLI tool without dependencies apart from Python 3.7+ and its standard library. 
 
+## Features
+
 - Select which keys to include or exclude from the output
 - Quickly view the most important fields: timestamp, log level, message
 - Restrict output to given log levels, time range or time delta (e.g. since 1h ago)
@@ -14,6 +16,7 @@ Single file CLI tool without dependencies apart from Python 3.7+ and its standar
 - Colored output and pretty printing (can be turned off)
 - Optional pretty printing with indentation, Unicode chars and tab/crlf expansion
 - JSON Lines and TSV as alternative input/output formats
+- and more...
 
 ## Installation
 
