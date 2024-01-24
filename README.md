@@ -51,7 +51,7 @@ See `klp --help` for the list of options.
 Only extract time stamp, log level and message:
 
 ```bash
-$ kubectl logs db-api-server-5cdc577894-j8z92 | klp -c
+$ klp -c mylog.txt
 2023-01-17T07:55:48.233Z DEBUG preparing query s190578: select * from applications
 2023-01-17T07:55:48.234Z DEBUG executing statement s190578 with parameters: []
 2023-01-17T07:55:48.656Z DEBUG preparing query s190579: select * from oauthproviderconfig where id = 0
@@ -65,7 +65,7 @@ $ kubectl logs db-api-server-5cdc577894-j8z92 | klp -c
 Use `--keys`/`-k` and a comma-separated list of keys to print:
 
 ```bash
-$ kubectl logs db-api-server-5cdc577894-j8z92 | klp -k timestamp,message
+$ cat mylog.txt | klp -k timestamp,message
 timestamp="2022-09-05T06:25:27.465Z" message="poll_read: waiting on response"
 timestamp="2022-09-05T06:25:27.465Z" message="polled new request"
 timestamp="2022-09-05T06:25:27.465Z" message="poll_write: waiting on request"
@@ -73,30 +73,28 @@ timestamp="2022-09-05T06:25:27.465Z" message="poll_flush: flushed"
 timestamp="2022-09-05T06:25:27.466Z" message="poll_read: waiting on response"
 ```
 
-You can use `klp --common`/`-c` as a shorthand for `--keys ts,timestamp,msg,message`.
-
 ### Filter on log level
 
 Use `--loglevel`/`-l` to filter on the `log_level` or `level` key.
 You can give a comma-separated list of levels.
 
 ```bash
-$ kubectl logs db-api-server-5cdc577894-j8z92 -f | klp -cp --loglevel debug
+$ cat mylog.txt | klp -c --loglevel debug
 ```
 
 Filter out log levels with `--not-loglevel`/`-L`.
 This is useful to suppress trace and debug output:
 
 ```bash
-$ kubectl logs db-api-server-5cdc577894-j8z92 -f | klp -cp -L trace,debug
+$ cat mylog.txt | klp -c -L trace,debug
 ```
 
 ### Only show new output
 
-Sometimes you want to skip old events and only want to see new events, e.g. when using the --follow option of kubectl:
+Sometimes you want to skip old events and only want to see new events, e.g. when using `tail -f` or the `--follow` option of `kubectl`:
 
 ```bash
-kubectl logs db-api-server-5cdc577894-j8z92 -f | klp -n
+kubectl logs mypod --follow | klp -n
 ```
 
 This is equivalent to `klp --since 0s`.
@@ -104,6 +102,8 @@ Other time spans can be specified.
 Use `s` for seconds, `m` for minutes, `h` for hours and `d` for days.
 
 You can combine `--new`/`-n` with `--max-events`/`-m` to prevent scrolling.
+
+See `klp --help` for the complete list of options.
 
 ## Alternatives
 
