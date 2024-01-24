@@ -17,7 +17,13 @@ Single file CLI tool without dependencies apart from Python 3.7+ and its standar
 
 ## Installation
 
-Copy `klp` to your PATH and make it executable. Only Python 3.7+ is needed.
+Copy `klp.py` to a folder on your PATH and make it executable:
+
+```bash
+$ install -m 755 klp.py ~/.local/bin/klp
+```
+
+Or just run it using `python3`, without any installation.
 
 ## Usage
 
