@@ -71,7 +71,7 @@ THEMES = {
     "default": {
         "keys": "green",
         "quotes": "off",
-        "message_key": "bold",
+        "message_key": "off",
         "timestamp_key": "off",
         "levels": {
             "trace": "cyan",
