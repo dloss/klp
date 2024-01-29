@@ -22,7 +22,7 @@ import sys
 import textwrap
 import unittest
 
-__version__ = "0.41.0"
+__version__ = "0.42.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = r"\u0000"
@@ -303,7 +303,7 @@ datetime_converters = [
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
-    # floats
+    # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s))
 ]
 
@@ -371,7 +371,12 @@ def format_time(val):
 def show(event, context_type="", lineno=None):
     event = reorder(event)
     if args.output_format == "default":
-        show_default(event, context_type, lineno)
+        if args.output_template:
+            show_by_template(event, args.output_template)
+        elif args.output_eval_template:
+            show_by_eval_template(event, args.output_eval_template)
+        else:
+            show_default(event, context_type, lineno)
     elif args.output_format == "jsonl":
         show_jsonl(event)
     elif args.output_format == "tsv":
@@ -380,6 +385,37 @@ def show(event, context_type="", lineno=None):
 
 def show_jsonl(event):
     print(json.dumps(event).replace(SENTINEL, args.output_quote))
+
+def show_by_template(event, template):
+    try:
+        out = template.format(**event)
+        print(out)
+    except KeyError:
+        pass
+
+def show_by_eval_template(event, template):
+    # Find {expression} patterns
+    pattern = re.compile(r'\{(.*?)\}')
+    # XXX: Modules that can access the filesystem are risky
+    exported_globals = { "_datetime": globals()["dt"], 
+                        "_re": globals()["re"], 
+                        "_json": globals()["json"],
+                        "_textwrap": globals()["textwrap"],
+                        "_collections": globals()["collections"] }
+
+    # Replace each match with its evaluated result
+    def replace_expr(match):
+        expr = match.group(1)
+        try:
+            return str(eval(expr, exported_globals, event))
+        except Exception as e:
+            return f"[Error evaluating '{expr}': {e}]"
+
+    # Replace all expressions in the template
+    out = pattern.sub(replace_expr, template)
+    if out:
+        print(out)
+
 
 
 def show_tsv(event):
@@ -1006,6 +1042,18 @@ def parse_args():
         metavar="STR",
         default=" ",
         help="string to separate elements",
+    )
+    default_output.add_argument(
+        "--output-template",
+        metavar="STR",
+        default="",
+        help='Python f-string template for output, e.g. "{timestamp} {message}"',
+    )
+    default_output.add_argument(
+        "--output-eval-template",
+        metavar="STR",
+        default="",
+        help='''Python eval template for output, e.g. "{ts} {level.upper()} {'#'*len(msg)}"''',
     )
 
     output_special = parser.add_argument_group("special output format options")
