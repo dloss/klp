@@ -303,6 +303,8 @@ datetime_converters = [
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
+    # floats
+    lambda s: dt.datetime.fromtimestamp(float(s))
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
