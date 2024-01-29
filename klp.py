@@ -22,7 +22,7 @@ import sys
 import textwrap
 import unittest
 
-__version__ = "0.40.1"
+__version__ = "0.41.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = r"\u0000"
@@ -657,7 +657,7 @@ def parse_jsonl(line):
     except json.decoder.JSONDecodeError as exc:
         print_err("Invalid JSON syntax:", exc)
         sys.exit(1)
-    for key, val in json_data.items():
+    for key, val in flatten_json(json_data).items():
         if isinstance(val, str):
             result[key] = val
         else:
