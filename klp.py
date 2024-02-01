@@ -1071,6 +1071,7 @@ def parse_args():
     )
     output_special.add_argument(
         "--levelmap",
+        "-M",
         action="store_true",
         help="output log levels only to give a big picture overview",
     )
