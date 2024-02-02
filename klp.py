@@ -433,8 +433,10 @@ def show_by_eval_template(event, template):
     # Replace each match with its evaluated result
     def replace_expr(match):
         expr = match.group(1)
+        event_plus_underscore = event.copy()
+        event_plus_underscore["_"] = event
         try:
-            return str(eval(expr, EXPORTED_GLOBALS, event))
+            return str(eval(expr, EXPORTED_GLOBALS, event_plus_underscore))
         except Exception as e:
             if args.debug:
                 print(f"[Error evaluating '{expr} on {event}': {e}]", file=sys.stderr)
@@ -641,8 +643,10 @@ def key_matches(regex, key, event):
     return False
 
 def matches_python_expr(expr, event):
+    event_plus_underscore = event.copy()
+    event_plus_underscore["_"] = event
     try:
-        return eval(expr, EXPORTED_GLOBALS, event)
+        return eval(expr, EXPORTED_GLOBALS, event_plus_underscore)
     except Exception as e:
         if args.debug:
             print(f"[Error: {e}. event={event}]", file=sys.stderr)
