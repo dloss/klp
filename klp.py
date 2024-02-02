@@ -144,6 +144,13 @@ BUILTIN_REGEXES = {
     ],
 }
 
+# XXX: Modules that can access the filesystem are risky
+EXPORTED_GLOBALS = { "_datetime": globals()["dt"], 
+                    "_re": globals()["re"], 
+                    "_json": globals()["json"],
+                    "_textwrap": globals()["textwrap"],
+                    "_collections": globals()["collections"] }
+
 EPILOG = f"""
 INTERVAL units: us=microseconds/ms=milliseconds/s=seconds/m=minutes/h=hours/d=days/w=weeks"
 Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
@@ -174,7 +181,6 @@ class Stats:
 
 class StoppedEarly(Exception):
     pass
-
 
 def timedelta_from(duration):
     pattern = re.compile(r"([-\d.]+)(\w+)")
@@ -396,20 +402,16 @@ def show_by_template(event, template):
 def show_by_eval_template(event, template):
     # Find {expression} patterns
     pattern = re.compile(r'\{(.*?)\}')
-    # XXX: Modules that can access the filesystem are risky
-    exported_globals = { "_datetime": globals()["dt"], 
-                        "_re": globals()["re"], 
-                        "_json": globals()["json"],
-                        "_textwrap": globals()["textwrap"],
-                        "_collections": globals()["collections"] }
 
     # Replace each match with its evaluated result
     def replace_expr(match):
         expr = match.group(1)
         try:
-            return str(eval(expr, exported_globals, event))
+            return str(eval(expr, EXPORTED_GLOBALS, event))
         except Exception as e:
-            return f"[Error evaluating '{expr}': {e}]"
+            if args.debug:
+                print(f"[Error evaluating '{expr} on {event}': {e}]", file=sys.stderr)
+            return ""
 
     # Replace all expressions in the template
     out = pattern.sub(replace_expr, template)
@@ -611,11 +613,18 @@ def key_matches(regex, key, event):
         return True
     return False
 
+def matches_python_expr(expr, event):
+    try:
+        return eval(expr, EXPORTED_GLOBALS, event)
+    except Exception as e:
+        if args.debug:
+            print(f"[Error: {e}. event={event}]", file=sys.stderr)
+        return False
 
 def visible(line, event):
     if (args.grep_not and any(regex.search(line) for regex in args.grep_not)) or (
         args.grep and not any(regex.search(line) for regex in args.grep)
-    ):
+    ) or (args.where and not matches_python_expr(args.where, event)):
         return False
     if not event:
         return False
@@ -850,6 +859,12 @@ def parse_args():
         help=f"don't process lines according to one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
     )
     grep.add_argument(
+        "--where",
+        metavar="EXPR",
+        default="",
+        help="only process lines where the given Python expression is True",
+    )
+    grep.add_argument(
         "--before-context",
         "-B",
         type=positive_int,
@@ -1082,6 +1097,11 @@ def parse_args():
         help="for a sequence of events that are separated by less then INTERVAL,"
         " show only the first and last.",
     )
+    output_special.add_argument(
+    "--debug",
+    action="store_true",
+    help="print exceptions",
+    )   
 
     other = parser.add_argument_group("other options")
     other.add_argument(
