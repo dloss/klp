@@ -406,8 +406,8 @@ def show(event, context_type="", lineno=None):
     if args.output_format == "default":
         if args.output_template:
             show_by_template(event, args.output_template)
-        elif args.output_eval_template:
-            show_by_eval_template(event, args.output_eval_template)
+        elif args.output_eval:
+            show_by_eval_template(event, args.output_eval)
         else:
             show_default(event, context_type, lineno)
     elif args.output_format == "jsonl":
@@ -1092,7 +1092,7 @@ def parse_args():
         help='Python f-string template for output, e.g. "{timestamp} {message}"',
     )
     default_output.add_argument(
-        "--output-eval-template",
+        "--output-eval",
         metavar="STR",
         default="",
         help='''Python eval template for output, e.g. "{ts} {level.upper()} {'#'*len(msg)}"''',
