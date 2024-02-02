@@ -8,7 +8,6 @@ For logs in key=value format (and some others), show only the interesting parts
 """
 
 import argparse
-import collections
 import csv
 import dataclasses
 import datetime as dt
@@ -16,13 +15,23 @@ import errno
 import fileinput
 import json
 import os
+import pprint
 import re
 import shutil
 import sys
 import textwrap
 import unittest
 
-__version__ = "0.42.0"
+# Some modules to make available for filtering and templating
+import base64
+import collections
+import datetime
+import hashlib
+import itertools
+import random
+import string
+
+__version__ = "0.43.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = r"\u0000"
@@ -144,12 +153,7 @@ BUILTIN_REGEXES = {
     ],
 }
 
-# XXX: Modules that can access the filesystem are risky
-EXPORTED_GLOBALS = { "_datetime": globals()["dt"], 
-                    "_re": globals()["re"], 
-                    "_json": globals()["json"],
-                    "_textwrap": globals()["textwrap"],
-                    "_collections": globals()["collections"] }
+
 
 EPILOG = f"""
 INTERVAL units: us=microseconds/ms=milliseconds/s=seconds/m=minutes/h=hours/d=days/w=weeks"
@@ -158,6 +162,29 @@ Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
 
 terminal_width = shutil.get_terminal_size((80, 24)).columns
 
+
+def build_globals_dict(modules):
+    d = {}
+    for module in modules:
+        name = module.__name__
+        alt_name = "_" + name
+        d[name] = d[alt_name] = module      
+    return d
+
+# Make some modules available for use in filters and templates
+EXPORTED_GLOBALS = build_globals_dict([
+        base64, 
+        collections, 
+        datetime,  
+        hashlib,                                  
+        itertools, 
+        json, 
+        pprint, 
+        random, 
+        re, 
+        string,
+        textwrap, 
+    ])
 
 def expand_color_codes(line):
     for _, (color, scolor) in COLOR_CODES.items():
