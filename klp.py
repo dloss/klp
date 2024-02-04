@@ -54,17 +54,17 @@ RE_EXTRACT_KEY = re.compile(r"^(\w+)~(.*)")
 
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
-    "black": ("\x1b[30m", "\x00"),
-    "red": ("\x1b[31m", "\x01"),
-    "green": ("\x1b[32m", "\x02"),
-    "yellow": ("\x1b[33m", "\x03"),
-    "blue": ("\x1b[34m", "\x04"),
-    "magenta": ("\x1b[35m", "\x05"),
-    "cyan": ("\x1b[36m", "\x06"),
-    "white": ("\x1b[37m", "\x07"),
-    "bright_black": ("\x1b[1;30m", "\x08"),
+    "black": ("\x1b[30m", "\x01"),
+    "red": ("\x1b[31m", "\x02"),
+    "green": ("\x1b[32m", "\x03"),
+    "yellow": ("\x1b[33m", "\x04"),
+    "blue": ("\x1b[34m", "\x05"),
+    "magenta": ("\x1b[35m", "\x06"),
+    "cyan": ("\x1b[36m", "\x07"),
+    "white": ("\x1b[37m", "\x08"),
     # Skip 0x09 to 0x0D (not supported by textwrap.wrap)
-    "bright_red": ("\x1b[1;31m", "\x0E"),
+    "bright_black": ("\x1b[1;30m", "\x0E"),
+    "bright_red": ("\x1b[1;31m", "\x0F"),
     "bright_green": ("\x1b[1;32m", "\x0F"),
     "bright_yellow": ("\x1b[1;33m", "\x10"),
     "bright_blue": ("\x1b[1;34m", "\x11"),
@@ -168,22 +168,22 @@ def build_globals_dict(modules):
     for module in modules:
         name = module.__name__
         alt_name = "_" + name
-        d[name] = d[alt_name] = module      
+        d[name] = d[alt_name] = module
     return d
 
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict([
-        base64, 
-        collections, 
-        datetime,  
-        hashlib,                                  
-        itertools, 
-        json, 
-        pprint, 
-        random, 
-        re, 
+        base64,
+        collections,
+        datetime,
+        hashlib,
+        itertools,
+        json,
+        pprint,
+        random,
+        re,
         string,
-        textwrap, 
+        textwrap,
     ])
 
 def expand_color_codes(line):
@@ -1137,7 +1137,7 @@ def parse_args():
     "--debug",
     action="store_true",
     help="print exceptions",
-    )   
+    )
 
     other = parser.add_argument_group("other options")
     other.add_argument(
