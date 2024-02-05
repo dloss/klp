@@ -31,10 +31,10 @@ import itertools
 import random
 import string
 
-__version__ = "0.43.0"
+__version__ = "0.44.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
-SENTINEL = r"\u0000"
+SENTINEL = "\x00"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about
@@ -416,8 +416,13 @@ def show(event, context_type="", lineno=None):
         show_tsv(event)
 
 
+def unsentinel(s):
+    return s.replace(SENTINEL, args.output_quote)
+
+
 def show_jsonl(event):
-    print(json.dumps(event).replace(SENTINEL, args.output_quote))
+    unquoted = { unsentinel(k):unsentinel(v) for k, v in event.items()}
+    print(json.dumps(unquoted))
 
 def show_by_template(event, template):
     try:
@@ -452,7 +457,7 @@ def show_by_eval_template(event, template):
 def show_tsv(event):
     cols = []
     for key in args.keys:
-        cols.append(event.get(key, "").replace(SENTINEL, args.output_quote))
+        cols.append(unsentinel(event.get(key, "")))
     print("\t".join(cols))
 
 
@@ -478,7 +483,7 @@ def show_default(event, context_type="", lineno=None):
         elems = []
         for key, val in part.items():
             key_lower = key.lower()
-            val = val.replace(SENTINEL, args.output_quote)
+            val = unsentinel(val)
 
             key_color = THEMES[args.theme]["keys"]
             quote_color = THEMES[args.theme]["quotes"]
@@ -1239,7 +1244,12 @@ def parse_args():
         print_err("Time span must not be zero. This would not select any data.")
         sys.exit(1)
 
-    args.output_quote = "\u201c" if args.unicode else INPUT_QUOTE
+    if args.plain or args.output_format in ["jsonl", "tsv"]:
+        args.output_quote = '"'
+    elif args.unicode:
+        args.output_quote = "\u201c"
+    else:
+        args.output_quote = INPUT_QUOTE
 
     args.output_width = None
     args.output_wrap = None
