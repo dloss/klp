@@ -425,6 +425,7 @@ def show_jsonl(event):
     print(json.dumps(unquoted))
 
 def show_by_template(event, template):
+    template = template.replace("\\n", "\n").replace("\\t", "\t")
     try:
         out = template.format(**event)
         print(out)
@@ -432,6 +433,7 @@ def show_by_template(event, template):
         pass
 
 def show_by_eval_template(event, template):
+    template = template.replace("\\n", "\n").replace("\\t", "\t")
     # Find {expression} patterns
     pattern = re.compile(r'\{(.*?)\}')
 
