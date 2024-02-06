@@ -138,7 +138,7 @@ $ cat mylog.txt | klp -k -p timestamp,message
 2022-09-05T06:25:27.466Z poll_read: waiting on response
 ```
 
-#### Filter on log level
+### Filter on log level
 
 Use `--loglevel`/`-l` to filter on the `log_level` or `level` key.
 You can give a comma-separated list of levels.
@@ -162,8 +162,6 @@ There are multiple ways to specify the time range that you're interested in:
 * relative from now: `--since` and `--until` 
 * timespan, computed from program start or first event shown: `--duration`, `--timespan`
 
-#### Only show new events
-
 Sometimes you want to skip old events and only want to see new events, e.g. when using `tail -f` or the `--follow` option of `kubectl`.
 Use the `--new`/`-n` flag:
 
@@ -179,7 +177,7 @@ Use `s` for seconds, `m` for minutes, `h` for hours and `d` for days.
 
 Use `--max-events`/`-m` to limit the output to the first N events.
 
-### Output formats and formatting
+### Customize the output formatting
 
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
 
