@@ -210,7 +210,7 @@ class StoppedEarly(Exception):
     pass
 
 def timedelta_from(duration):
-    pattern = re.compile(r"([-\d.]+)(\w+)")
+    pattern = re.compile(r"([-\d.]+)([a-z]+)")
     matches = pattern.findall(duration)
     if not matches:
         raise argparse.ArgumentTypeError(f"Invalid timespec: {duration}")

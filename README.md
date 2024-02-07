@@ -162,6 +162,16 @@ There are multiple ways to specify the time range that you're interested in:
 * relative from now: `--since` and `--until` 
 * timespan, computed from program start or first event shown: `--duration`, `--timespan`
 
+Timespans can be specified with these units:
+
+- `us` = microseconds
+- `m` = milliseconds
+- `s` = seconds
+- `m` = minutes
+- `h` = hours
+- `d` = days
+- `w` = weeks
+
 Sometimes you want to skip old events and only want to see new events, e.g. when using `tail -f` or the `--follow` option of `kubectl`.
 Use the `--new`/`-n` flag:
 
@@ -182,6 +192,15 @@ Use `--max-events`/`-m` to limit the output to the first N events.
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
 
 For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as. "{ts} {level.upper()} {'#'*len(msg)}"
+
+### Synthetic fields
+
+klp can add some additional fields to the event.
+For performance reasons this is only done if you explitly list these keys using `--keys`/`-k`.
+
+* `_ts`: timestamp showing when the event was shown by klp
+* `_ts_delta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
+* `_line`: the complete line from the log file or string. This can be used to show timestamps for lines that aren't logfmt or JSONL.
 
 ## Alternatives
 
