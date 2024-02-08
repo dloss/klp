@@ -207,10 +207,14 @@ For performance reasons this is only done if you explitly list these keys using 
 If you don't like klp, maybe try one of these other tools:
 
 - [hutils](https://github.com/brandur/hutils): the original logfmt tools, written in Ruby
-- [fblog](https://github.com/brocode/fblog): small command-line JSON Log view
+- [fblog](https://github.com/brocode/fblog): small command-line JSON Log viewer
 - [json-log-viewer](https://github.com/gistia/json-log-viewer): powerful terminal based viewer for JSON logs using ncurses.
 - [hl](https://github.com/pamburus/hl): A log viewer that translates JSON logs into human-readable representation.
+- [l'oGGo](https://github.com/aurc/loggo): A powerful terminal app for structured log streaming
+- [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line
+- [sumoshell](https://github.com/SumoLogic/sumoshell): collection of utilities to improve analyzing log files written in Go
 - [lnav](https://lnav.org): very advanced log file viewer
+- [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
 - [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
 - [Klogg](https://github.com/variar/klogg): multi-platform GUI application that helps browse and search through long and complex log files
