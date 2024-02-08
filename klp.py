@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.44.0"
+__version__ = "0.45.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -51,7 +51,12 @@ RE_LOGFMT = re.compile(
 )  # 'key="value"' OR 'key=value '
 RE_EOL_OR_TAB = re.compile(r"\\n|\\t|\\r")
 RE_EXTRACT_KEY = re.compile(r"^(\w+)~(.*)")
-RE_CLF = re.compile(r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+)')
+RE_CLF = re.compile(
+    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+)'
+)
+RE_COMBINED = re.compile(
+    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+) "(?P<referrer>[^"]*)" "(?P<agent>[^"]*)"'
+)
 
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
@@ -155,7 +160,6 @@ BUILTIN_REGEXES = {
 }
 
 
-
 EPILOG = f"""
 INTERVAL units: us=microseconds/ms=milliseconds/s=seconds/m=minutes/h=hours/d=days/w=weeks"
 Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
@@ -172,8 +176,10 @@ def build_globals_dict(modules):
         d[name] = d[alt_name] = module
     return d
 
+
 # Make some modules available for use in filters and templates
-EXPORTED_GLOBALS = build_globals_dict([
+EXPORTED_GLOBALS = build_globals_dict(
+    [
         base64,
         collections,
         datetime,
@@ -185,7 +191,9 @@ EXPORTED_GLOBALS = build_globals_dict([
         re,
         string,
         textwrap,
-    ])
+    ]
+)
+
 
 def expand_color_codes(line):
     for _, (color, scolor) in COLOR_CODES.items():
@@ -209,6 +217,7 @@ class Stats:
 
 class StoppedEarly(Exception):
     pass
+
 
 def timedelta_from(duration):
     pattern = re.compile(r"([-\d.]+)([a-z]+)")
@@ -340,7 +349,7 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
     # Unix timestamps (seconds since epoch)
-    lambda s: dt.datetime.fromtimestamp(float(s))
+    lambda s: dt.datetime.fromtimestamp(float(s)),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
@@ -424,8 +433,9 @@ def unsentinel(s):
 
 
 def show_jsonl(event):
-    unquoted = { unsentinel(k):unsentinel(v) for k, v in event.items()}
+    unquoted = {unsentinel(k): unsentinel(v) for k, v in event.items()}
     print(json.dumps(unquoted))
+
 
 def show_by_template(event, template):
     template = template.replace("\\n", "\n").replace("\\t", "\t")
@@ -435,10 +445,11 @@ def show_by_template(event, template):
     except KeyError:
         pass
 
+
 def show_by_eval_template(event, template):
     template = template.replace("\\n", "\n").replace("\\t", "\t")
     # Find {expression} patterns
-    pattern = re.compile(r'\{(.*?)\}')
+    pattern = re.compile(r"\{(.*?)\}")
 
     # Replace each match with its evaluated result
     def replace_expr(match):
@@ -456,7 +467,6 @@ def show_by_eval_template(event, template):
     out = pattern.sub(replace_expr, template)
     if out:
         print(out)
-
 
 
 def show_tsv(event):
@@ -652,6 +662,7 @@ def key_matches(regex, key, event):
         return True
     return False
 
+
 def matches_python_expr(expr, event):
     event_plus_underscore = event.copy()
     event_plus_underscore["_"] = event
@@ -662,10 +673,13 @@ def matches_python_expr(expr, event):
             print(f"[Error: {e}. event={event}]", file=sys.stderr)
         return False
 
+
 def visible(line, event):
-    if (args.grep_not and any(regex.search(line) for regex in args.grep_not)) or (
-        args.grep and not any(regex.search(line) for regex in args.grep)
-    ) or (args.where and not matches_python_expr(args.where, event)):
+    if (
+        (args.grep_not and any(regex.search(line) for regex in args.grep_not))
+        or (args.grep and not any(regex.search(line) for regex in args.grep))
+        or (args.where and not matches_python_expr(args.where, event))
+    ):
         return False
     if not event:
         return False
@@ -730,6 +744,8 @@ def parse(line, format):
         return parse_logfmt(line)
     elif format == "clf":
         return parse_clf(line)
+    elif format == "combined":
+        return parse_combined(line)
     else:
         print_err("Unknown input format.")
         exit()
@@ -754,15 +770,28 @@ def parse_jsonl(line):
             result[key] = repr(val)
     return result
 
+
 def parse_clf(line):
-    match = RE_CLF.match(line)  
+    match = RE_CLF.match(line)
     if match:
         d = match.groupdict()
-        if d["size"] == "-": 
+        if d["size"] == "-":
             d["size"] = "0"
         return d
     else:
         return {}
+
+
+def parse_combined(line):
+    match = RE_COMBINED.match(line)
+    if match:
+        d = match.groupdict()
+        if d["size"] == "-":
+            d["size"] = "0"
+        return d
+    else:
+        return {}
+
 
 def extract_key_regex(spec):
     m = RE_EXTRACT_KEY.match(spec)
@@ -842,9 +871,9 @@ def parse_args():
     input.add_argument(
         "--input-format",
         "-i",
-        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf"],
+        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf", "combined"],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format",
+        help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
@@ -1150,9 +1179,9 @@ def parse_args():
         " show only the first and last.",
     )
     output_special.add_argument(
-    "--debug",
-    action="store_true",
-    help="print exceptions",
+        "--debug",
+        action="store_true",
+        help="print exceptions",
     )
 
     other = parser.add_argument_group("other options")
