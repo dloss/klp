@@ -162,7 +162,7 @@ There are multiple ways to specify the time range that you're interested in:
 * relative from now: `--since` and `--until` 
 * timespan, computed from program start or first event shown: `--duration`, `--timespan`
 
-Timespans can be specified with these units:
+Timespans can be specified with these units (for example: `--since 1w2h3.2s`):
 
 - `us` = microseconds
 - `m` = milliseconds
