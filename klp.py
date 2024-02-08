@@ -51,6 +51,7 @@ RE_LOGFMT = re.compile(
 )  # 'key="value"' OR 'key=value '
 RE_EOL_OR_TAB = re.compile(r"\\n|\\t|\\r")
 RE_EXTRACT_KEY = re.compile(r"^(\w+)~(.*)")
+RE_CLF = re.compile(r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+)')
 
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
@@ -333,6 +334,8 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(
         s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%f"
     ).astimezone(),
+    # NCSA Common Log Format
+    lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
@@ -725,6 +728,8 @@ def parse(line, format):
     elif format in ["json", "tsv"]:
         # JSON and TSV files have been converted to logfmt
         return parse_logfmt(line)
+    elif format == "clf":
+        return parse_clf(line)
     else:
         print_err("Unknown input format.")
         exit()
@@ -749,6 +754,15 @@ def parse_jsonl(line):
             result[key] = repr(val)
     return result
 
+def parse_clf(line):
+    match = RE_CLF.match(line)  
+    if match:
+        d = match.groupdict()
+        if d["size"] == "-": 
+            d["size"] = "0"
+        return d
+    else:
+        return {}
 
 def extract_key_regex(spec):
     m = RE_EXTRACT_KEY.match(spec)
@@ -828,9 +842,9 @@ def parse_args():
     input.add_argument(
         "--input-format",
         "-i",
-        choices=["logfmt", "jsonl", "json", "tsv", "tap"],
+        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf"],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'",
+        help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
