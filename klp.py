@@ -1525,6 +1525,8 @@ def main():
         fuse_skipped = 0
         colored_levelline = []
         levelchars = 0
+        formatted_time = ""
+        len_formatted_time = 0
         fuse_maybe_last = None
         if args.input_format == "json":
             lines = lines_from_jsonfiles(args.files)
@@ -1602,6 +1604,7 @@ def main():
                         ts = get_timestamp_str_or_none(event)
                         if ts:
                             formatted_time = format_time(ts)
+                            # Cache value for more performance
                             len_formatted_time = len(formatted_time)
                             if args.color:
                                 print(
