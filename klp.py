@@ -71,14 +71,14 @@ COLOR_CODES = {
     # Skip 0x09 to 0x0D (not supported by textwrap.wrap)
     "bright_black": ("\x1b[1;30m", "\x0E"),
     "bright_red": ("\x1b[1;31m", "\x0F"),
-    "bright_green": ("\x1b[1;32m", "\x0F"),
-    "bright_yellow": ("\x1b[1;33m", "\x10"),
-    "bright_blue": ("\x1b[1;34m", "\x11"),
-    "bright_magenta": ("\x1b[1;35m", "\x12"),
-    "bright_cyan": ("\x1b[1;36m", "\x13"),
-    "bright_white": ("\x1b[1;37m", "\x14"),
-    "bold": ("\x1b[1m", "\x15"),
-    "off": ("\x1b[0m", "\x16"),
+    "bright_green": ("\x1b[1;32m", "\x10"),
+    "bright_yellow": ("\x1b[1;33m", "\x11"),
+    "bright_blue": ("\x1b[1;34m", "\x12"),
+    "bright_magenta": ("\x1b[1;35m", "\x13"),
+    "bright_cyan": ("\x1b[1;36m", "\x14"),
+    "bright_white": ("\x1b[1;37m", "\x15"),
+    "bold": ("\x1b[1m", "\x16"),
+    "off": ("\x1b[0m", "\x17"),
 }
 COLOR = {key: color for key, (color, _) in COLOR_CODES.items()}
 SCOLOR = {key: scolor for key, (_, scolor) in COLOR_CODES.items()}
