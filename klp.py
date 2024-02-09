@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.45.0"
+__version__ = "0.46.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -1201,6 +1201,10 @@ def parse_args():
     )
 
     args = parser.parse_args()
+
+    if sys.stdin.isatty() and not args.files:
+        parser.print_usage()
+        sys.exit(0)
 
     args.color = (
         args.color
