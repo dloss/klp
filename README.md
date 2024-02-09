@@ -183,6 +183,26 @@ This is equivalent to `klp --since 0s`.
 Other time spans can be specified.
 Use `s` for seconds, `m` for minutes, `h` for hours and `d` for days.
 
+### Grep: searching with regexes, builtin regexes or Python expressions
+
+Use `--grep`/`-g` to limit the processing to lines that match a given regular expression.
+When this flag is given multiple times, any of those regexes matching 
+will allow the line to be processed (logical OR).
+If you need a logical AND, use an appropriate regex or pipe the output to another instance of klp.
+To specify lines that should NOT be processed, use `--grep-not`/`-G`/`-v`.
+
+Search is case-sensitive by default. 
+Prepend `(?i)`to the regex for case-insensitive matches. 
+
+By default, `--grep` searches on the whole line. 
+To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
+
+klp has several builtin regexes to match URLs, email addresses, common errors, path names or IP addresses.
+Use `--grep-builtin-not`/`-r` to use them.
+
+Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
+Events before the matching line are visually marked with `/`, lines after with `\`.
+
 ### Limit the output
 
 Use `--max-events`/`-m` to limit the output to the first N events.
@@ -191,7 +211,26 @@ Use `--max-events`/`-m` to limit the output to the first N events.
 
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
 
-For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as. "{ts} {level.upper()} {'#'*len(msg)}"
+For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as `{ts} {level.upper()} {'#'*len(msg)}`.
+
+### Other input and output formats
+
+Apart from logfmt, klp supports the following other data formats:
+
+Input formats (`--input-format`/`-i`):
+- `jsonl`: JSON Lines (shortcut: `-j`)
+- `json`: JSON (only for complete files, not for streaming)
+- `tsv`: Tab separated values (keys have to be set manually with `-k`)
+- `tap`: Output of `linkerd viz tap`
+- `clf`: NCSA Common Log Format
+- `combined`: Combined Log Format of Apache httpd
+
+Output formats (`--output-format`/`-o`):
+- `default`: logfmt
+- `jsonl`: JSON Lines
+- `tsv`: Tab separated values (keys have to be set manually with `-k`) 
+
+The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
 
 ### Synthetic fields
 
