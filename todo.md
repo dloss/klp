@@ -1,13 +1,19 @@
 - Fix JSONL output: Ensure valid lines
 - Add some example files
+- More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
 - Improve README: 
+    - reword feature list
     - common use cases 
     - using complementary tools: sqlite, jq, ...
-    - more alternative tools: jlv, ...
+    - more alternative tools: jlv, benthos, ...
 - logfmt output format (without additional info and colors, for post-processing)
 - Add TUI with textual
+- Publish on PyPI
 - Add --manual with examples
 - Add --ts-key to set key name for timestamp
 - Add --msg-key to set key name for message
 - Use fast string comparison for ISO dates
 - More input formats: like logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
+- Nice logo
+- Standalone executable (e.g. with Nuitka)
+- Rewrite in Rust :-)
