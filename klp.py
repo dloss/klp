@@ -566,7 +566,7 @@ def print_err(*args, **kwargs):
 
 
 def colorize(text, color):
-    if color:
+    if args.color and color:
         return COLOR[color] + text + COLOR["off"]
     else:
         return text
@@ -587,7 +587,8 @@ def colorize_loglevels(keys):
 
 
 def show_stats(stats):
-    print_err(COLOR["off"], end="")
+    if args.color:
+        print_err(COLOR["off"], end="")
     seen = stats.num_lines_seen
     shown = stats.num_events_shown
     if seen > 0 and shown > 0:
