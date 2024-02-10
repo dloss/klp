@@ -12,7 +12,7 @@ import csv
 import dataclasses
 import datetime as dt
 import errno
-import fileinput
+import gzip
 import json
 import os
 import pprint
@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.46.0"
+__version__ = "0.47.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -1340,6 +1340,22 @@ def colored_levelchar(event):
     else:
         return loglevel[0]
 
+def file_generator(filenames):
+    """Yields lines from multiple files, which may be compressed."""
+    if not filenames:
+        filenames = ["-"]
+    for filename in filenames:
+        if filename in ["-"]:
+            for line in sys.stdin:
+                yield line
+        elif filename.lower().endswith('.gz'):
+            with gzip.open(filename, 'rt') as f:
+                for line in f:
+                    yield line
+        else:
+            with open(filename, 'r') as f:
+                for line in f:
+                    yield line
 
 class MyTests(unittest.TestCase):
     def test_guess_datetime_military_ns(self):
@@ -1500,8 +1516,12 @@ def read_json_from_input(filename):
     if filename in ["-", None]:
         data = json.load(sys.stdin)
     else:
-        with open(filename, "r") as f:
-            data = json.load(f)
+        if filename.lower().endswith('.gz'):
+            with gzip.open(filename, 'rt') as f:
+                data = json.load(f)
+        else:
+            with open(filename, "r") as f:
+                data = json.load(f)
     return data
 
 
@@ -1539,6 +1559,8 @@ def lines_from_tsvfiles(filenames):
     for filename in filenames:
         if filename in ["-", None]:
             f = sys.stdin
+        elif filename.lower().endswith(".gz"):
+            f = gzip.open(filename, "rt")
         else:
             f = open(filename, "r")
         reader = csv.reader(f, delimiter="\t")
@@ -1582,7 +1604,7 @@ def main():
         elif args.input_format == "tsv":
             lines = lines_from_tsvfiles(args.files)
         else:
-            lines = fileinput.input(files=args.files)
+            lines = file_generator(args.files)
         for line in lines:
             stats.num_lines_seen += 1
             # quoted double quotes would break our parser
