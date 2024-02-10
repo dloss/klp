@@ -573,7 +573,7 @@ def colorize(text, color):
 
 
 def scolorize(text, color):
-    if color:
+    if args.color and color:
         return SCOLOR[color] + text + SCOLOR["off"]
     else:
         return text
@@ -589,6 +589,7 @@ def colorize_loglevels(keys):
 def show_stats(stats):
     if args.color:
         print_err(COLOR["off"], end="")
+    colors = THEMES[args.theme]
     seen = stats.num_lines_seen
     shown = stats.num_events_shown
     if seen > 0 and shown > 0:
@@ -598,11 +599,11 @@ def show_stats(stats):
     print_err(f"Events shown: { shown }{percent}")
     if stats.first_timestamp:
         print_err(
-            f"Time span shown: { colorize(format_time(stats.first_timestamp), 'bright_black') } "
-            f"to { colorize(format_time(stats.last_timestamp), 'bright_black') }"
+            f"Time span shown: { colorize(format_time(stats.first_timestamp), colors['timestamp_key']) } "
+            f"to { colorize(format_time(stats.last_timestamp), colors['timestamp_key']) }"
             f" ({ to_datetime(stats.last_timestamp) - to_datetime(stats.first_timestamp) })"
         )
-    print_err(f"Keys seen: { ','.join( colorize(key, 'green') for key in stats.keys)}")
+    print_err(f"Keys seen: { ','.join( colorize(key, colors['keys']) for key in stats.keys)}")
     print_err(
         f"Log levels seen: { ','.join(colorize_loglevels(stats.loglevels))}"
         f" (keys: {','.join(stats.loglevel_keys)})"
