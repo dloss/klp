@@ -707,13 +707,15 @@ def visible(line, event):
         return False
 
     try:
-        if args.from_dt is not None and get_timestamp_datetime(event) < args.from_dt:
-            return False
-        if args.to_dt is not None and get_timestamp_datetime(event) > args.to_dt:
-            if len(args.files) < 2:
-                # Skip rest of the file. We can assume each file is ordered
-                raise StoppedEarly
-            return False
+        if args.from_dt is not None or args.to_dt is not None:
+            dt_event = get_timestamp_datetime(event)
+            if dt_event is not None:
+                if args.from_dt is not None and dt_event < args.from_dt:
+                    return False
+                if args.to_dt is not None and dt_event > args.to_dt:
+                    if len(args.files) < 2:
+                        raise StoppedEarly
+                    return False
     except ValueError as exc:
         print(exc)
         sys.exit(1)
