@@ -161,6 +161,9 @@ $ cat mylog.txt | klp -L trace,debug
 
 ### Filter on time
 
+klp tries to parse the following keys as timestamps: `timestamp`, `ts`, `time`.
+You can specify your own key with `--ts-key KEY`.
+
 There are multiple ways to specify the time range that you're interested in:
 
 * absolute time: `--from` and `--to` 
