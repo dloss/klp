@@ -260,6 +260,7 @@ If you don't like klp, maybe try one of these other tools:
 - [hutils](https://github.com/brandur/hutils): the original logfmt tools, written in Ruby
 - [fblog](https://github.com/brocode/fblog): small command-line JSON Log viewer
 - [json-log-viewer](https://github.com/gistia/json-log-viewer): powerful terminal based viewer for JSON logs using ncurses.
+- [Toolong](https://github.com/Textualize/toolong): A terminal application to view, tail, merge, and search log files (plus JSONL)
 - [hl](https://github.com/pamburus/hl): A log viewer that translates JSON logs into human-readable representation.
 - [l'oGGo](https://github.com/aurc/loggo): A powerful terminal app for structured log streaming
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line
@@ -268,5 +269,6 @@ If you don't like klp, maybe try one of these other tools:
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
 - [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
+- [Benthos](https://github.com/benthosdev/benthos.git): high performance and resilient stream processor, able to connect various sources and sinks in a range of brokering patterns and perform hydration, enrichments, transformations and filters on payloads
 - [Klogg](https://github.com/variar/klogg): multi-platform GUI application that helps browse and search through long and complex log files
 - [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): horizontally-scalable, highly-available, multi-tenant log aggregation system

@@ -5,7 +5,6 @@
     - reword feature list
     - common use cases 
     - using complementary tools: sqlite, jq, ...
-    - more alternative tools: jlv, benthos, ...
 - logfmt output format (without additional info and colors, for post-processing)
 - Add TUI with textual
 - Publish on PyPI
