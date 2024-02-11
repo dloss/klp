@@ -348,6 +348,7 @@ datetime_converters = [
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
     # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s)),
 ]
