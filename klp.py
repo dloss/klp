@@ -31,19 +31,16 @@ import itertools
 import random
 import string
 
-__version__ = "0.47.1"
+__version__ = "0.47.2"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
 INPUT_QUOTE = r"\""
 
-# Names of keys our program cares about
+# Names of keys our program cares about. Use lowercase keys here.
 TS_KEYS = "_ts_delta ts time timestamp _ts".split()
-TS_KEYS_SET_LOWER = set(s.lower() for s in TS_KEYS)
 MSG_KEYS = "msg message".split()
-MSG_KEYS_SET_LOWER = set(s.lower() for s in MSG_KEYS)
 LEVEL_KEYS = "log_level level lvl loglevel severity".split()
-LEVEL_KEYS_SET_LOWER = set(s.lower() for s in LEVEL_KEYS)
 
 # Regular expressions
 RE_LOGFMT = re.compile(
@@ -304,7 +301,7 @@ def datetime_from(text):
     elif text == "now":
         return dt.datetime.now(tz=dt.timezone.utc)
     else:
-        datetime = guess_datetime(text)
+        datetime = guess_datetime(text, with_args=False)
         if datetime is None:
             raise argparse.ArgumentTypeError(f"Not a valid timestamp: {text}")
         return datetime
@@ -356,12 +353,9 @@ datetime_converters = [
 dt_conv_order = list(range(len(datetime_converters)))
 
 
-def guess_datetime(timestamp):
+def guess_datetime(timestamp, with_args=True):
     global dt_conv_order
     datetime = None
-    if args.ts_format:
-        # Try user-specified format first
-        dt_conv_order.insert(0, lambda s: dt.datetime.strptime(s, args.ts_format).astimezone())
     for i in dt_conv_order:
         converter = datetime_converters[i]
         try:
@@ -509,12 +503,12 @@ def show_default(event, context_type="", lineno=None):
             key_color = THEMES[args.theme]["keys"]
             quote_color = THEMES[args.theme]["quotes"]
             val_color = ""
-            if key_lower in TS_KEYS_SET_LOWER:
+            if key_lower in TS_KEYS:
                 val_color = THEMES[args.theme]["timestamp_key"]
                 val = format_time(val)
-            elif key_lower in LEVEL_KEYS_SET_LOWER:
+            elif key_lower in LEVEL_KEYS:
                 val_color = THEMES[args.theme]["levels"].get(val.lower(), "off")
-            elif key_lower in MSG_KEYS_SET_LOWER:
+            elif key_lower in MSG_KEYS:
                 val_color = THEMES[args.theme]["message_key"]
 
             if args.color:
@@ -637,6 +631,7 @@ def update_stats(stats, event):
         stats.loglevels.append(loglevel)
     ts = get_timestamp_str_or_none(event)
     if ts:
+        # FIXME: This string comparison only works for ISO dates
         if stats.first_timestamp == "" or ts < stats.first_timestamp:
             stats.first_timestamp = ts
             if args.timespan is not None:
@@ -986,7 +981,7 @@ def parse_args():
     time_selection = parser.add_argument_group("event selection by time")
     time_selection.add_argument(
         "--ts-key",
-        metavar="KEYS",
+        metavar="KEY",
         help="parse timestamp from KEY",
     )
     time_selection.add_argument(
@@ -1250,6 +1245,7 @@ def parse_args():
     args.add_ts_delta = "_ts_delta" in args.keys
     args.add_line = "_line" in args.keys
 
+    global TS_KEYS
     if args.common:
         args.keys = TS_KEYS + LEVEL_KEYS + MSG_KEYS + args.keys
         args.plain = True
@@ -1294,6 +1290,17 @@ def parse_args():
     except re.error as exc:
         print_err("Invalid regular expression:", exc)
         sys.exit(1)
+
+    if args.ts_key:
+        # XXX: Don't modify what looks like a constant
+        TS_KEYS.append(args.ts_key)
+
+    if args.ts_format:
+        global datetime_converters
+        global dt_conv_order
+        # Try user-specified format first
+        datetime_converters.insert(0, lambda s: dt.datetime.strptime(s, args.ts_format).astimezone())
+        dt_conv_order = list(range(len(datetime_converters)))
 
     if args.new:
         args.since = timedelta_from("0s")

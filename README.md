@@ -166,7 +166,7 @@ The following keys are treated as possibly holding timestamps: `timestamp`, `ts`
 You can specify your own key with `--ts-key KEY`.
 
 klp includes a list of common time formats that will be tried for parsing.
-Use `--ts-format` to specify your own format, using [Python strptime() format codes](https://docs.python.org/3/library/datetime.html#format-codes).
+Use `--ts-format` to specify your own format, using [Python strptime() format codes](https://docs.python.org/3/library/datetime.html#format-codes) (e.g. `%a %d %b %Y, %I:%M%p` to parse `Mon 31 Jan 2022, 11:59PM`).
 
 There are multiple ways to specify the time range that you're interested in:
 
