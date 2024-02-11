@@ -13,15 +13,15 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 
 ## Key Features
 
-- *Focus on the Essentials*: Instantly view the crucial fields: timestamp, log level, and message.
-- *Selective Key Display*: Choose to include or exclude specific keys in your output.
-- *Powerful Filtering*: Filter logs by log level or specific time ranges, e.g. to focus on new events.
-- *Advanced Grep Capabilities*: Search whole lines or specific keys. Show context lines to see what happened right before or after an interesting event. Use built-in regexes for URLs, IPs, file paths or common errors.
-- *Python Expression Filters*: Employ Python expressions to specify complex filters.
-- *Customizable Output*: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
-- *Overview Stats*: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
-- *Enhanced Readability*: Enjoy colored and pretty-printed output for easier reading.
-- *Supports JSON Lines and TSV* as alternative input/output formats (and some others)
+- **Focus on the Essentials**: Instantly view the crucial fields: timestamp, log level, and message.
+- **Selective Key Display**: Choose to include or exclude specific keys in your output.
+- **Powerful Filtering**: Filter logs by log level or specific time ranges, e.g. to focus on new events.
+- **Advanced Grep Capabilities**: Search whole lines or specific keys. Show context lines to see what happened right before or after an interesting event. Use built-in regexes for URLs, IPs, file paths or common errors.
+- **Python Expression Filters**: Employ Python expressions to specify complex filters.
+- **Customizable Output**: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
+- **Overview Stats**: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
+- **Enhanced Readability**: Enjoy colored and pretty-printed output for easier reading.
+- **Supports JSON Lines and TSV** as alternative input/output formats (and some others)
 
 klp is designed not for large-scale log analysis, but as a lightweight, efficient tool for developers. It's your companion for uncovering the mysteries in your logs, streamlining your development workflow, and accelerating troubleshooting.
 
