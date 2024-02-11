@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.47.0"
+__version__ = "0.47.1"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -901,14 +901,14 @@ def parse_args():
         "-l",
         metavar="LEVELS",
         type=csv_lower_type,
-        help="comma-separated names of loglevel keys to process (case-insensitive). Use -S to show available levels",
+        help="comma-separated names of loglevels to process (case-insensitive). Use -S to show the loglevels available",
     )
     selection.add_argument(
         "--loglevels-not",
         "-L",
         metavar="LEVELS",
         type=csv_lower_type,
-        help="comma-separated names of loglevel keys NOT to process (case-insensitive)",
+        help="comma-separated names of loglevels NOT to process (case-insensitive)",
     )
 
     grep = parser.add_argument_group(
