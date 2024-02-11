@@ -359,6 +359,9 @@ dt_conv_order = list(range(len(datetime_converters)))
 def guess_datetime(timestamp):
     global dt_conv_order
     datetime = None
+    if args.ts_format:
+        # Try user-specified format first
+        dt_conv_order.insert(0, lambda s: dt.datetime.strptime(s, args.ts_format).astimezone())
     for i in dt_conv_order:
         converter = datetime_converters[i]
         try:
@@ -985,6 +988,11 @@ def parse_args():
         "--ts-key",
         metavar="KEYS",
         help="parse timestamp from KEY",
+    )
+    time_selection.add_argument(
+        "--ts-format",
+        metavar="FORMAT",
+        help="add FORMAT to the list of timestamp formats to try",
     )
     time_selection.add_argument(
         "--from",
