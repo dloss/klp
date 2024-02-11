@@ -391,7 +391,9 @@ def to_datetime(timestamp):
 
 
 def get_timestamp_datetime(event):
-    if "timestamp" in event:
+    if args.ts_key and args.ts_key in event:
+        return to_datetime(event[args.ts_key])
+    elif "timestamp" in event:
         return to_datetime(event["timestamp"])
     elif "ts" in event:
         return to_datetime(event["ts"])
@@ -645,9 +647,12 @@ def update_stats(stats, event):
 
 
 def get_timestamp_str_or_none(event):
-    return (
-        event.get("timestamp", None) or event.get("ts", None) or event.get("time", None)
-    )
+    if args.ts_key:
+        return event.get(args.ts_key, None)
+    else:
+        return (
+            event.get("timestamp", None) or event.get("ts", None) or event.get("time", None)
+        )
 
 
 def get_log_level(event):
@@ -974,6 +979,11 @@ def parse_args():
     )
 
     time_selection = parser.add_argument_group("event selection by time")
+    time_selection.add_argument(
+        "--ts-key",
+        metavar="KEYS",
+        help="parse timestamp from KEY",
+    )
     time_selection.add_argument(
         "--from",
         dest="from_dt",
