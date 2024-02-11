@@ -6,6 +6,8 @@ Viewer for structured log files in key=value format (and some others).
 
 Single file CLI tool without dependencies apart from Python 3.7+ and its standard library. 
 
+![](demo/basic.gif)
+
 ## Features
 
 - Select which keys to include or exclude from the output
