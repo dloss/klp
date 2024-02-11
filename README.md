@@ -181,7 +181,7 @@ Sometimes you want to skip old events and only want to see new events, e.g. when
 Use the `--new`/`-n` flag:
 
 ```bash
-kubectl logs mypod --follow | klp -n
+$ kubectl logs mypod --follow | klp -n
 ```
 
 This is equivalent to `klp --since 0s`.
