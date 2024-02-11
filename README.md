@@ -1,26 +1,29 @@
 # klp
 
-Kool Logfmt Parser
+_Kool Logfmt Parser_
 
-Viewer for structured log files in key=value format (and some others).
+klp is a lightweight, command-line interface (CLI) tool  for analyzing and understanding structured logs in various formats.
+Designed for software developers involved in debugging and troubleshooting.
 
-Single file CLI tool without dependencies apart from Python 3.7+ and its standard library. 
+Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.org), [TSV](https://en.wikipedia.org/wiki/Tab-separated_values) and some other formats.
+
+Single file Python script without dependencies apart from Python 3.7+ and its standard library. 
 
 ![](demo/basic.gif)
 
-## Features
+## Key Features
 
-- Select which keys to include or exclude from the output
-- Quickly view the most important fields: timestamp, log level, message
-- Restrict output to given log levels, time range or time delta (e.g. since 1h ago)
-- Grep on the values of given keys, optionally with context lines. 
-- Built-in regexes for URLs, email addresses, IPv4 addresses and common errors
-- Filter using Python expressions, like "len(msg.split()) == 5 and int(port) > 1024"
-- Statistics page to get a quick overview of the event count, keys, log levels and time span
-- Colored output and pretty printing (can be turned off)
-- Optional pretty printing with indentation, Unicode chars and tab/crlf expansion
-- [JSON Lines](https://jsonlines.org) and tab-separated values (TSV) as alternative input and output formats
-- and more...
+- *Focus on the Essentials*: Instantly view the crucial fields: timestamp, log level, and message.
+- *Selective Key Display*: Choose to include or exclude specific keys in your output.
+- *Powerful Filtering*: Filter logs by log level or specific time ranges, e.g. to focus on new events.
+- *Advanced Grep Capabilities*: Search whole lines or specific keys. Show context lines to see what happened right before or after an interesting event. Use built-in regexes for URLs, IPs, file paths or common errors.
+- *Python Expression Filters*: Employ Python expressions to specify complex filters.
+- *Customizable Output*: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
+- *Overview Stats*: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
+- *Enhanced Readability*: Enjoy colored and pretty-printed output for easier reading.
+- *Supports JSON Lines and TSV* as alternative input/output formats (and some others)
+
+klp is designed not for large-scale log analysis, but as a lightweight, efficient tool for developers. It's your companion for uncovering the mysteries in your logs, streamlining your development workflow, and accelerating troubleshooting.
 
 ## Installation
 
