@@ -348,6 +348,8 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
     # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s)),
+    # Nginx timestamps (milliseconds since epoch)
+    lambda s: dt.datetime.fromtimestamp(int(s)/1000),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
