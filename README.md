@@ -15,11 +15,10 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 
 - **Focus on the Essentials**: Instantly view the crucial fields: timestamp, log level, and message.
 - **Selective Key Display**: Choose to include or exclude specific keys in your output.
-- **Powerful Filtering**: Filter logs by log level or specific time ranges, e.g. to focus on new events.
+- **Powerful Filtering**: Filter logs by log level or specific time ranges, e.g. to focus on new events. Employ Python expressions to specify complex filters.
 - **Advanced Grep Capabilities**: Search whole lines or specific keys. Show context lines to see what happened right before or after an interesting event. Use built-in regexes for URLs, IPs, file paths or common errors.
-- **Python Expression Filters**: Employ Python expressions to specify complex filters.
-- **Customizable Output**: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
 - **Overview Stats**: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
+- **Customizable Output**: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
 - **Enhanced Readability**: Enjoy colored and pretty-printed output for easier reading.
 - **Supports JSON Lines and TSV** as alternative input/output formats (and some others)
 
@@ -40,7 +39,7 @@ Or just run it using `python3`, without any installation.
 klp can be used as a filter, reading from stdin:
 
 ```bash
-$ cat log.txt | klp
+$ tail -f log.txt | klp
 ```
 
 Or you can read from a file:
@@ -67,13 +66,13 @@ by looking for the following keys:
 * Log level keys: `log_level`, `loglevel`, `level`, `lvl`, `severity`
 * Message keys: `message`, `msg`
 
-klp has special features to select events by timestamp or log level.
+klp has special features to select events by timestamp or log level (see below).
 
 
 ### Default output
 
 By default, klp prints every event that was recognized and shows both the key and the value of each field.
-Colors are used for syntax-highlighting.
+Colors are used for syntax-highlighting (use `--no-color` to turn this off or `--theme` to select different colors).
 
 ### Common output format: timestamp, log level, message
 
@@ -93,7 +92,7 @@ $ klp -c mylog.txt
 ### Get an overview of the log data
 
 Use `--stats-only`/`-S` to get some basic statistics about number of events in the log file,
-the timespan, the names of keys and the log levels:
+the timespan, the names of the keys and the log levels:
 
 ```bash
 $ klp -S mylog.logfmt
@@ -104,7 +103,7 @@ Log levels seen: DEBUG,TRACE,INFO (keys: log_level)
 ```
 
 Use `--levelmap`/`-M` to print only the first character of the log level of each event.
-The timestamp is for the first event 
+The timestamp is for the first event shown in that line:
 
 ```bash
 $ klp -M mylog.logfmt
@@ -115,6 +114,7 @@ $ klp -M mylog.logfmt
 2024-02-05T20:19:02.666Z TTTTDTTTTTTTTTITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDT
 2024-02-05T20:19:15.571Z TTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTT
 ```
+
 
 ### Select the keys to show
 
@@ -145,14 +145,14 @@ $ cat mylog.txt | klp -k -p timestamp,message
 
 ### Filter on log level
 
-Use `--loglevel`/`-l` to filter on the `log_level` or `level` key.
+Use `--loglevel`/`-l` to restrict the output to specific log levels.
 You can give a comma-separated list of levels.
 
 ```bash
-$ cat mylog.txt | klp --loglevel debug
+$ cat mylog.txt | klp --loglevel warning,error,fatal
 ```
 
-Filter out log levels with `--not-loglevel`/`-L`.
+Exclude log levels with `--not-loglevel`/`-L`.
 This is useful to suppress trace and debug output:
 
 ```bash
@@ -170,30 +170,26 @@ Use `--ts-format` to specify your own format, using [Python strptime() format co
 
 There are multiple ways to specify the time range that you're interested in:
 
-* absolute time: `--from` and `--to` 
-* relative from now: `--since` and `--until` 
-* timespan, computed from program start or first event shown: `--duration`, `--timespan`
+* absolute time: `--from ISODATETIME` and `--to ISODATETIME` 
+* relative from now: `--since INTERVAL` and `--until INTERVAL` 
+* timespan, computed from program start or first event shown: `--duration INTERVAL`, `--timespan INTERVAL`
 
 Timespans can be specified with these units (for example: `--since 1w2h3.2s`):
 
-- `us` = microseconds
-- `m` = milliseconds
-- `s` = seconds
-- `m` = minutes
-- `h` = hours
-- `d` = days
 - `w` = weeks
+- `d` = days
+- `h` = hours
+- `m` = minutes
+- `s` = seconds
+- `ms` = milliseconds
+- `us` = microseconds
 
 Sometimes you want to skip old events and only want to see new events, e.g. when using `tail -f` or the `--follow` option of `kubectl`.
-Use the `--new`/`-n` flag:
+Use the `--new`/`-n` flag, which is equivalent to --since 0s`:
 
 ```bash
 $ kubectl logs mypod --follow | klp -n
 ```
-
-This is equivalent to `klp --since 0s`.
-Other time spans can be specified.
-Use `s` for seconds, `m` for minutes, `h` for hours and `d` for days.
 
 ### Grep: searching with regexes, builtin regexes or Python expressions
 
@@ -210,20 +206,49 @@ By default, `--grep` searches on the whole line.
 To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
 
 klp has several builtin regexes to match URLs, email addresses, common errors, path names or IP addresses.
-Use `--grep-builtin-not`/`-r` to use them.
+Use `--grep-builtin`/`-r` to use them.
 
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
 
+### Complex filtering with Python expressions
+
+Use `--where EXPR` to only process lines where the given Python expression is True.
+All fields of the event are available by their key name.
+
+```bash
+$ cat httplog.txt | klp --where "len(message) > 10 and int(response[:3] > 499"
+```
+
+The whole event dict can be accessed as the underscore `_`.
+
+By default, errors are ignored, because some keys might not be available in all lines. 
+Use `--debug` to print exceptions.
+
+This can be be combined with other filters, such as `--grep` and grep context lines.
+
 ### Limit the output
 
-Use `--max-events`/`-m` to limit the output to the first N events.
+Use `--max-events`/`-m` to limit the output to the given number of events.
+This is useful to avoid being flooded with lots and lots of output.
 
 ### Customize the output formatting
 
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
 
 For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as `{ts} {level.upper()} {'#'*len(msg)}`.
+The following `Python modules can be used in these expressions:
+`base64`,
+`collections`,
+`datetime`,
+`hashlib`,
+`itertools`,
+`json`,
+`pprint`,
+`random`,
+`re`,
+`string`,
+`textwrap`.
 
 ### Other input and output formats
 
