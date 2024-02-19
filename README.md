@@ -278,6 +278,17 @@ For performance reasons this is only done if you explitly list these keys using 
 * `_ts_delta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
 * `_line`: the complete line from the log file or string. This can be used to show timestamps for lines that aren't logfmt or JSONL.
 
+## Complementary tools
+
+These tools aren't specialized on log fiels, but useful to post-process or view klp`s output, particulary the JSONL or TSV formats:
+
+- [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
+- [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
+- [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
+- [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
+- [ov](https://github.com/noborus/ov): Feature-rich terminal-based text viewer. It is a so-called terminal pager.
+- [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
+
 ## Alternatives
 
 If you don't like klp, maybe try one of these other tools:
@@ -287,13 +298,13 @@ If you don't like klp, maybe try one of these other tools:
 - [json-log-viewer](https://github.com/gistia/json-log-viewer): powerful terminal based viewer for JSON logs using ncurses.
 - [Toolong](https://github.com/Textualize/toolong): A terminal application to view, tail, merge, and search log files (plus JSONL)
 - [hl](https://github.com/pamburus/hl): A log viewer that translates JSON logs into human-readable representation.
+- [tailspin](https://github.com/bensadeh/tailspin):  A log file highlighter
 - [l'oGGo](https://github.com/aurc/loggo): A powerful terminal app for structured log streaming
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line
 - [sumoshell](https://github.com/SumoLogic/sumoshell): collection of utilities to improve analyzing log files written in Go
 - [lnav](https://lnav.org): very advanced log file viewer
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
-- [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
-- [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
 - [Benthos](https://github.com/benthosdev/benthos.git): high performance and resilient stream processor, able to connect various sources and sinks in a range of brokering patterns and perform hydration, enrichments, transformations and filters on payloads
 - [Klogg](https://github.com/variar/klogg): multi-platform GUI application that helps browse and search through long and complex log files
 - [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): horizontally-scalable, highly-available, multi-tenant log aggregation system
+
