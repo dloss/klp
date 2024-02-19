@@ -63,7 +63,7 @@ The events in a file or stream don't have to have the same fields.
 klp tries to automatically detect timestamps, log levels and log messages
 by looking for the following keys:
 
-* Timestamp keys: `timestamp`, `time`, `ts`
+* Timestamp keys: `timestamp`, `time`, `ts`, `at`
 * Log level keys: `log_level`, `loglevel`, `level`, `lvl`, `severity`
 * Message keys: `message`, `msg`
 
@@ -162,7 +162,7 @@ $ cat mylog.txt | klp -L trace,debug
 ### Filter on time
 
 klp tries to parse timestamps automatically.
-The following keys are treated as possibly holding timestamps: `timestamp`, `ts`, `time`.
+The following keys are treated as possibly holding timestamps: `timestamp`, `ts`, `time`, `at`.
 You can specify your own key with `--ts-key KEY`.
 
 klp includes a list of common time formats that will be tried for parsing.

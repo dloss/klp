@@ -31,14 +31,14 @@ import itertools
 import random
 import string
 
-__version__ = "0.47.2"
+__version__ = "0.47.3"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
-TS_KEYS = "_ts_delta ts time timestamp _ts".split()
+TS_KEYS = "_ts_delta ts time timestamp at _ts".split()
 MSG_KEYS = "msg message".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity".split()
 
@@ -398,6 +398,8 @@ def get_timestamp_datetime(event):
         return to_datetime(event["ts"])
     elif "time" in event:
         return to_datetime(event["time"])
+    elif "at" in event:
+        return to_datetime(event["at"])
     else:
         return None
 
@@ -651,7 +653,7 @@ def get_timestamp_str_or_none(event):
         return event.get(args.ts_key, None)
     else:
         return (
-            event.get("timestamp", None) or event.get("ts", None) or event.get("time", None)
+            event.get("timestamp", None) or event.get("ts", None) or event.get("time", None) or event.get("at", None)
         )
 
 
