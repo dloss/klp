@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.47.3"
+__version__ = "0.47.4"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -673,7 +673,11 @@ def key_matches(regex, key, event):
     return False
 
 
-def matches_python_expr(expr, event):
+def matches_python_expr(expr, event):#
+    # XXX: Be more intelligent about this
+    def unsentinel2(s):
+        return s.replace(SENTINEL, '"')
+    event = {unsentinel2(k): unsentinel2(v) for k, v in event.items()}
     event_plus_underscore = event.copy()
     event_plus_underscore["_"] = event
     try:
