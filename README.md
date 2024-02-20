@@ -294,6 +294,7 @@ These tools aren't specialized on log fiels, but useful to post-process or view 
 If you don't like klp, maybe try one of these other tools:
 
 - [hutils](https://github.com/brandur/hutils): the original logfmt tools, written in Ruby
+- [lfq](https://github.com/mattcontinisio/lfq): command-line logfmt processor
 - [fblog](https://github.com/brocode/fblog): small command-line JSON Log viewer
 - [json-log-viewer](https://github.com/gistia/json-log-viewer): powerful terminal based viewer for JSON logs using ncurses.
 - [Toolong](https://github.com/Textualize/toolong): A terminal application to view, tail, merge, and search log files (plus JSONL)

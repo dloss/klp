@@ -1,4 +1,6 @@
+- Fix SENTINEL handling for --where
 - Fix JSONL output: Ensure valid lines
+- smarter logfmt quoting (only when necessary)
 - Add some example files
 - More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
 - Improve README: 
