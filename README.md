@@ -237,7 +237,7 @@ This is useful to avoid being flooded with lots and lots of output.
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
 
 For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as `{ts} {level.upper()} {'#'*len(msg)}`.
-The following `Python modules can be used in these expressions:
+The following Python modules can be used in these expressions:
 `base64`,
 `collections`,
 `datetime`,
