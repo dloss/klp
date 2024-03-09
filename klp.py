@@ -777,8 +777,12 @@ def parse_jsonl(line):
     try:
         json_data = json.loads(line)
     except json.decoder.JSONDecodeError as exc:
-        print_err("Invalid JSON syntax:", exc)
-        sys.exit(1)
+        if args.debug:
+            print_err(line, end="")
+            print_err(f"Invalid JSON syntax in the above line:", exc)
+            sys.exit(1)
+        else: 
+            return result
     for key, val in flatten_json(json_data).items():
         if isinstance(val, str):
             result[key] = val
