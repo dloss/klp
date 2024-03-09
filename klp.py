@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.47.4"
+__version__ = "0.48.0"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -1254,6 +1254,10 @@ def parse_args():
     args.add_line = "_line" in args.keys
 
     global TS_KEYS
+    if args.ts_key:
+        # XXX: Don't modify what looks like a constant
+        TS_KEYS.append(args.ts_key)
+
     if args.common:
         args.keys = TS_KEYS + LEVEL_KEYS + MSG_KEYS + args.keys
         args.plain = True
@@ -1298,10 +1302,6 @@ def parse_args():
     except re.error as exc:
         print_err("Invalid regular expression:", exc)
         sys.exit(1)
-
-    if args.ts_key:
-        # XXX: Don't modify what looks like a constant
-        TS_KEYS.append(args.ts_key)
 
     if args.ts_format:
         global datetime_converters
