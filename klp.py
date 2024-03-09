@@ -770,13 +770,14 @@ def parse(line, format):
 def parse_logfmt(line):
     return {key: val.strip('"') for key, val in RE_LOGFMT.findall(line)}
 
-
 def parse_jsonl(line):
     # Only handle top-level strings. Everything else is converted into a string
     result = {}
     try:
-        json_data = json.loads(line)
-    except json.decoder.JSONDecodeError as exc:
+        # Ignore text before and after JSON object
+        json_str = line[line.index('{'):line.rindex('}')+1]
+        json_data = json.loads(json_str)
+    except (ValueError, json.decoder.JSONDecodeError) as exc:
         if args.debug:
             print_err(line, end="")
             print_err(f"Invalid JSON syntax in the above line:", exc)
