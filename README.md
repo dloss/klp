@@ -303,6 +303,7 @@ If you don't like klp, maybe try one of these other tools:
 - [lfq](https://github.com/mattcontinisio/lfq): command-line logfmt processor (Go). Quite similar to klp. Faster, but fewer features
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line (Rust). Flexible query syntax
 - [pq](https://github.com/iximiuz/pq): Parse and Query log files as time series
+- [Kelpie](https://github.com/Yord/klp): small, fast, and magical command-line data processor similar to pxi, jq, mlr, and awk
 - [lnav](https://github.com/tstack/lnav): very advanced log file viewer. Files-only (no streaming), lots of formats
 
 #### JSON CLI/TUI
