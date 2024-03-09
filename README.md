@@ -286,6 +286,7 @@ These tools aren't specialized on log fiels, but useful to post-process or view 
 - [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
 - [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
+- [jc](https://github.com/kellyjonbrazil/jc): CLI tool and python library that converts the output of popular command-line tools, file-types, and common strings to JSON, YAML, or Dictionaries
 - [ov](https://github.com/noborus/ov): Feature-rich terminal-based text viewer. It is a so-called terminal pager.
 - [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
