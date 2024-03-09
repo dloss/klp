@@ -284,6 +284,7 @@ These tools aren't specialized on log fiels, but useful to post-process or view 
 
 - [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
 - [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
+- [yq](https://github.com/mikefarah/yq): yq is a portable command-line YAML, JSON, XML, CSV, TOML and properties processor
 - [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
 - [jc](https://github.com/kellyjonbrazil/jc): CLI tool and python library that converts the output of popular command-line tools, file-types, and common strings to JSON, YAML, or Dictionaries
@@ -301,6 +302,7 @@ If you don't like klp, maybe try one of these other tools:
 - [hutils](https://github.com/brandur/hutils): the original logfmt tools (Ruby)
 - [lfq](https://github.com/mattcontinisio/lfq): command-line logfmt processor (Go). Quite similar to klp. Faster, but fewer features
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line (Rust). Flexible query syntax
+- [pq](https://github.com/iximiuz/pq): Parse and Query log files as time series
 - [lnav](https://github.com/tstack/lnav): very advanced log file viewer. Files-only (no streaming), lots of formats
 
 #### JSON CLI/TUI
