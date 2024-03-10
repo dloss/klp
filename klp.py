@@ -38,7 +38,7 @@ SENTINEL = "\x00"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
-TS_KEYS = "_ts_delta ts time timestamp at _ts".split()
+TS_KEYS = "_ts_delta ts time timestamp t at _ts".split()
 MSG_KEYS = "msg message".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity".split()
 
@@ -345,24 +345,32 @@ datetime_converters = [
     # RFC 2822 (date -R)
     lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
     # With day name (git log)
-    lambda s: dt.datetime.strptime(' '.join(s.split()[1:]), "%b %d %H:%M:%S %Y %z").astimezone(),
+    lambda s: dt.datetime.strptime(
+        " ".join(s.split()[1:]), "%b %d %H:%M:%S %Y %z"
+    ).astimezone(),
     # date -u
-    lambda s: dt.datetime.strptime(' '.join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y").replace(
-        tzinfo=dt.timezone.utc
-    ),
+    lambda s: dt.datetime.strptime(
+        " ".join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y"
+    ).replace(tzinfo=dt.timezone.utc),
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
-    lambda s: dt.datetime.strptime(s, '%Y %b %d %H:%M').astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y %b %d %H:%M").astimezone(),
     # Assume current year if not given
-    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M:%S.%f').astimezone(),
-    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M:%S').astimezone(),
-    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M').astimezone(),
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S.%f"
+    ).astimezone(),
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S"
+    ).astimezone(),
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M"
+    ).astimezone(),
     # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s)),
     # Nginx timestamps (milliseconds since epoch)
-    lambda s: dt.datetime.fromtimestamp(int(s)/1000),
+    lambda s: dt.datetime.fromtimestamp(int(s) / 1000),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
@@ -411,6 +419,8 @@ def get_timestamp_datetime(event):
         return to_datetime(event["ts"])
     elif "time" in event:
         return to_datetime(event["time"])
+    elif "t" in event:
+        return to_datetime(event["t"])
     elif "at" in event:
         return to_datetime(event["at"])
     else:
@@ -623,7 +633,9 @@ def show_stats(stats):
             f"to { colorize(format_time(stats.last_timestamp), colors['timestamp_key']) }"
             f" ({ span }{ rate_info })"
         )
-    print_err(f"Keys seen: { ','.join( colorize(key, colors['keys']) for key in stats.keys)}")
+    print_err(
+        f"Keys seen: { ','.join( colorize(key, colors['keys']) for key in stats.keys)}"
+    )
     print_err(
         f"Log levels seen: { ','.join(colorize_loglevels(stats.loglevels))}"
         f" (keys: {','.join(stats.loglevel_keys)})"
@@ -669,7 +681,11 @@ def get_timestamp_str_or_none(event):
         return event.get(args.ts_key, None)
     else:
         return (
-            event.get("timestamp", None) or event.get("ts", None) or event.get("time", None) or event.get("at", None)
+            event.get("timestamp", None)
+            or event.get("ts", None)
+            or event.get("time", None)
+            or event.get("at", None)
+            or event.get("t", None)
         )
 
 
@@ -689,10 +705,11 @@ def key_matches(regex, key, event):
     return False
 
 
-def matches_python_expr(expr, event):#
+def matches_python_expr(expr, event):  #
     # XXX: Be more intelligent about this
     def unsentinel2(s):
         return s.replace(SENTINEL, '"')
+
     event = {unsentinel2(k): unsentinel2(v) for k, v in event.items()}
     event_plus_underscore = event.copy()
     event_plus_underscore["_"] = event
@@ -786,19 +803,20 @@ def parse(line, format):
 def parse_logfmt(line):
     return {key: val.strip('"') for key, val in RE_LOGFMT.findall(line)}
 
+
 def parse_jsonl(line):
     # Only handle top-level strings. Everything else is converted into a string
     result = {}
     try:
         # Ignore text before and after JSON object
-        json_str = line[line.index('{'):line.rindex('}')+1]
+        json_str = line[line.index("{") : line.rindex("}") + 1]
         json_data = json.loads(json_str)
     except (ValueError, json.decoder.JSONDecodeError) as exc:
         if args.debug:
             print_err(line, end="")
             print_err(f"Invalid JSON syntax in the above line:", exc)
             sys.exit(1)
-        else: 
+        else:
             return result
     for key, val in flatten_json(json_data).items():
         if isinstance(val, str):
@@ -1328,7 +1346,9 @@ def parse_args():
         global datetime_converters
         global dt_conv_order
         # Try user-specified format first
-        datetime_converters.insert(0, lambda s: dt.datetime.strptime(s, args.ts_format).astimezone())
+        datetime_converters.insert(
+            0, lambda s: dt.datetime.strptime(s, args.ts_format).astimezone()
+        )
         dt_conv_order = list(range(len(datetime_converters)))
 
     if args.new:
@@ -1397,6 +1417,7 @@ def colored_levelchar(event):
     else:
         return loglevel[0]
 
+
 def file_generator(filenames):
     """Yields lines from multiple files, which may be compressed."""
     if not filenames:
@@ -1405,14 +1426,15 @@ def file_generator(filenames):
         if filename in ["-"]:
             for line in sys.stdin:
                 yield line
-        elif filename.lower().endswith('.gz'):
-            with gzip.open(filename, 'rt') as f:
+        elif filename.lower().endswith(".gz"):
+            with gzip.open(filename, "rt") as f:
                 for line in f:
                     yield line
         else:
-            with open(filename, 'r') as f:
+            with open(filename, "r") as f:
                 for line in f:
                     yield line
+
 
 class MyTests(unittest.TestCase):
     def test_guess_datetime_military_ns(self):
@@ -1573,8 +1595,8 @@ def read_json_from_input(filename):
     if filename in ["-", None]:
         data = json.load(sys.stdin)
     else:
-        if filename.lower().endswith('.gz'):
-            with gzip.open(filename, 'rt') as f:
+        if filename.lower().endswith(".gz"):
+            with gzip.open(filename, "rt") as f:
                 data = json.load(f)
         else:
             with open(filename, "r") as f:
