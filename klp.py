@@ -817,9 +817,7 @@ def parse_jsonl(line):
         if args.debug:
             print_err(repr(line))
             print_err(f"Invalid JSON syntax in the above line:", exc)
-            sys.exit(1)
-        else:
-            return result
+        return result
     for key, val in flatten_json(json_data).items():
         if isinstance(val, str):
             result[key] = val
