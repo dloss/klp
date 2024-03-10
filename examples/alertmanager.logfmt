@@ -1,0 +1,14 @@
+ts=2024-03-10T14:13:06.698Z caller=main.go:181 level=info msg="Starting Alertmanager" version="(version=0.27.0, branch=HEAD, revision=0aa3c2aad14cff039931923ab16b26b7481783b5)"
+ts=2024-03-10T14:13:06.699Z caller=main.go:182 level=info build_context="(go=go1.21.7, platform=linux/amd64, user=root@22cd11f671e9, date=20240228-11:51:20, tags=netgo)"
+ts=2024-03-10T14:13:06.714Z caller=cluster.go:186 level=info component=cluster msg="setting advertise address explicitly" addr=172.19.0.4 port=9094
+ts=2024-03-10T14:13:06.719Z caller=cluster.go:683 level=info component=cluster msg="Waiting for gossip to settle..." interval=2s
+ts=2024-03-10T14:13:06.790Z caller=coordinator.go:113 level=info component=configuration msg="Loading configuration file" file=/etc/alertmanager/alertmanager.yml
+ts=2024-03-10T14:13:06.806Z caller=coordinator.go:126 level=info component=configuration msg="Completed loading of configuration file" file=/etc/alertmanager/alertmanager.yml
+ts=2024-03-10T14:13:06.808Z caller=main.go:394 level=info component=configuration msg="skipping creation of receiver not referenced by any route" receiver=team-X-pager
+ts=2024-03-10T14:13:06.808Z caller=main.go:394 level=info component=configuration msg="skipping creation of receiver not referenced by any route" receiver=team-Y-mails
+ts=2024-03-10T14:13:06.808Z caller=main.go:394 level=info component=configuration msg="skipping creation of receiver not referenced by any route" receiver=team-Y-pager
+ts=2024-03-10T14:13:06.808Z caller=main.go:394 level=info component=configuration msg="skipping creation of receiver not referenced by any route" receiver=team-DB-pager
+ts=2024-03-10T14:13:06.810Z caller=tls_config.go:313 level=info msg="Listening on" address=[::]:9093
+ts=2024-03-10T14:13:06.810Z caller=tls_config.go:316 level=info msg="TLS is disabled." http2=false address=[::]:9093
+ts=2024-03-10T14:13:08.720Z caller=cluster.go:708 level=info component=cluster msg="gossip not settled" polls=0 before=0 now=1 elapsed=2.001088591s
+ts=2024-03-10T14:13:16.726Z caller=cluster.go:700 level=info component=cluster msg="gossip settled; proceeding" elapsed=10.007355554s
