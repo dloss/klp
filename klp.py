@@ -815,7 +815,7 @@ def parse_jsonl(line):
         json_data = json.loads(json_str)
     except (ValueError, json.decoder.JSONDecodeError) as exc:
         if args.debug:
-            print_err(line, end="")
+            print_err(repr(line))
             print_err(f"Invalid JSON syntax in the above line:", exc)
             sys.exit(1)
         else:
