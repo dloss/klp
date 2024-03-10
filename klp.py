@@ -344,6 +344,8 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
     # RFC 2822 (date -R)
     lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
+    # With day name (git log)
+    lambda s: dt.datetime.strptime(' '.join(s.split()[1:]), "%b %d %H:%M:%S %Y %z").astimezone(),
     # date -u
     lambda s: dt.datetime.strptime(' '.join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y").replace(
         tzinfo=dt.timezone.utc
