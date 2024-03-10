@@ -31,7 +31,7 @@ import itertools
 import random
 import string
 
-__version__ = "0.48.0"
+__version__ = "0.48.1"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -342,10 +342,21 @@ datetime_converters = [
     ).astimezone(),
     # NCSA Common Log Format
     lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
+    # RFC 2822 (date -R)
+    lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
+    # date -u
+    lambda s: dt.datetime.strptime(' '.join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y").replace(
+        tzinfo=dt.timezone.utc
+    ),
     # only date
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
+    lambda s: dt.datetime.strptime(s, '%Y %b %d %H:%M').astimezone(),
+    # Assume current year if not given
+    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M:%S.%f').astimezone(),
+    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M:%S').astimezone(),
+    lambda s: dt.datetime.strptime(f'{dt.datetime.now().year} {s}', '%Y %b %d %H:%M').astimezone(),
     # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s)),
     # Nginx timestamps (milliseconds since epoch)
