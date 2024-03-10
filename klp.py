@@ -615,10 +615,13 @@ def show_stats(stats):
         percent = ""
     print_err(f"Events shown: { shown }{percent}")
     if stats.first_timestamp:
+        span = to_datetime(stats.last_timestamp) - to_datetime(stats.first_timestamp)
+        total_seconds = span.total_seconds()
+        rate_info = f", {shown/total_seconds:.1f} events/s" if total_seconds > 0 else ""
         print_err(
             f"Time span shown: { colorize(format_time(stats.first_timestamp), colors['timestamp_key']) } "
             f"to { colorize(format_time(stats.last_timestamp), colors['timestamp_key']) }"
-            f" ({ to_datetime(stats.last_timestamp) - to_datetime(stats.first_timestamp) })"
+            f" ({ span }{ rate_info })"
         )
     print_err(f"Keys seen: { ','.join( colorize(key, colors['keys']) for key in stats.keys)}")
     print_err(
