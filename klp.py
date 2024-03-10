@@ -28,10 +28,11 @@ import collections
 import datetime
 import hashlib
 import itertools
+import math
 import random
 import string
 
-__version__ = "0.48.1"
+__version__ = "0.48.2"
 
 # Input quotes will be temporarily replaced by sentinel value to simplify parsing
 SENTINEL = "\x00"
@@ -183,6 +184,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         hashlib,
         itertools,
         json,
+        math,
         pprint,
         random,
         re,

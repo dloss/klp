@@ -244,6 +244,7 @@ The following Python modules can be used in these expressions:
 `hashlib`,
 `itertools`,
 `json`,
+`math`,
 `pprint`,
 `random`,
 `re`,
