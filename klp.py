@@ -32,10 +32,8 @@ import math
 import random
 import string
 
-__version__ = "0.48.2"
+__version__ = "0.49.0"
 
-# Input quotes will be temporarily replaced by sentinel value to simplify parsing
-SENTINEL = "\x00"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
@@ -44,9 +42,8 @@ MSG_KEYS = "msg message".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity".split()
 
 # Regular expressions
-RE_LOGFMT = re.compile(
-    r'([\w.]+)=("[^"]+"|[^ ]+(?= ))'
-)  # 'key="value"' OR 'key=value '
+RE_LOGFMT = re.compile(r'([\w.]+)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^\s]*))')
+RE_WHITESPACE = re.compile(r"\s")
 RE_EOL_OR_TAB = re.compile(r"\\n|\\t|\\r")
 RE_EXTRACT_KEY = re.compile(r"^(\w+)~(.*)")
 RE_CLF = re.compile(
@@ -457,13 +454,40 @@ def show(event, context_type="", lineno=None):
         show_tsv(event)
 
 
-def unsentinel(s):
-    return s.replace(SENTINEL, args.output_quote)
+def escape_doublequotes_quoted(s):
+    "Return string with unprintable chars (and double quotes) escaped"
+    orig_repr = repr(s)
+    if orig_repr.startswith('"') and orig_repr.endswith('"'):
+        return orig_repr[1:-1].replace("\\'", "'")
+    elif orig_repr.startswith("'") and orig_repr.endswith("'"):
+        return orig_repr[1:-1].replace('"', '\\"')
+
+
+def escape_plain(s):
+    "Return string with unprintable chars escaped"
+    return repr(s)[1:-1]
+
+
+def unescape(s):
+    return re.sub(
+        r'\\(?:([\\abfnrtv"])|x([0-9a-fA-F]{2}))',
+        lambda m: {
+            "\\": "\\",
+            "a": "\a",
+            "b": "\b",
+            "f": "\f",
+            "n": "\n",
+            "r": "\r",
+            "t": "\t",
+            "v": "\v",
+            '"': '"',  # Handle escaped double quotes
+        }.get(m.group(1), chr(int(m.group(2), 16)) if m.group(2) else ""),
+        s,
+    )
 
 
 def show_jsonl(event):
-    unquoted = {unsentinel(k): unsentinel(v) for k, v in event.items()}
-    print(json.dumps(unquoted))
+    print(json.dumps(event))
 
 
 def show_by_template(event, template):
@@ -501,7 +525,7 @@ def show_by_eval_template(event, template):
 def show_tsv(event):
     cols = []
     for key in args.keys:
-        cols.append(unsentinel(event.get(key, "")))
+        cols.append(escape_plain(event.get(key, "")))
     print("\t".join(cols))
 
 
@@ -527,7 +551,12 @@ def show_default(event, context_type="", lineno=None):
         elems = []
         for key, val in part.items():
             key_lower = key.lower()
-            val = unsentinel(val)
+            double_quotes_needed = not args.plain and RE_WHITESPACE.search(val)
+            val = (
+                escape_doublequotes_quoted(val)
+                if double_quotes_needed
+                else escape_plain(val)
+            )
 
             key_color = THEMES[args.theme]["keys"]
             quote_color = THEMES[args.theme]["quotes"]
@@ -543,7 +572,7 @@ def show_default(event, context_type="", lineno=None):
             if args.color:
                 if args.plain:
                     elems.append(SCOLOR["off"] + scolorize(val, val_color))
-                else:
+                elif double_quotes_needed:
                     elems.append(
                         SCOLOR["off"]
                         + scolorize(key, key_color)
@@ -551,11 +580,20 @@ def show_default(event, context_type="", lineno=None):
                         + scolorize(val, val_color)
                         + scolorize('"', quote_color)
                     )
+                else:
+                    elems.append(
+                        SCOLOR["off"]
+                        + scolorize(key, key_color)
+                        + scolorize("=", quote_color)
+                        + scolorize(val, val_color)
+                    )
             else:
                 if args.plain:
                     elems.append(f"{val}")
-                else:
+                elif double_quotes_needed:
                     elems.append(f'{key}="{val}"')
+                else:
+                    elems.append(f"{key}={val}")
 
         text = args.output_sep.join(elems)
         val_lines = RE_EOL_OR_TAB.split(text) if args.expand else [text]
@@ -708,11 +746,7 @@ def key_matches(regex, key, event):
 
 
 def matches_python_expr(expr, event):  #
-    # XXX: Be more intelligent about this
-    def unsentinel2(s):
-        return s.replace(SENTINEL, '"')
-
-    event = {unsentinel2(k): unsentinel2(v) for k, v in event.items()}
+    event = {k: v for k, v in event.items()}
     event_plus_underscore = event.copy()
     event_plus_underscore["_"] = event
     try:
@@ -802,8 +836,11 @@ def parse(line, format):
         exit()
 
 
-def parse_logfmt(line):
-    return {key: val.strip('"') for key, val in RE_LOGFMT.findall(line)}
+def parse_logfmt(text):
+    return {
+        key: (unescape(quoted_val) if quoted_val else unquoted_val)
+        for key, quoted_val, unquoted_val in RE_LOGFMT.findall(text)
+    }
 
 
 def parse_jsonl(line):
@@ -1563,6 +1600,72 @@ class MyTests(unittest.TestCase):
                         f"Regex compilation for {name} failed with error: {e.msg}"
                     )
 
+    # Logfmt parsing
+    def test_parse_logfmt_basic(self):
+        text = "key1=value1 key2=value2"
+        expected = {"key1": "value1", "key2": "value2"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_spaces(self):
+        text = 'key1="value with spaces" key2=value2'
+        expected = {"key1": "value with spaces", "key2": "value2"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_escaped_quotes(self):
+        text = 'key1="value with \\"escaped quotes\\"" key2=value2'
+        expected = {"key1": 'value with "escaped quotes"', "key2": "value2"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_quotes_inside(self):
+        text = 'key1=singlequote\'s key2=double"quot"es'
+        expected = {"key1": "singlequote's", "key2": 'double"quot"es'}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_unicode(self):
+        text = 'schlüssel=Schloß kauf="Äpfel aus Köln"'
+        expected = {"schlüssel": "Schloß", "kauf": "Äpfel aus Köln"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_dots_in_key(self):
+        text = "my.long.key=value1 key2=value2"
+        expected = {"my.long.key": "value1", "key2": "value2"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_with_equal_in_val(self):
+        text = "key=2+2=4 key2=test"
+        expected = {"key": "2+2=4", "key2": "test"}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_parse_logfmt_empty_string(self):
+        text = ""
+        expected = {}
+        self.assertEqual(parse_logfmt(text), expected)
+
+    def test_escape1(self):
+        text = 'a "string" with double quotes'
+        expected = 'a \\"string\\" with double quotes'
+        self.assertEqual(escape_doublequotes_quoted(text), expected)
+
+    def test_escape2(self):
+        text = "a 'string' with single quotes"
+        expected = "a 'string' with single quotes"
+        self.assertEqual(escape_doublequotes_quoted(text), expected)
+
+    def test_escape3(self):
+        text = "Escape seqs: \x00\t\n"
+        expected = "Escape seqs: \\x00\\t\\n"
+        self.assertEqual(escape_doublequotes_quoted(text), expected)
+
+    def test_unescape(self):
+        self.assertEqual(
+            unescape(r"This is a \"test\" string"), 'This is a "test" string'
+        )
+        self.assertEqual(
+            unescape(r"Escape sequences: \n \t"), "Escape sequences: \n \t"
+        )
+        self.assertEqual(unescape("значение со spaces"), "значение со spaces")
+        self.assertEqual(unescape("\\x01"), "\x01")
+
 
 def do_tests():
     loader = unittest.TestLoader()
@@ -1686,9 +1789,6 @@ def main():
             lines = file_generator(args.files)
         for line in lines:
             stats.num_lines_seen += 1
-            # quoted double quotes would break our parser
-            # replace with a symbol that shouldn't occur otherwise
-            line = line.replace(INPUT_QUOTE, SENTINEL)
             # Do whole-line matches here to prevent parsing if line is not included
             if (
                 args.grep_not and any(regex.search(line) for regex in args.grep_not)

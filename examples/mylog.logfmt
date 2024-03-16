@@ -5,3 +5,4 @@ time="2015-03-26T01:27:38-04:00" level=debug msg="Temperature changes" temperatu
 time="2015-03-26T01:27:38-04:00" level=panic msg="It's over 9000!" animal=orca size=9009
 time="2015-03-26T01:27:38-04:00" level=fatal msg="The ice breaks!" err=&{0x2082280c0 map[animal:orca size:9009] 2015-03-26 01:27:38.441574009 -0400 EDT panic It's over 9000!} number=100 omg=true
 time="2015-03-26T01:27:38-04:00" level=fatal msg="This needs quoting: The name \"Adam\" is a short name." err=&{0x2082280c0 map[animal:orca size:9009] 2015-03-26 01:27:38.441574009 -0400 EDT panic It's over 9000!} number=100 omg=true
+time="2024-03-16T05:17:28-04:00" level=fatal msg="Several lines\nLine 2\nLine3\rLine4 has a	TAB"
