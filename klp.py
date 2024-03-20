@@ -1267,7 +1267,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if sys.stdin.isatty() and not args.files:
+    if sys.stdin.isatty() and not args.files and not args.selftest:
         parser.print_usage()
         sys.exit(0)
 
