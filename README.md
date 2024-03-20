@@ -9,7 +9,7 @@ Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.or
 
 Single file Python script without dependencies apart from Python 3.7+ and its standard library. 
 
-![](demo/basic.gif)
+![](demo/basic.png)
 
 ## Key Features
 
