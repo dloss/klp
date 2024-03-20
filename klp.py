@@ -180,12 +180,29 @@ def pprint_json(json_string, indent=2, sort_keys=True):
         print(f"Invalid JSON string: {e}")
         return ""
 
+def guess_datetime(timestamp, with_args=True):
+    global dt_conv_order
+    datetime = None
+    for i in dt_conv_order:
+        converter = datetime_converters[i]
+        try:
+            datetime = converter(timestamp)
+            # print("guess", i, timestamp, "as", datetime, datetime.tzname()) # debug
+            break
+        except (AttributeError, ValueError, TypeError):
+            continue
+    # Bring found converter to the front so that it's tried first next time
+    if not dt_conv_order[0] == i:
+        dt_conv_order.insert(0, dt_conv_order.pop(i))
+    return datetime
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
         base64,
         collections,
         datetime,
+        guess_datetime,
         hashlib,
         itertools,
         json,
@@ -384,21 +401,7 @@ datetime_converters = [
 dt_conv_order = list(range(len(datetime_converters)))
 
 
-def guess_datetime(timestamp, with_args=True):
-    global dt_conv_order
-    datetime = None
-    for i in dt_conv_order:
-        converter = datetime_converters[i]
-        try:
-            datetime = converter(timestamp)
-            # print("guess", i, timestamp, "as", datetime, datetime.tzname()) # debug
-            break
-        except (AttributeError, ValueError, TypeError):
-            continue
-    # Bring found converter to the front so that it's tried first next time
-    if not dt_conv_order[0] == i:
-        dt_conv_order.insert(0, dt_conv_order.pop(i))
-    return datetime
+
 
 
 def now_rfc3339():

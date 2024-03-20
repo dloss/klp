@@ -251,7 +251,10 @@ The following Python modules can be used in these expressions:
 `string`,
 `textwrap`.
 
-Moreover, a `pprint_json()` function is available to pretty print JSON data.
+The following additional functions are available:
+
+* `pprint_json()`: pretty print JSON data
+* `guess_datetime()`: convert a string into a Python datetime object
 
 ### Other input and output formats
 
