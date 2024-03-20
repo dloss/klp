@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.49.0"
+__version__ = "0.49.1"
 
 INPUT_QUOTE = r"\""
 
@@ -1339,7 +1339,7 @@ def parse_args():
 
     args.add_ts = "_ts" in args.keys
     args.add_ts_delta = "_ts_delta" in args.keys
-    args.add_line = "_line" in args.keys
+    args.add_line = "_line" in args.keys or "_line_number" in args.keys
 
     global TS_KEYS
     if args.ts_key:
@@ -1799,7 +1799,7 @@ def main():
             lines = lines_from_tsvfiles(args.files)
         else:
             lines = file_generator(args.files)
-        for line in lines:
+        for line_number, line in enumerate(lines):
             stats.num_lines_seen += 1
             # Do whole-line matches here to prevent parsing if line is not included
             if (
@@ -1815,7 +1815,7 @@ def main():
                     continue
 
             if args.add_line:
-                event = {"_line": line.rstrip(), "_ts": now_rfc3339()}
+                event = {"_line": line.rstrip(), "_line_number": line_number, "_ts": now_rfc3339()}
             else:
                 if args.add_ts:
                     line = line + f' _ts="{now_rfc3339()}"'
