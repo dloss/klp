@@ -10,8 +10,6 @@
 - Add --msg-key to set key name for message
 - Use fast string comparison for ISO dates
 - More input formats: like logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
-- More stats:
-  * Rate: avg events/s
 - Nice logo
 - Standalone executable (e.g. with Nuitka)
 - Rewrite in Rust :-)

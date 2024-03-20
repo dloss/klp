@@ -251,6 +251,8 @@ The following Python modules can be used in these expressions:
 `string`,
 `textwrap`.
 
+Moreover, a `pprint_json()` function is available to pretty print JSON data.
+
 ### Other input and output formats
 
 Apart from logfmt, klp supports the following other data formats:

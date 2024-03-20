@@ -171,6 +171,14 @@ def build_globals_dict(modules):
         d[name] = d[alt_name] = module
     return d
 
+def pprint_json(json_string, indent=2, sort_keys=True):
+    try:
+        parsed_json = json.loads(json_string)
+        pretty_json = json.dumps(parsed_json, indent=indent, sort_keys=sort_keys)
+        return pretty_json
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON string: {e}")
+        return ""
 
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
@@ -183,6 +191,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         json,
         math,
         pprint,
+        pprint_json,
         random,
         re,
         string,
