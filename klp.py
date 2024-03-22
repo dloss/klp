@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.49.1"
+__version__ = "0.50.0"
 
 INPUT_QUOTE = r"\""
 
@@ -171,14 +171,41 @@ def build_globals_dict(modules):
         d[name] = d[alt_name] = module
     return d
 
+
+def extract_first_json(text):
+    """Extract the first JSON object or array from a given text"""
+    json_start_chars = {"{", "["}
+    json_end_chars = {"}": "{", "]": "["}
+    start = None
+
+    for i, char in enumerate(text):
+        if start is None and char in json_start_chars:
+            start = i
+            stack = [char]
+        elif start is not None:
+            if char in json_start_chars:
+                stack.append(char)
+            elif char in json_end_chars and stack and json_end_chars[char] == stack[-1]:
+                stack.pop()
+                if not stack:
+                    try:
+                        json_str = text[start : i + 1]
+                        json.loads(json_str)
+                        return json_str
+                    except json.JSONDecodeError:
+                        start = None
+                        stack = []
+
+    raise ValueError(f"Could not extract JSON from {text!r}")
+
+
 def pprint_json(json_string, indent=2, sort_keys=True):
     try:
         parsed_json = json.loads(json_string)
         pretty_json = json.dumps(parsed_json, indent=indent, sort_keys=sort_keys)
         return pretty_json
     except json.JSONDecodeError as e:
-        print(f"Invalid JSON string: {e}")
-        return ""
+        raise ValueError("Invalid JSON string: {e}")
 
 def guess_datetime(timestamp, with_args=True):
     global dt_conv_order
@@ -196,23 +223,25 @@ def guess_datetime(timestamp, with_args=True):
         dt_conv_order.insert(0, dt_conv_order.pop(i))
     return datetime
 
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
         base64,
         collections,
         datetime,
-        guess_datetime,
         hashlib,
         itertools,
         json,
         math,
         pprint,
-        pprint_json,
         random,
         re,
         string,
         textwrap,
+        extract_first_json,
+        guess_datetime,
+        pprint_json,
     ]
 )
 
@@ -401,9 +430,6 @@ datetime_converters = [
 dt_conv_order = list(range(len(datetime_converters)))
 
 
-
-
-
 def now_rfc3339():
     return dt.datetime.now(tz=dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -524,8 +550,8 @@ def show_by_eval_template(event, template):
         try:
             return str(eval(expr, EXPORTED_GLOBALS, event_plus_underscore))
         except Exception as e:
-            if args.debug:
-                print(f"[Error evaluating '{expr} on {event}': {e}]", file=sys.stderr)
+            if args.debug or args.debug_eval:
+                print(f"[Error evaluating {expr!r}: {e}. {event=}]", file=sys.stderr)
             return ""
 
     # Replace all expressions in the template
@@ -764,8 +790,8 @@ def matches_python_expr(expr, event):  #
     try:
         return eval(expr, EXPORTED_GLOBALS, event_plus_underscore)
     except Exception as e:
-        if args.debug:
-            print(f"[Error: {e}. event={event}]", file=sys.stderr)
+        if args.debug or args.debug_where:
+            print(f"[Error matching {expr}: {e}. event={event}]", file=sys.stderr)
         return False
 
 
@@ -1298,6 +1324,18 @@ def parse_args():
         help="print exceptions",
     )
 
+    output_special.add_argument(
+        "--debug-where",
+        action="store_true",
+        help="print exceptions when evaluating --where expressions",
+    )
+
+    output_special.add_argument(
+        "--debug-eval",
+        action="store_true",
+        help="print exceptions when evaluating --output-eval expressions",
+    )
+
     other = parser.add_argument_group("other options")
     other.add_argument(
         "--selftest",
@@ -1678,6 +1716,52 @@ class MyTests(unittest.TestCase):
         self.assertEqual(unescape("значение со spaces"), "значение со spaces")
         self.assertEqual(unescape("\\x01"), "\x01")
 
+    def test_extract_first_json_valid_json_object(self):
+        self.assertEqual(
+            extract_first_json('{"name": "John", "age": 30}'),
+            '{"name": "John", "age": 30}',
+        )
+
+    def test_extract_first_json_valid_json_array(self):
+        self.assertEqual(extract_first_json("[1, 2, 3, 4]"), "[1, 2, 3, 4]")
+
+    def test_extract_first_json_nested_json(self):
+        self.assertEqual(
+            extract_first_json(
+                '{"person": {"name": "John", "age": 30}, "city": "New York"}'
+            ),
+            '{"person": {"name": "John", "age": 30}, "city": "New York"}',
+        )
+
+    def test_extract_first_json_json_with_text_before(self):
+        self.assertEqual(
+            extract_first_json('Hello world {"name": "John", "age": 30}'),
+            '{"name": "John", "age": 30}',
+        )
+
+    def test_extract_first_json_json_with_text_after(self):
+        self.assertEqual(
+            extract_first_json('{"name": "John", "age": 30} and more text'),
+            '{"name": "John", "age": 30}',
+        )
+
+    def test_extract_first_json_invalid_json(self):
+        with self.assertRaises(ValueError):
+            extract_first_json('{"name": "John" "age": 30}')
+
+    def test_extract_first_json_no_json(self):
+        with self.assertRaises(ValueError):
+            extract_first_json("Just a plain text without JSON")
+
+    def test_extract_first_json_multiple_json_objects(self):
+        self.assertEqual(
+            extract_first_json('{"name": "John"} {"age": 30}'), '{"name": "John"}'
+        )
+
+    def test_extract_first_json_empty_string(self):
+        with self.assertRaises(ValueError):
+            extract_first_json("")
+
 
 def do_tests():
     loader = unittest.TestLoader()
@@ -1815,7 +1899,11 @@ def main():
                     continue
 
             if args.add_line:
-                event = {"_line": line.rstrip(), "_line_number": line_number, "_ts": now_rfc3339()}
+                event = {
+                    "_line": line.rstrip(),
+                    "_line_number": line_number,
+                    "_ts": now_rfc3339(),
+                }
             else:
                 if args.add_ts:
                     line = line + f' _ts="{now_rfc3339()}"'

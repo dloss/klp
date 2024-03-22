@@ -253,8 +253,9 @@ The following Python modules can be used in these expressions:
 
 The following additional functions are available:
 
-* `pprint_json()`: pretty print JSON data
+* `extract_first_json()`: return the first JSON object or array in a given string as a string
 * `guess_datetime()`: convert a string into a Python datetime object
+* `pprint_json()`: pretty print JSON data
 
 ### Other input and output formats
 
