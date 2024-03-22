@@ -207,6 +207,7 @@ def pprint_json(json_string, indent=2, sort_keys=True):
     except json.JSONDecodeError as e:
         raise ValueError("Invalid JSON string: {e}")
 
+
 def guess_datetime(timestamp, with_args=True):
     global dt_conv_order
     datetime = None
@@ -1312,10 +1313,17 @@ def parse_args():
         help="output log levels only to give a big picture overview",
     )
     output_special.add_argument(
+        "--mark-gaps",
+        metavar="INTERVAL",
+        type=timedelta_from,
+        help="between events that are separated by more than INTERVAL,"
+        " show a marker that visually separates them.",
+    )
+    output_special.add_argument(
         "--fuse",
         metavar="INTERVAL",
         type=timedelta_from,
-        help="for a sequence of events that are separated by less then INTERVAL,"
+        help="for a sequence of events that are separated by less than INTERVAL,"
         " show only the first and last.",
     )
     output_special.add_argument(
@@ -1913,11 +1921,11 @@ def main():
 
             if visible(line, event):
                 # breakpoint()
-                if args.fuse is not None:
+                if args.fuse is not None or args.mark_gaps is not None:
                     ts_datetime = get_timestamp_datetime(event)
                     if ts_datetime is None:
                         # timestamp unknown: ignore event
-                        if fuse_maybe_last:
+                        if args.fuse is not None and fuse_maybe_last:
                             show(fuse_maybe_last)
                         continue
                     elif last_ts_datetime is None:
@@ -1926,21 +1934,25 @@ def main():
                     else:
                         ts_delta = ts_datetime - last_ts_datetime
                         last_ts_datetime = ts_datetime
-                        if ts_delta < args.fuse:
-                            # old block, ignore for now, but save for later
-                            # (will have to be printed if it was the last in block)
-                            fuse_maybe_last = event
-                            fuse_skipped += 1
-                            continue
-                        else:
-                            # new block: show last event from last block first
-                            if fuse_maybe_last:
-                                show(
-                                    fuse_maybe_last,
-                                    "fuse_last",
-                                    lineno=1 + fuse_skipped + 1,
-                                )
-                                print("", file=sys.stderr)
+                        if args.fuse is not None:
+                            if ts_delta < args.fuse:
+                                # old block, ignore for now, but save for later
+                                # (will have to be printed if it was the last in block)
+                                fuse_maybe_last = event
+                                fuse_skipped += 1
+                                continue
+                            else:
+                                # new block: show last event from last block first
+                                if fuse_maybe_last:
+                                    show(
+                                        fuse_maybe_last,
+                                        "fuse_last",
+                                        lineno=1 + fuse_skipped + 1,
+                                    )
+                                    print("", file=sys.stderr)
+                        elif args.mark_gaps is not None:
+                            if ts_delta > args.mark_gaps:
+                                print(f"time gap: {ts_delta}".center(terminal_width, "_"), file=sys.stderr)
                 if show_context and skipped > 0 and args.output_format == "default":
                     show_skipped_marker(skipped)
                 skipped = 0
