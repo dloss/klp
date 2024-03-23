@@ -106,6 +106,7 @@ THEMES = {
             "fuse_last": "blue",
         },
         "skipped_marker": {"before": "cyan", "number": "cyan", "after": "cyan"},
+        "gap_marker": {"before": "blue", "label": "blue", "after": "blue"},
     },
     "classic": {
         "keys": "green",
@@ -135,6 +136,7 @@ THEMES = {
             "fuse_last": "blue",
         },
         "skipped_marker": {"before": "blue", "number": "black", "after": "blue"},
+        "gap_marker": {"before": "blue", "label": "black", "after": "blue"},
     },
 }
 
@@ -1500,6 +1502,21 @@ def show_skipped_marker(skipped):
     )
 
 
+def show_gap_marker(timedelta, width):
+    colors = THEMES[args.theme]["gap_marker"]
+    label = f"time gap: {timedelta}"
+    separator = "_" * int((terminal_width - len(label) - 3) / 2)
+    print(
+        colorize(separator, colors["before"]),
+        colorize(label, colors["label"]),
+        colorize(
+            "_" * int((terminal_width - 1 - len(label) - 1 - len(separator))),
+            colors["after"],
+        ),
+        file=sys.stderr,
+    )
+
+
 def colored_levelchar(event):
     _, loglevel = get_log_level(event)
     if loglevel is None:
@@ -1952,7 +1969,7 @@ def main():
                                     print("", file=sys.stderr)
                         elif args.mark_gaps is not None:
                             if ts_delta > args.mark_gaps:
-                                print(f"time gap: {ts_delta}".center(terminal_width, "_"), file=sys.stderr)
+                                show_gap_marker(ts_delta, terminal_width)
                 if show_context and skipped > 0 and args.output_format == "default":
                     show_skipped_marker(skipped)
                 skipped = 0
