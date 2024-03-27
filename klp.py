@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.51.0"
+__version__ = "0.52.0"
 
 INPUT_QUOTE = r"\""
 
@@ -201,10 +201,10 @@ def extract_first_json(text):
     raise ValueError(f"Could not extract JSON from {text!r}")
 
 
-def pprint_json(json_string, indent=2, sort_keys=True):
+def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
     try:
         parsed_json = json.loads(json_string)
-        pretty_json = json.dumps(parsed_json, indent=indent, sort_keys=sort_keys)
+        pretty_json = json.dumps(parsed_json, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii)
         return pretty_json
     except json.JSONDecodeError as e:
         raise ValueError("Invalid JSON string: {e}")
@@ -527,8 +527,8 @@ def unescape(s):
     )
 
 
-def show_jsonl(event):
-    print(json.dumps(event))
+def show_jsonl(event, ensure_ascii=False):
+    print(json.dumps(event, ensure_ascii=ensure_ascii))
 
 
 def show_by_template(event, template):
@@ -723,8 +723,8 @@ def show_stats(stats):
     )
 
 
-def show_stats_json(stats):
-    print_err(json.dumps(dataclasses.asdict(stats), indent=2))
+def show_stats_json(stats, ensure_ascii):
+    print_err(json.dumps(dataclasses.asdict(stats), indent=2, ensure_ascii=ensure_ascii))
 
 
 def update_stats(stats, event):
