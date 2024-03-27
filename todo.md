@@ -1,4 +1,3 @@
-- logfmt output format (without additional info and colors, for post-processing)
 - Fix grep when used both with and without keys
 - Add -o for output to file
 - Allow to specify encodings for input/output

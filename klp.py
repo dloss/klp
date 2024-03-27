@@ -489,6 +489,8 @@ def show(event, context_type="", lineno=None):
             show_by_eval_template(event, args.output_eval)
         else:
             show_default(event, context_type, lineno)
+    elif args.output_format == "logfmt":
+        show_logfmt(event)
     elif args.output_format == "jsonl":
         show_jsonl(event)
     elif args.output_format == "tsv":
@@ -667,6 +669,28 @@ def show_default(event, context_type="", lineno=None):
             print(expand_color_codes(line))
         else:
             print(line)
+
+def show_logfmt(event, file=sys.stdout):
+    elems = []
+    for key, val in event.items():
+        double_quotes_needed = not args.plain and RE_WHITESPACE.search(val)
+        val = (
+            escape_doublequotes_quoted(val)
+            if double_quotes_needed
+                else escape_plain(val)
+        )
+        if key.lower() in TS_KEYS:
+            val = format_time(val)
+
+        if args.plain:
+            elems.append(f"{val}")
+        elif double_quotes_needed:
+            elems.append(f'{key}="{val}"')
+        else:
+            elems.append(f"{key}={val}")
+
+    line = " ".join(elems)
+    print(line, file=file)
 
 
 def print_err(*args, **kwargs):
@@ -1169,9 +1193,9 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "jsonl", "tsv"],
+        choices=["default", "logfmt", "jsonl", "tsv"],
         default="default",
-        help="format of the output data. Default: default",
+        help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
     output.add_argument(
         "--jsonl-output", "-J", action="store_true", help="output in JSON Lines format"
