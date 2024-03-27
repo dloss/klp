@@ -1,5 +1,4 @@
 - Unicode output for JSON
-- Use -f/-F for input/ouput format
 - logfmt output format (without additional info and colors, for post-processing)
 - Add -i for case-insensitive matching
 - Add -o for output to file

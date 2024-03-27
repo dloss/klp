@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.50.0"
+__version__ = "0.51.0"
 
 INPUT_QUOTE = r"\""
 
@@ -1003,7 +1003,7 @@ def parse_args():
     input = parser.add_argument_group("input options")
     input.add_argument(
         "--input-format",
-        "-i",
+        "-f",
         choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf", "combined"],
         default="logfmt",
         help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
@@ -1162,7 +1162,7 @@ def parse_args():
     output = parser.add_argument_group("output format options")
     output.add_argument(
         "--output-format",
-        "-o",
+        "-F",
         choices=["default", "jsonl", "tsv"],
         default="default",
         help="format of the output data. Default: default",

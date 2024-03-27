@@ -261,7 +261,7 @@ The following additional functions are available:
 
 Apart from logfmt, klp supports the following other data formats:
 
-Input formats (`--input-format`/`-i`):
+Input formats (`--input-format`/`-f`):
 - `jsonl`: JSON Lines (shortcut: `-j`)
 - `json`: JSON (only for complete files, not for streaming)
 - `tsv`: Tab separated values (keys have to be set manually with `-k`)
@@ -269,7 +269,7 @@ Input formats (`--input-format`/`-i`):
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
 
-Output formats (`--output-format`/`-o`):
+Output formats (`--output-format`/`-F`):
 - `default`: logfmt
 - `jsonl`: JSON Lines
 - `tsv`: Tab separated values (keys have to be set manually with `-k`) 
