@@ -1043,7 +1043,7 @@ def parse_args():
         metavar="REGEX",
         default=[],
         action="append",
-        help="only process lines matching the given REGEX. Use '(?i)REGEX' for case-insensitive matches. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
+        help="only process lines matching the given REGEX. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
     )
     grep.add_argument(
         "--grep-not",
@@ -1072,6 +1072,12 @@ def parse_args():
         action="append",
         help=f"don't process lines according to one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
     )
+    grep.add_argument(
+        "--ignore-case",
+        "-i",
+        action="store_true",
+        help="case-insensitive matching for all grep regexes",
+    )  
     grep.add_argument(
         "--where",
         metavar="EXPR",
@@ -1426,14 +1432,15 @@ def parse_args():
     args.grep_not_by_key, args.grep_not = make_regex_dict(args.grep_not)
 
     # compile regexes to improve performance
+    flags = re.IGNORECASE if args.ignore_case else 0
     try:
-        args.grep = [re.compile(regex) for regex in args.grep]
-        args.grep_not = [re.compile(regex) for regex in args.grep_not]
+        args.grep = [re.compile(regex, flags) for regex in args.grep]
+        args.grep_not = [re.compile(regex, flags) for regex in args.grep_not]
         args.grep_by_key = {
-            key: re.compile(regex) for key, regex in args.grep_by_key.items()
+            key: re.compile(regex, flags) for key, regex in args.grep_by_key.items()
         }
         args.grep_not_by_key = {
-            key: re.compile(regex) for key, regex in args.grep_not_by_key.items()
+            key: re.compile(regex, flags) for key, regex in args.grep_not_by_key.items()
         }
     except re.error as exc:
         print_err("Invalid regular expression:", exc)

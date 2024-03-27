@@ -1,5 +1,5 @@
 - logfmt output format (without additional info and colors, for post-processing)
-- Add -i for case-insensitive matching
+- Fix grep when used both with and without keys
 - Add -o for output to file
 - Allow to specify encodings for input/output
 - README: Add common use cases
