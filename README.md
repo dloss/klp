@@ -232,6 +232,8 @@ This can be be combined with other filters, such as `--grep` and grep context li
 Use `--max-events`/`-m` to limit the output to the given number of events.
 This is useful to avoid being flooded with lots and lots of output.
 
+Use `--skip` to avoid parsing the first lines.
+
 ### Customize the output formatting
 
 Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
