@@ -204,7 +204,9 @@ def extract_first_json(text):
 def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
     try:
         parsed_json = json.loads(json_string)
-        pretty_json = json.dumps(parsed_json, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii)
+        pretty_json = json.dumps(
+            parsed_json, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii
+        )
         return pretty_json
     except json.JSONDecodeError as e:
         raise ValueError("Invalid JSON string: {e}")
@@ -670,6 +672,7 @@ def show_default(event, context_type="", lineno=None):
         else:
             print(line)
 
+
 def show_logfmt(event, file=sys.stdout):
     elems = []
     for key, val in event.items():
@@ -677,7 +680,7 @@ def show_logfmt(event, file=sys.stdout):
         val = (
             escape_doublequotes_quoted(val)
             if double_quotes_needed
-                else escape_plain(val)
+            else escape_plain(val)
         )
         if key.lower() in TS_KEYS:
             val = format_time(val)
@@ -748,7 +751,9 @@ def show_stats(stats):
 
 
 def show_stats_json(stats, ensure_ascii):
-    print_err(json.dumps(dataclasses.asdict(stats), indent=2, ensure_ascii=ensure_ascii))
+    print_err(
+        json.dumps(dataclasses.asdict(stats), indent=2, ensure_ascii=ensure_ascii)
+    )
 
 
 def update_stats(stats, event):
@@ -1057,6 +1062,12 @@ def parse_args():
         type=csv_lower_type,
         help="comma-separated names of loglevels NOT to process (case-insensitive)",
     )
+    selection.add_argument(
+        "--skip",
+        metavar="NUM",
+        type=int,
+        help="don't process the first N number of lines",
+    )
 
     grep = parser.add_argument_group(
         "event selection by regular expression (grepping) options"
@@ -1101,7 +1112,7 @@ def parse_args():
         "-i",
         action="store_true",
         help="case-insensitive matching for all grep regexes",
-    )  
+    )
     grep.add_argument(
         "--where",
         metavar="EXPR",
@@ -1941,6 +1952,8 @@ def main():
             lines = file_generator(args.files)
         for line_number, line in enumerate(lines):
             stats.num_lines_seen += 1
+            if args.skip and args.skip >= stats.num_lines_seen:
+                continue
             # Do whole-line matches here to prevent parsing if line is not included
             if (
                 args.grep_not and any(regex.search(line) for regex in args.grep_not)
