@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.52.2"
+__version__ = "0.52.3"
 
 INPUT_QUOTE = r"\""
 
@@ -518,6 +518,8 @@ def show(event, context_type="", lineno=None):
         show_jsonl(event)
     elif args.output_format == "tsv":
         show_tsv(event)
+    elif args.output_format == "psv":
+        show_tsv(event, sep="|")
 
 
 def escape_doublequotes_quoted(s):
@@ -588,11 +590,11 @@ def show_by_eval_template(event, template):
         print(out)
 
 
-def show_tsv(event):
+def show_tsv(event, sep="\t"):
     cols = []
     for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
-    print("\t".join(cols))
+    print(sep.join(cols))
 
 
 def show_default(event, context_type="", lineno=None):
@@ -915,8 +917,8 @@ def parse(line, format):
         return parse_logfmt(line)
     elif format == "jsonl":
         return parse_jsonl(line)
-    elif format in ["json", "tsv"]:
-        # JSON and TSV files have been converted to logfmt
+    elif format in ["json", "tsv", "psv"]:
+        # Files have been converted to logfmt
         return parse_logfmt(line)
     elif format == "clf":
         return parse_clf(line)
@@ -1060,9 +1062,19 @@ def parse_args():
     input.add_argument(
         "--input-format",
         "-f",
-        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf", "combined", "line"],
+        choices=[
+            "logfmt",
+            "jsonl",
+            "json",
+            "tsv",
+            "psv",
+            "tap",
+            "clf",
+            "combined",
+            "line",
+        ],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
+        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
@@ -1231,7 +1243,7 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "logfmt", "jsonl", "tsv"],
+        choices=["default", "logfmt", "jsonl", "tsv", "psv"],
         default="default",
         help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
@@ -1447,9 +1459,9 @@ def parse_args():
     if args.jsonl_output:
         args.output_format = "jsonl"
 
-    if args.output_format == "tsv" and not args.keys:
+    if args.output_format in ["tsv", "psv"] and not args.keys:
         print_err(
-            "TSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
+            "TSV or PSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
         )
         sys.exit(1)
 
@@ -1538,7 +1550,7 @@ def parse_args():
         print_err("Time span must not be zero. This would not select any data.")
         sys.exit(1)
 
-    if args.plain or args.output_format in ["jsonl", "tsv"]:
+    if args.plain or args.output_format in ["jsonl", "tsv", "psv"]:
         args.output_quote = '"'
     elif args.unicode:
         args.output_quote = "\u201c"
@@ -1925,7 +1937,7 @@ def lines_from_jsonfiles(filenames):
     return out
 
 
-def lines_from_tsvfiles(filenames):
+def lines_from_tsvfiles(filenames, delimiter="\t"):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -1935,7 +1947,7 @@ def lines_from_tsvfiles(filenames):
             f = gzip.open(filename, "rt")
         else:
             f = open(filename, "r")
-        reader = csv.reader(f, delimiter="\t")
+        reader = csv.reader(f, delimiter=delimiter)
         # TODO: Support files without header
         headers = next(reader)
         for row in reader:
@@ -1957,6 +1969,9 @@ def main():
         if args.output_format == "tsv":
             # Header
             print("\t".join(args.keys))
+        elif args.output_format == "psv":
+            # Header
+            print("|".join(args.keys))
         show_context = (
             args.context or args.before_context or args.after_context
         ) and not args.stats_only
@@ -1975,6 +1990,8 @@ def main():
             lines = lines_from_jsonfiles(args.files)
         elif args.input_format == "tsv":
             lines = lines_from_tsvfiles(args.files)
+        elif args.input_format == "psv":
+            lines = lines_from_tsvfiles(args.files, delimiter="|")
         else:
             lines = file_generator(args.files)
         for line_number, line in enumerate(lines):

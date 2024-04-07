@@ -268,6 +268,7 @@ Input formats (`--input-format`/`-f`):
 - `jsonl`: JSON Lines (shortcut: `-j`)
 - `json`: JSON (only for complete files, not for streaming)
 - `tsv`: Tab separated values (keys have to be set manually with `-k`)
+- `psv`: Pipe separated values (keys have to be set manually with `-k`)
 - `tap`: Output of `linkerd viz tap`
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
@@ -277,6 +278,7 @@ Output formats (`--output-format`/`-F`):
 - `default`: logfmt
 - `jsonl`: JSON Lines
 - `tsv`: Tab separated values (keys have to be set manually with `-k`) 
+- `psv`: Pipe separated values (keys have to be set manually with `-k`) 
 
 The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
 
