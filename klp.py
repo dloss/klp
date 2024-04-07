@@ -448,8 +448,22 @@ datetime_converters = [
     lambda s: dt.datetime.fromtimestamp(float(s)),
     # Nginx timestamps (milliseconds since epoch)
     lambda s: dt.datetime.fromtimestamp(int(s) / 1000),
-    # Found in Apache logs
+    # Android logs
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year}-{s}", "%Y-%m-%d %H:%M:%S.%f"
+    ).astimezone(),
+    # Proxifier
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year}.{s}", "%Y.[%m.%d %H:%M:%S]"
+    ).astimezone(),
+    # HealthApp
+    lambda s: dt.datetime.strptime(s + "000", "%Y%m%d-%H:%M:%S:%f").astimezone(),
+    # Zookeeper
+    lambda s: dt.datetime.strptime(s + "000", "%Y-%m-%d %H:%M:%S,%f").astimezone(),
+    # Apache
     lambda s: dt.datetime.strptime(s, "[%a %b %d %H:%M:%S %Y]").astimezone(),
+    # Spark
+    lambda s: dt.datetime.strptime(s, "%y/%m/%d %H:%M:%S").astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
