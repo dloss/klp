@@ -229,6 +229,23 @@ def guess_datetime(timestamp, with_args=True):
     return datetime
 
 
+def format_datetime(val):
+    """
+    Formats a given string into a standardized ISO format string with milliseconds precision.
+    Guesses the datetime format.
+    """
+    if args.localtime:
+        val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
+    elif args.utc:
+        val = (
+            to_datetime(val)
+            .astimezone(dt.timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+    return val
+
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
@@ -245,6 +262,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         string,
         textwrap,
         extract_first_json,
+        format_datetime,
         guess_datetime,
         pprint_json,
     ]
@@ -430,6 +448,8 @@ datetime_converters = [
     lambda s: dt.datetime.fromtimestamp(float(s)),
     # Nginx timestamps (milliseconds since epoch)
     lambda s: dt.datetime.fromtimestamp(int(s) / 1000),
+    # Found in Apache logs
+    lambda s: dt.datetime.strptime(s, "[%a %b %d %H:%M:%S %Y]").astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
@@ -467,19 +487,6 @@ def get_timestamp_datetime(event):
         return to_datetime(event["at"])
     else:
         return None
-
-
-def format_time(val):
-    if args.localtime:
-        val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
-    elif args.utc:
-        val = (
-            to_datetime(val)
-            .astimezone(dt.timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
-    return val
 
 
 def show(event, context_type="", lineno=None):
@@ -608,7 +615,7 @@ def show_default(event, context_type="", lineno=None):
             val_color = ""
             if key_lower in TS_KEYS:
                 val_color = THEMES[args.theme]["timestamp_key"]
-                val = format_time(val)
+                val = format_datetime(val)
             elif key_lower in LEVEL_KEYS:
                 val_color = THEMES[args.theme]["levels"].get(val.lower(), "off")
             elif key_lower in MSG_KEYS:
@@ -683,7 +690,7 @@ def show_logfmt(event, file=sys.stdout):
             else escape_plain(val)
         )
         if key.lower() in TS_KEYS:
-            val = format_time(val)
+            val = format_datetime(val)
 
         if args.plain:
             elems.append(f"{val}")
@@ -737,8 +744,8 @@ def show_stats(stats):
         total_seconds = span.total_seconds()
         rate_info = f", {shown/total_seconds:.1f} events/s" if total_seconds > 0 else ""
         print_err(
-            f"Time span shown: { colorize(format_time(stats.first_timestamp), colors['timestamp_key']) } "
-            f"to { colorize(format_time(stats.last_timestamp), colors['timestamp_key']) }"
+            f"Time span shown: { colorize(format_datetime(stats.first_timestamp), colors['timestamp_key']) } "
+            f"to { colorize(format_datetime(stats.last_timestamp), colors['timestamp_key']) }"
             f" ({ span }{ rate_info })"
         )
     print_err(
@@ -2032,7 +2039,7 @@ def main():
                     if levelchars == 1:
                         ts = get_timestamp_str_or_none(event)
                         if ts:
-                            formatted_time = format_time(ts)
+                            formatted_time = format_datetime(ts)
                             # Cache value for more performance
                             len_formatted_time = len(formatted_time)
                             if args.color:
