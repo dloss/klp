@@ -499,6 +499,8 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "[%a %b %d %H:%M:%S %Y]").astimezone(),
     # Spark
     lambda s: dt.datetime.strptime(s, "%y/%m/%d %H:%M:%S").astimezone(),
+    # BGL
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d-%H.%M.%S.%f").astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
