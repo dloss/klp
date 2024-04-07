@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.54.0"
+__version__ = "0.54.1"
 
 INPUT_QUOTE = r"\""
 
@@ -992,7 +992,7 @@ def parse_jsonl(line):
             print_err(repr(line))
             print_err(f"Invalid JSON syntax in the above line:", exc)
         return result
-    for key, val in flatten_json(json_data).items():
+    for key, val in flatten_object(json_data).items():
         if isinstance(val, str):
             result[key] = val
         else:
@@ -1118,7 +1118,7 @@ def positive_int(value):
     return ivalue
 
 
-def flatten(l):
+def flatten_sublists(l):
     return [item for sublist in l for item in sublist]
 
 
@@ -1584,8 +1584,8 @@ def parse_args():
         args.before_context = args.context
         args.after_context = args.context
 
-    args.grep += flatten(args.grep_builtin)
-    args.grep_not += flatten(args.grep_builtin_not)
+    args.grep += flatten_sublists(args.grep_builtin)
+    args.grep_not += flatten_sublists(args.grep_builtin_not)
 
     # Move key=regex args into separate variables
     args.grep_by_key, args.grep = make_regex_dict(args.grep)
@@ -1964,22 +1964,22 @@ def do_tests():
     return result
 
 
-def flatten_json(json_data, separator="."):
+def flatten_object(json_data, separator="."):
     flattened = {}
 
-    def flatten(x, name=""):
+    def _flatten(x, name=""):
         if type(x) is dict:
             for a in x:
-                flatten(x[a], name + a + separator)
+                _flatten(x[a], name + a + separator)
         elif type(x) is list:
             i = 0
             for a in x:
-                flatten(a, name + str(i) + separator)
+                _flatten(a, name + str(i) + separator)
                 i += 1
         else:
             flattened[name[:-1]] = x
 
-    flatten(json_data)
+    _flatten(json_data)
     return flattened
 
 
@@ -2014,11 +2014,11 @@ def lines_from_jsonfiles(filenames):
         data = read_json_from_input(filename)
         if type(data) is list:
             for elem in data:
-                flat = flatten_json(elem)
+                flat = flatten_object(elem)
                 line = build_line(flat)
                 out.append(line)
         else:
-            flat = flatten_json(data)
+            flat = flatten_object(data)
             line = build_line(flat)
             out.append(line)
     return out
