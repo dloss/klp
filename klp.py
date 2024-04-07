@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.53.2"
+__version__ = "0.54.0"
 
 INPUT_QUOTE = r"\""
 
@@ -951,23 +951,26 @@ def reorder(event):
 
 def parse(line, format):
     if format == "logfmt":
-        return parse_logfmt(line)
+        event = parse_logfmt(line)
     elif format == "jsonl":
-        return parse_jsonl(line)
+        event = parse_jsonl(line)
     elif format in ["json", "tsv", "psv"]:
         # Files have been converted to logfmt
-        return parse_logfmt(line)
+        event = parse_logfmt(line)
     elif format == "clf":
-        return parse_clf(line)
+        event = parse_clf(line)
     elif format == "combined":
-        return parse_combined(line)
+        event = parse_combined(line)
     elif format == "unix":
-        return parse_unix(line)
+        event = parse_unix(line)
     elif format == "line":
-        return parse_line(line)
+        event = parse_line(line)
     else:
         print_err("Unknown input format.")
         exit()
+    if args.input_exec:
+        event = input_exec(args.input_exec, event)
+    return event
 
 
 def parse_logfmt(text):
@@ -1031,6 +1034,32 @@ def parse_unix(line):
 
 def parse_line(line):
     return {"line": line.rstrip()}
+
+
+def input_exec(code, event):
+    def exec_and_get_locals(code, local_vars):
+        if local_vars is None:
+            local_vars = {}
+        exec(code, EXPORTED_GLOBALS, local_vars)
+        return local_vars
+
+    local_vars = event.copy()
+    # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
+    local_vars["_"] = event
+    try:
+        event = exec_and_get_locals(code, local_vars)
+        # Make sure the output values are all strings, like we expect in other parts of the code,
+        # and uppress non-existing fields
+        event = {str(key): str(val) for key, val in event.items() if val is not None}
+        del event["_"]
+    except Exception as e:
+        if args.debug or args.debug_eval:
+            print(
+                f"[Error executing {args.input_exec!r}: {e}. {event=}]",
+                file=sys.stderr,
+            )
+        return {}
+    return event
 
 
 def extract_key_regex(spec):
@@ -1122,12 +1151,19 @@ def parse_args():
             "combined",
             "unix",
             "line",
+            "exec",
         ],
         default="logfmt",
         help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
+    )
+    input.add_argument(
+        "--input-exec",
+        metavar="CODE",
+        default="",
+        help="execute Python code to transform event after input parsing",
     )
     input.add_argument(
         "--prefix",
@@ -1617,6 +1653,7 @@ def parse_args():
         args.output_width = terminal_width
     if args.output_sep:
         args.output_sep = args.output_sep.replace("\\n", "\n").replace("\\t", "\t")
+
     return args
 
 

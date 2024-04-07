@@ -287,6 +287,24 @@ Output formats (`--output-format`/`-F`):
 
 The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
 
+### Advanced input transformations using Python code
+
+You can specify Python code that transforms the event after it has been parsed.
+This allows to introduce new fields based on existing ones, or ad-hoc parsers for unknown formats.
+All functions available for output formatting (see above) are available here as well:
+
+```bash
+$ klp examples/mylog.logfmt --input-exec "msg_len=len(msg); del msg"
+$ klp examples/alertmanager.logfmt --input-exec "path=(extract_first_path(file) or None)" -k path
+$ klp -f line BGL_2k.log --input-exec "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
+```
+
+To allow key names that are not valid Python identifiers, the parsed event dict is available as an underscore:
+
+```bash
+$ klp examples/qryn.jsonl -j --input-exec "method=_['req.method'].lower()"
+```
+
 ### Synthetic fields
 
 klp can add some additional fields to the event.
