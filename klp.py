@@ -53,6 +53,11 @@ RE_COMBINED = re.compile(
     r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+) "(?P<referrer>[^"]*)" "(?P<agent>[^"]*)"'
 )
 
+RE_UNIX = re.compile(
+    r"(?P<timestamp>\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<service>\S+)\s*:\s+(?P<message>.*)"
+)
+
+
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
     "black": ("\x1b[30m", "\x01"),
@@ -924,6 +929,8 @@ def parse(line, format):
         return parse_clf(line)
     elif format == "combined":
         return parse_combined(line)
+    elif format == "unix":
+        return parse_unix(line)
     elif format == "line":
         return parse_line(line)
     else:
@@ -976,6 +983,14 @@ def parse_combined(line):
         if d["size"] == "-":
             d["size"] = "0"
         return d
+    else:
+        return {}
+
+
+def parse_unix(line):
+    match = RE_UNIX.match(line)
+    if match:
+        return match.groupdict()
     else:
         return {}
 
@@ -1071,6 +1086,7 @@ def parse_args():
             "tap",
             "clf",
             "combined",
+            "unix",
             "line",
         ],
         default="logfmt",
