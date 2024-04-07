@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.53.1"
+__version__ = "0.53.2"
 
 INPUT_QUOTE = r"\""
 
@@ -255,6 +255,30 @@ def format_datetime(val):
     return val
 
 
+def extract_first_regex(pattern, s):
+    match = re.search(pattern, s)
+    if match:
+        return match.group()
+    return ""
+
+
+def extract_builtin_regex(regex_name, s):
+    if regex_name in BUILTIN_REGEXES:
+        pattern = BUILTIN_REGEXES[regex_name][0]
+        match = re.search(pattern, s)
+        if match:
+            return match.group()
+    return ""
+
+
+def create_extraction_function(regex_name):
+    def extraction_function(s):
+        return extract_builtin_regex(regex_name, s)
+
+    extraction_function.__name__ = f"extract_first_{regex_name}"
+    return extraction_function
+
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
@@ -271,10 +295,12 @@ EXPORTED_GLOBALS = build_globals_dict(
         string,
         textwrap,
         extract_first_json,
+        extract_first_regex,
         format_datetime,
         guess_datetime,
         pprint_json,
     ]
+    + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
 )
 
 

@@ -256,6 +256,10 @@ The following Python modules can be used in these expressions:
 The following additional functions are available:
 
 * `extract_first_json()`: return the first JSON object or array in a given string as a string
+* `extract_first_email()`: return the first email address in a given string
+* `extract_first_fqdn()`: return the first FQDN in a given string
+* `extract_first_ipv4()`: return the first IPv4 address in a given string
+* `extract_first_url()`: return the first URL in a given string
 * `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
 * `guess_datetime()`: convert a string into a Python datetime object
 * `pprint_json()`: pretty print JSON data
