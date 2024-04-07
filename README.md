@@ -205,7 +205,7 @@ Prepend `(?i)`to the regex for case-insensitive matches.
 By default, `--grep` searches on the whole line. 
 To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
 
-klp has several builtin regexes to match URLs, email addresses, common errors, path names or IP addresses.
+klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
 Use `--grep-builtin`/`-r` to use them.
 
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
