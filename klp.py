@@ -279,6 +279,93 @@ def create_extraction_function(regex_name):
     return extraction_function
 
 
+def parse(line, format):
+    if format == "logfmt":
+        event = parse_logfmt(line)
+    elif format == "jsonl":
+        event = parse_jsonl(line)
+    elif format in ["json", "tsv", "psv"]:
+        # Files have been converted to logfmt
+        event = parse_logfmt(line)
+    elif format == "clf":
+        event = parse_clf(line)
+    elif format == "combined":
+        event = parse_combined(line)
+    elif format == "unix":
+        event = parse_unix(line)
+    elif format == "line":
+        event = parse_line(line)
+    else:
+        print_err("Unknown input format.")
+        exit()
+    if args.input_exec:
+        event = input_exec(args.input_exec, event)
+    return event
+
+
+def parse_logfmt(text):
+    return {
+        key: (unescape(quoted_val) if quoted_val else unquoted_val)
+        for key, quoted_val, unquoted_val in RE_LOGFMT.findall(text)
+    }
+
+
+def parse_jsonl(line):
+    # Only handle top-level strings. Everything else is converted into a string
+    result = {}
+    try:
+        # Ignore text before and after JSON object
+        json_str = line[line.index("{") : line.rindex("}") + 1]
+        json_data = json.loads(json_str)
+    except (ValueError, json.decoder.JSONDecodeError) as exc:
+        if args.debug:
+            print_err(repr(line))
+            print_err(f"Invalid JSON syntax in the above line:", exc)
+        return result
+    for key, val in flatten_object(json_data).items():
+        if isinstance(val, str):
+            result[key] = val
+        else:
+            result[key] = repr(val)
+    return result
+
+
+def parse_clf(line):
+    match = RE_CLF.match(line)
+    if match:
+        d = match.groupdict()
+        if d["size"] == "-":
+            d["size"] = "0"
+        return d
+    else:
+        return {}
+
+
+def parse_combined(line):
+    match = RE_COMBINED.match(line)
+    if match:
+        d = match.groupdict()
+        if d["size"] == "-":
+            d["size"] = "0"
+        return d
+    else:
+        return {}
+
+
+def parse_unix(line):
+    match = RE_UNIX.match(line)
+    if match:
+        return {
+            k: v for k, v in match.groupdict().items() if k != "pid" or v is not None
+        }
+    else:
+        return {}
+
+
+def parse_line(line):
+    return {"line": line.rstrip()}
+
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
@@ -298,6 +385,12 @@ EXPORTED_GLOBALS = build_globals_dict(
         extract_first_regex,
         format_datetime,
         guess_datetime,
+        parse_logfmt,
+        parse_jsonl,
+        parse_clf,
+        parse_combined,
+        parse_unix,
+        parse_line,
         pprint_json,
     ]
     + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
@@ -949,93 +1042,6 @@ def reorder(event):
     }
 
 
-def parse(line, format):
-    if format == "logfmt":
-        event = parse_logfmt(line)
-    elif format == "jsonl":
-        event = parse_jsonl(line)
-    elif format in ["json", "tsv", "psv"]:
-        # Files have been converted to logfmt
-        event = parse_logfmt(line)
-    elif format == "clf":
-        event = parse_clf(line)
-    elif format == "combined":
-        event = parse_combined(line)
-    elif format == "unix":
-        event = parse_unix(line)
-    elif format == "line":
-        event = parse_line(line)
-    else:
-        print_err("Unknown input format.")
-        exit()
-    if args.input_exec:
-        event = input_exec(args.input_exec, event)
-    return event
-
-
-def parse_logfmt(text):
-    return {
-        key: (unescape(quoted_val) if quoted_val else unquoted_val)
-        for key, quoted_val, unquoted_val in RE_LOGFMT.findall(text)
-    }
-
-
-def parse_jsonl(line):
-    # Only handle top-level strings. Everything else is converted into a string
-    result = {}
-    try:
-        # Ignore text before and after JSON object
-        json_str = line[line.index("{") : line.rindex("}") + 1]
-        json_data = json.loads(json_str)
-    except (ValueError, json.decoder.JSONDecodeError) as exc:
-        if args.debug:
-            print_err(repr(line))
-            print_err(f"Invalid JSON syntax in the above line:", exc)
-        return result
-    for key, val in flatten_object(json_data).items():
-        if isinstance(val, str):
-            result[key] = val
-        else:
-            result[key] = repr(val)
-    return result
-
-
-def parse_clf(line):
-    match = RE_CLF.match(line)
-    if match:
-        d = match.groupdict()
-        if d["size"] == "-":
-            d["size"] = "0"
-        return d
-    else:
-        return {}
-
-
-def parse_combined(line):
-    match = RE_COMBINED.match(line)
-    if match:
-        d = match.groupdict()
-        if d["size"] == "-":
-            d["size"] = "0"
-        return d
-    else:
-        return {}
-
-
-def parse_unix(line):
-    match = RE_UNIX.match(line)
-    if match:
-        return {
-            k: v for k, v in match.groupdict().items() if k != "pid" or v is not None
-        }
-    else:
-        return {}
-
-
-def parse_line(line):
-    return {"line": line.rstrip()}
-
-
 def input_exec(code, event):
     def exec_and_get_locals(code, local_vars):
         if local_vars is None:
@@ -1048,9 +1054,18 @@ def input_exec(code, event):
     local_vars["_"] = event
     try:
         event = exec_and_get_locals(code, local_vars)
+        if "__" in event:
+            for key, val in event["__"].items():
+                if val is not None:
+                    event[key] = val
+            del event["__"]
         # Make sure the output values are all strings, like we expect in other parts of the code,
         # and uppress non-existing fields
-        event = {str(key): str(val) for key, val in event.items() if val is not None}
+        event = {
+            str(key): str(val)
+            for key, val in event.items()
+            if val is not None and key != "__"
+        }
         del event["_"]
     except Exception as e:
         if args.debug or args.debug_eval:
