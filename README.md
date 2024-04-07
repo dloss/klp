@@ -270,6 +270,7 @@ Input formats (`--input-format`/`-f`):
 - `tap`: Output of `linkerd viz tap`
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
+- `line`: lines of text (trailing whitespace removed)
 
 Output formats (`--output-format`/`-F`):
 - `default`: logfmt

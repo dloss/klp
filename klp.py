@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.52.1"
+__version__ = "0.52.2"
 
 INPUT_QUOTE = r"\""
 
@@ -901,6 +901,8 @@ def parse(line, format):
         return parse_clf(line)
     elif format == "combined":
         return parse_combined(line)
+    elif format == "line":
+        return parse_line(line)
     else:
         print_err("Unknown input format.")
         exit()
@@ -953,6 +955,10 @@ def parse_combined(line):
         return d
     else:
         return {}
+
+
+def parse_line(line):
+    return {"line": line.rstrip()}
 
 
 def extract_key_regex(spec):
@@ -1033,7 +1039,7 @@ def parse_args():
     input.add_argument(
         "--input-format",
         "-f",
-        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf", "combined"],
+        choices=["logfmt", "jsonl", "json", "tsv", "tap", "clf", "combined", "line"],
         default="logfmt",
         help="format of the input data. Default: logfmt. tsv needs a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
     )
