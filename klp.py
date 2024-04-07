@@ -54,7 +54,10 @@ RE_COMBINED = re.compile(
 )
 
 RE_UNIX = re.compile(
-    r"(?P<timestamp>\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<service>\S+)\s*:\s+(?P<message>.*)"
+        r"(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+"
+        r"(?P<hostname>\S+)\s+"
+        r"(?P<service>\S+?)(?:\[(?P<pid>\d+)\])?\s*:\s+"
+        r"(?P<message>.*)"
 )
 
 
@@ -990,7 +993,9 @@ def parse_combined(line):
 def parse_unix(line):
     match = RE_UNIX.match(line)
     if match:
-        return match.groupdict()
+        return {
+            k: v for k, v in match.groupdict().items() if k != "pid" or v is not None
+        }
     else:
         return {}
 
