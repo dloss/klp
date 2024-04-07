@@ -289,8 +289,8 @@ The JSONL and TSV output formats are useful for further processing with tools li
 
 ### Advanced input transformations using Python code
 
-You can specify Python code that transforms the event after it has been parsed.
-This allows to introduce new fields based on existing ones, or ad-hoc parsers for unknown formats.
+Use `--input-exec` to specify Python code that transforms the event after it has been parsed.
+This allows you to introduce new fields based on existing ones, or even develop an ad-hoc parser for an unknown format.
 All functions available for output formatting (see above) are available here as well:
 
 ```bash
