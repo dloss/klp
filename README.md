@@ -316,7 +316,7 @@ For performance reasons this is only done if you explitly list these keys using 
 
 ## Complementary tools
 
-These tools aren't specialized on log fiels, but useful to post-process or view klp`s output, particulary the JSONL or TSV formats:
+These tools aren't specialized on log files, but useful to post-process or view klp`s output, particulary the JSONL or TSV formats:
 
 - [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
 - [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
@@ -329,6 +329,22 @@ These tools aren't specialized on log fiels, but useful to post-process or view 
 - [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
 - [Benthos](https://github.com/benthosdev/benthos.git): high performance and resilient stream processor, able to connect various sources and sinks in a range of brokering patterns and perform hydration, enrichments, transformations and filters on payloads
+
+The TSV format can be processed by spreadsheet software and common Unix tools:
+
+- [cut](https://man7.org/linux/man-pages/man1/cut.1.html): uses tab separator by default
+- [AWK](https://man7.org/linux/man-pages/man1/awk.1p.html): `-F$'\t'`
+- [sort](https://man7.org/linux/man-pages/man1/sort.1.html): `-t$'\t'`
+- [column](https://man7.org/linux/man-pages/man1/column.1.html): `-s$'\t' -N timestamp,log_level,message -J` (can convert to JSON)
+- [Vim](https://www.vim.org): `:set list    :set listchars=tab:>-`
+- [Pandas](https://pandas.pydata.org):  `pd.read_table()`
+- [SQLite](https://www.sqlite.org):
+
+```sql
+sqlite> .mode tabs
+sqlite> .import data.tsv data
+sqlite> select date(timestamp) as day, count(*) from data group by day;
+```
 
 ## Alternatives
 
