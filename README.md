@@ -259,6 +259,7 @@ The following additional functions are available:
 * `extract_first_email()`: return the first email address in a given string
 * `extract_first_fqdn()`: return the first FQDN in a given string
 * `extract_first_ipv4()`: return the first IPv4 address in a given string
+* `extract_first_regex()`: return first part of the string matching a regex
 * `extract_first_url()`: return the first URL in a given string
 * `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
 * `guess_datetime()`: convert a string into a Python datetime object

@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.54.1"
+__version__ = "0.54.2"
 
 INPUT_QUOTE = r"\""
 
@@ -255,10 +255,10 @@ def format_datetime(val):
     return val
 
 
-def extract_first_regex(pattern, s):
+def extract_first_regex(pattern, s, *groupargs):
     match = re.search(pattern, s)
     if match:
-        return match.group()
+        return match.group(*groupargs)
     return ""
 
 
