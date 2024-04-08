@@ -281,7 +281,7 @@ Input formats (`--input-format`/`-f`):
 
 Output formats (`--output-format`/`-F`):
 - `default`: logfmt
-- `jsonl`: JSON Lines
+- `jsonl`: JSON Lines (shortcut: `-J`)
 - `tsv`: Tab separated values (keys have to be set manually with `-k`) 
 - `psv`: Pipe separated values (keys have to be set manually with `-k`) 
 
