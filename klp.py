@@ -1175,16 +1175,16 @@ def parse_args():
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
     )
     input.add_argument(
-        "--input-exec",
-        metavar="CODE",
-        default="",
-        help="execute Python code to transform event after input parsing",
-    )
-    input.add_argument(
         "--prefix",
         metavar="STR",
         default="",
         help="prepend given string to each log line before parsing it",
+    )
+    input.add_argument(
+        "--input-exec",
+        metavar="CODE",
+        default="",
+        help="execute Python code to transform event after input parsing",
     )
 
     selection = parser.add_argument_group("event selection options")
