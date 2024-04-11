@@ -255,12 +255,12 @@ The following Python modules can be used in these expressions:
 
 The following additional functions are available:
 
-* `extract_first_json()`: return the first JSON object or array in a given string as a string
-* `extract_first_email()`: return the first email address in a given string
-* `extract_first_fqdn()`: return the first FQDN in a given string
-* `extract_first_ipv4()`: return the first IPv4 address in a given string
-* `extract_first_regex()`: return first part of the string matching a regex
-* `extract_first_url()`: return the first URL in a given string
+* `extract_json()`: return the first JSON object or array in a given string as a string
+* `extract_email()`: return the first email address in a given string
+* `extract_fqdn()`: return the first FQDN in a given string
+* `extract_ipv4()`: return the first IPv4 address in a given string
+* `extract_regex()`: return first part of the string matching a regex
+* `extract_url()`: return the first URL in a given string
 * `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
 * `guess_datetime()`: convert a string into a Python datetime object
 * `pprint_json()`: pretty print JSON data
@@ -296,7 +296,7 @@ All functions available for output formatting (see above) are available here as 
 
 ```bash
 $ klp examples/mylog.logfmt --input-exec "msg_len=len(msg); del msg"
-$ klp examples/alertmanager.logfmt --input-exec "path=(extract_first_path(file) or None)" -k path
+$ klp examples/alertmanager.logfmt --input-exec "path=(extract_path(file) or None)" -k path
 $ klp -f line BGL_2k.log --input-exec "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
 ```
 

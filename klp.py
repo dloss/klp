@@ -183,7 +183,7 @@ def build_globals_dict(modules):
     return d
 
 
-def extract_first_json(text):
+def extract_json(text):
     """Extract the first JSON object or array from a given text"""
     json_start_chars = {"{", "["}
     json_end_chars = {"}": "{", "]": "["}
@@ -255,7 +255,7 @@ def format_datetime(val):
     return val
 
 
-def extract_first_regex(pattern, s, *groupargs):
+def extract_regex(pattern, s, *groupargs):
     match = re.search(pattern, s)
     if match:
         return match.group(*groupargs)
@@ -275,7 +275,7 @@ def create_extraction_function(regex_name):
     def extraction_function(s):
         return extract_builtin_regex(regex_name, s)
 
-    extraction_function.__name__ = f"extract_first_{regex_name}"
+    extraction_function.__name__ = f"extract_{regex_name}"
     return extraction_function
 
 
@@ -381,8 +381,8 @@ EXPORTED_GLOBALS = build_globals_dict(
         re,
         string,
         textwrap,
-        extract_first_json,
-        extract_first_regex,
+        extract_json,
+        extract_regex,
         format_datetime,
         guess_datetime,
         parse_logfmt,
@@ -1924,51 +1924,51 @@ class MyTests(unittest.TestCase):
         self.assertEqual(unescape("значение со spaces"), "значение со spaces")
         self.assertEqual(unescape("\\x01"), "\x01")
 
-    def test_extract_first_json_valid_json_object(self):
+    def test_extract_json_valid_json_object(self):
         self.assertEqual(
-            extract_first_json('{"name": "John", "age": 30}'),
+            extract_json('{"name": "John", "age": 30}'),
             '{"name": "John", "age": 30}',
         )
 
-    def test_extract_first_json_valid_json_array(self):
-        self.assertEqual(extract_first_json("[1, 2, 3, 4]"), "[1, 2, 3, 4]")
+    def test_extract_json_valid_json_array(self):
+        self.assertEqual(extract_json("[1, 2, 3, 4]"), "[1, 2, 3, 4]")
 
-    def test_extract_first_json_nested_json(self):
+    def test_extract_json_nested_json(self):
         self.assertEqual(
-            extract_first_json(
+            extract_json(
                 '{"person": {"name": "John", "age": 30}, "city": "New York"}'
             ),
             '{"person": {"name": "John", "age": 30}, "city": "New York"}',
         )
 
-    def test_extract_first_json_json_with_text_before(self):
+    def test_extract_json_json_with_text_before(self):
         self.assertEqual(
-            extract_first_json('Hello world {"name": "John", "age": 30}'),
+            extract_json('Hello world {"name": "John", "age": 30}'),
             '{"name": "John", "age": 30}',
         )
 
-    def test_extract_first_json_json_with_text_after(self):
+    def test_extract_json_json_with_text_after(self):
         self.assertEqual(
-            extract_first_json('{"name": "John", "age": 30} and more text'),
+            extract_json('{"name": "John", "age": 30} and more text'),
             '{"name": "John", "age": 30}',
         )
 
-    def test_extract_first_json_invalid_json(self):
+    def test_extract_json_invalid_json(self):
         with self.assertRaises(ValueError):
-            extract_first_json('{"name": "John" "age": 30}')
+            extract_json('{"name": "John" "age": 30}')
 
-    def test_extract_first_json_no_json(self):
+    def test_extract_json_no_json(self):
         with self.assertRaises(ValueError):
-            extract_first_json("Just a plain text without JSON")
+            extract_json("Just a plain text without JSON")
 
-    def test_extract_first_json_multiple_json_objects(self):
+    def test_extract_json_multiple_json_objects(self):
         self.assertEqual(
-            extract_first_json('{"name": "John"} {"age": 30}'), '{"name": "John"}'
+            extract_json('{"name": "John"} {"age": 30}'), '{"name": "John"}'
         )
 
-    def test_extract_first_json_empty_string(self):
+    def test_extract_json_empty_string(self):
         with self.assertRaises(ValueError):
-            extract_first_json("")
+            extract_json("")
 
 
 def do_tests():
