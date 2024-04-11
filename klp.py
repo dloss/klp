@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.54.2"
+__version__ = "0.55.0"
 
 INPUT_QUOTE = r"\""
 
@@ -633,6 +633,124 @@ def get_timestamp_datetime(event):
         return None
 
 
+class WhitespaceString:
+    def __init__(self, string):
+        self.string = string
+
+    def __str__(self):
+        return self.string
+
+    def __len__(self):
+        return len(self.string)
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.string[key]
+        else:
+            raise TypeError("WhitespaceString indices must be integers")
+
+    def col(self, n):
+        """
+        Extrahiert die n-te Spalte aus dem String.
+
+        Args:
+            n: Spaltennummer (0-basiert).
+
+        Returns:
+            Die n-te Spalte des Strings oder None, wenn die Spalte nicht existiert.
+        """
+
+        parts = self.string.split()
+        if n < 0 or n >= len(parts):
+            return None
+        else:
+            return parts[n]
+
+    def cols(self, *args, sep=None, outsep=None):
+        """Returns a string containing selected columns from the internal whitespace-separated string.
+
+        This method extracts and combines specific columns from the string stored in the WhitespaceString object. 
+        It supports both single column indexing and slicing.
+
+        * Input arguments:
+            * args: Accepts zero or more arguments representing column indices or slices. 
+                    If no arguments are provided, the entire string is returned.
+            * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
+            * outsep (optional): Delimiter used to join the selected columns (defaults to sep or whitespace).
+
+        * Column selection:
+            * Supports single integer indices to select specific columns.
+            * Supports colon-separated strings to define slices of columns.
+            * Handles out-of-range or invalid integer inputs silently.
+
+        * Output formatting:
+            * Joins the selected columns using the specified outsep delimiter.
+
+        Examples:
+
+        >>> s = WhitespaceString("This is a test with 7 columns")
+        >>> s.cols()  # Returns entire string by default
+        'This is a test with 7 columns'
+        >>> s.cols(0, 3)  # Select columns 0 and 3
+        'This test'
+        >>> s.cols("0,3")  # Select columns 0 and 3 using a comma-separated string
+        'This test'
+        >>> s.cols("1")  # Select column 1
+        'is'
+        >>> s.cols(1)  # Select column 1, equivalent to above
+        'is'
+        >>> s.cols("14")  # Attempt to select an out-of-range column 14
+        ''
+        >>> s.cols("1:3")  # Select a range of columns from 1 to 2 (end exclusive)
+        'is a'
+        >>> s.cols("-2,2,4:")  # Select columns using negative index and open-ended slice
+        '7 a with 7 columns'
+        >>> s.cols("0,3", " ")  # Specify output separator
+        'This test'
+        >>> t = WhitespaceString("This|is a|test with|4 columns")
+        >>> t.cols("1:3", sep="|")  # Specify a different column separator
+        'is a|test with'
+        >>> t.cols("-2,2,4:", sep="|", outsep=":")  # Specify both column and output separators
+        'test with:test with'
+        """
+
+        result = []
+        columns = self.string.split(sep)
+        if not args:
+            args = ":"
+
+        for arg in args:
+            # Split the input by commas for multiple indices or slices
+            indices_list = str(arg).split(',')
+
+            for index_or_slice in indices_list:
+                if ':' in index_or_slice:  # It's a slice
+                    parts = index_or_slice.split(':')
+
+                    # Convert string parts to integers or None
+                    # If there are less than 3 parts, fill the remaining with None
+                    parts = [int(p) if p else None for p in parts] + [None] * (3 - len(parts))
+
+                    start, stop, step = parts
+
+                    # Append the sliced part of the list to the result list
+                    result.extend(columns[slice(start, stop, step)])
+                else:  # It's a single index
+                    try:
+                        idx = int(index_or_slice)
+                        result.append(columns[idx])
+                    except (ValueError, IndexError):
+                        # Ignore invalid or out-of-range integer inputs
+                        pass
+
+        if outsep is None:
+            if sep is None:
+                outsep = " "
+            else:
+                outsep = sep
+        return outsep.join(result)
+
+
 def show(event, context_type="", lineno=None):
     event = reorder(event)
     if args.output_format == "default":
@@ -1049,7 +1167,8 @@ def input_exec(code, event):
         exec(code, EXPORTED_GLOBALS, local_vars)
         return local_vars
 
-    local_vars = event.copy()
+    # Allow special methods on String
+    local_vars = {key: WhitespaceString(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
     try:
@@ -1935,9 +2054,7 @@ class MyTests(unittest.TestCase):
 
     def test_extract_json_nested_json(self):
         self.assertEqual(
-            extract_json(
-                '{"person": {"name": "John", "age": 30}, "city": "New York"}'
-            ),
+            extract_json('{"person": {"name": "John", "age": 30}, "city": "New York"}'),
             '{"person": {"name": "John", "age": 30}, "city": "New York"}',
         )
 
@@ -1969,6 +2086,56 @@ class MyTests(unittest.TestCase):
     def test_extract_json_empty_string(self):
         with self.assertRaises(ValueError):
             extract_json("")
+
+
+    def test_init(self):
+        s = WhitespaceString("This is a test")
+        self.assertEqual(s.string, "This is a test")
+
+    def test_str(self):
+        s = WhitespaceString("This is a test")
+        self.assertEqual(str(s), "This is a test")
+
+    def test_len(self):
+        s = WhitespaceString("This is a test")
+        self.assertEqual(len(s), 14)
+
+    def test_getitem(self):
+        s = WhitespaceString("This is a test")
+        self.assertEqual(s[0], "T")
+        self.assertEqual(s[1], "h")
+        self.assertEqual(s[2], "i")
+        self.assertEqual(s[3], "s")
+        self.assertEqual(s[4], " ")
+        self.assertEqual(s[5], "i")
+        self.assertEqual(s[6], "s")
+        self.assertEqual(s[7], " ")
+        self.assertEqual(s[8], "a")
+
+    def test_col(self):
+        s = WhitespaceString("This is a test")
+        self.assertEqual(s.col(0), "This")
+        self.assertEqual(s.col(1), "is")
+        self.assertEqual(s.col(2), "a")
+        self.assertEqual(s.col(3), "test")
+        self.assertEqual(s.col(4), None)
+
+    def test_cols(self):
+        s = WhitespaceString("This is  a test  with 7 columns")
+        self.assertEqual(s.cols(), "This is a test with 7 columns")
+        self.assertEqual(s.cols(0,3), "This test")
+        self.assertEqual(s.cols("0,3"), "This test")
+        self.assertEqual(s.cols("1"), "is")
+        self.assertEqual(s.cols(1), "is")
+        self.assertEqual(s.cols("14"), "")
+        self.assertEqual(s.cols("1:3"), "is a")
+        self.assertEqual(s.cols("-2,2,4:"), "7 a with 7 columns")
+        self.assertEqual(s.cols("0,3", " "), "This test")
+    
+    def test_cols_sep(self):
+        s = WhitespaceString("This|is a|test with|4 columns")
+        self.assertEqual(s.cols("1:3", sep="|"), "is a|test with")
+        self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
 
 
 def do_tests():
