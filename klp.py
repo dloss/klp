@@ -1287,7 +1287,6 @@ def parse_args():
             "combined",
             "unix",
             "line",
-            "exec",
         ],
         default="logfmt",
         help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
