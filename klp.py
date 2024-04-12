@@ -643,7 +643,7 @@ def get_timestamp_datetime(event):
         return None
 
 
-class SuperString(str):
+class EnhancedString(str):
 
     def col(self, n):
         """
@@ -1166,7 +1166,7 @@ def input_exec(code, event):
         return local_vars
 
     # Allow special methods on String
-    local_vars = {key: SuperString(val) for key, val in event.items()}
+    local_vars = {key: EnhancedString(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
     events = []
@@ -2100,19 +2100,19 @@ class MyTests(unittest.TestCase):
             extract_json("")
 
     def test_init(self):
-        s = SuperString("This is a test")
+        s = EnhancedString("This is a test")
         self.assertEqual(s.string, "This is a test")
 
     def test_str(self):
-        s = SuperString("This is a test")
+        s = EnhancedString("This is a test")
         self.assertEqual(str(s), "This is a test")
 
     def test_len(self):
-        s = SuperString("This is a test")
+        s = EnhancedString("This is a test")
         self.assertEqual(len(s), 14)
 
     def test_getitem(self):
-        s = SuperString("This is a test")
+        s = EnhancedString("This is a test")
         self.assertEqual(s[0], "T")
         self.assertEqual(s[1], "h")
         self.assertEqual(s[2], "i")
@@ -2124,7 +2124,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s[8], "a")
 
     def test_col(self):
-        s = SuperString("This is a test")
+        s = EnhancedString("This is a test")
         self.assertEqual(s.col(0), "This")
         self.assertEqual(s.col(1), "is")
         self.assertEqual(s.col(2), "a")
@@ -2132,7 +2132,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.col(4), None)
 
     def test_cols(self):
-        s = SuperString("This is  a test  with 7 columns")
+        s = EnhancedString("This is  a test  with 7 columns")
         self.assertEqual(s.cols(), "This is a test with 7 columns")
         self.assertEqual(s.cols(0, 3), "This test")
         self.assertEqual(s.cols("0,3"), "This test")
@@ -2144,7 +2144,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.cols("0,3", " "), "This test")
 
     def test_cols_sep(self):
-        s = SuperString("This|is a|test with|4 columns")
+        s = EnhancedString("This|is a|test with|4 columns")
         self.assertEqual(s.cols("1:3", sep="|"), "is a|test with")
         self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
 
