@@ -295,12 +295,17 @@ def parse(line, format):
         event = parse_unix(line)
     elif format == "line":
         event = parse_line(line)
+    elif format == "data":
+        event = parse_data(line)
     else:
         print_err("Unknown input format.")
         exit()
     if args.input_exec:
-        event = input_exec(args.input_exec, event)
-    return event
+        # Transformation could return multiple events
+        events = input_exec(args.input_exec, event)
+    else:
+        events = [event]
+    return events
 
 
 def parse_logfmt(text):
@@ -366,6 +371,10 @@ def parse_line(line):
     return {"line": line.rstrip()}
 
 
+def parse_data(data):
+    return {"data": str(data)}
+
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
@@ -391,6 +400,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         parse_combined,
         parse_unix,
         parse_line,
+        parse_data,
         pprint_json,
     ]
     + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
@@ -633,7 +643,7 @@ def get_timestamp_datetime(event):
         return None
 
 
-class WhitespaceString:
+class SuperString:
     def __init__(self, string):
         self.string = string
 
@@ -648,6 +658,9 @@ class WhitespaceString:
             return self.string[key]
         else:
             raise TypeError("WhitespaceString indices must be integers")
+
+    def __getattr__(self, name):
+        return getattr(self.string, name)
 
     def col(self, n):
         """
@@ -1170,32 +1183,46 @@ def input_exec(code, event):
         return local_vars
 
     # Allow special methods on String
-    local_vars = {key: WhitespaceString(val) for key, val in event.items()}
+    local_vars = {key: SuperString(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
+    events = []
     try:
         event = exec_and_get_locals(code, local_vars)
-        if "__" in event:
+        # Multiple output events
+        if "___" in event:
+            for ev in event["___"]:
+                out_event = {}
+                for key, val in ev.items():
+                    if val is not None:
+                        out_event[key] = val
+                events.append(out_event)
+            result = events
+        # One output event
+        elif "__" in event:
             for key, val in event["__"].items():
                 if val is not None:
                     event[key] = val
             del event["__"]
-        # Make sure the output values are all strings, like we expect in other parts of the code,
-        # and uppress non-existing fields
-        event = {
-            str(key): str(val)
-            for key, val in event.items()
-            if val is not None and key != "__"
-        }
-        del event["_"]
+            events = [event]
+
+            # Make sure the output values are all strings, like we expect in other parts of the code,
+            # and uppress non-existing fields
+            event = {
+                str(key): str(val)
+                for key, val in event.items()
+                if val is not None and key != "__" and key != "___"
+            }
+            del event["_"]
+            result = [event]
     except Exception as e:
         if args.debug or args.debug_eval:
             print(
                 f"[Error executing {args.input_exec!r}: {e}. {event=}]",
                 file=sys.stderr,
             )
-        return {}
-    return event
+        return []
+    return result
 
 
 def extract_key_regex(spec):
@@ -1287,9 +1314,10 @@ def parse_args():
             "combined",
             "unix",
             "line",
+            "data",
         ],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache",
+        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
@@ -2089,19 +2117,19 @@ class MyTests(unittest.TestCase):
             extract_json("")
 
     def test_init(self):
-        s = WhitespaceString("This is a test")
+        s = SuperString("This is a test")
         self.assertEqual(s.string, "This is a test")
 
     def test_str(self):
-        s = WhitespaceString("This is a test")
+        s = SuperString("This is a test")
         self.assertEqual(str(s), "This is a test")
 
     def test_len(self):
-        s = WhitespaceString("This is a test")
+        s = SuperString("This is a test")
         self.assertEqual(len(s), 14)
 
     def test_getitem(self):
-        s = WhitespaceString("This is a test")
+        s = SuperString("This is a test")
         self.assertEqual(s[0], "T")
         self.assertEqual(s[1], "h")
         self.assertEqual(s[2], "i")
@@ -2113,7 +2141,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s[8], "a")
 
     def test_col(self):
-        s = WhitespaceString("This is a test")
+        s = SuperString("This is a test")
         self.assertEqual(s.col(0), "This")
         self.assertEqual(s.col(1), "is")
         self.assertEqual(s.col(2), "a")
@@ -2121,7 +2149,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.col(4), None)
 
     def test_cols(self):
-        s = WhitespaceString("This is  a test  with 7 columns")
+        s = SuperString("This is  a test  with 7 columns")
         self.assertEqual(s.cols(), "This is a test with 7 columns")
         self.assertEqual(s.cols(0, 3), "This test")
         self.assertEqual(s.cols("0,3"), "This test")
@@ -2133,7 +2161,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.cols("0,3", " "), "This test")
 
     def test_cols_sep(self):
-        s = WhitespaceString("This|is a|test with|4 columns")
+        s = SuperString("This|is a|test with|4 columns")
         self.assertEqual(s.cols("1:3", sep="|"), "is a|test with")
         self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
 
@@ -2232,6 +2260,20 @@ def lines_from_tsvfiles(filenames, delimiter="\t"):
             yield line
 
 
+def lines_from_datafiles(filenames, delimiter="\t"):
+    if not filenames:
+        filenames = ["-"]
+    for filename in filenames:
+        if filename in ["-", None]:
+            f = sys.stdin
+        elif filename.lower().endswith(".gz"):
+            f = gzip.open(filename, "rt")
+        else:
+            f = open(filename, "r")
+        data = f.read()
+        yield data  # f'data="{data}"'
+
+
 def main():
     global args
     interrupted = False
@@ -2269,6 +2311,8 @@ def main():
             lines = lines_from_tsvfiles(args.files)
         elif args.input_format == "psv":
             lines = lines_from_tsvfiles(args.files, delimiter="|")
+        elif args.input_format == "data":
+            lines = lines_from_datafiles(args.files)
         else:
             lines = file_generator(args.files)
         for line_number, line in enumerate(lines):
@@ -2299,100 +2343,103 @@ def main():
                     line = line + f' _ts="{now_rfc3339()}"'
                 if args.prefix:
                     line = args.prefix + line
-                event = parse(line, args.input_format)
+                events = parse(line, args.input_format)
 
-            if visible(line, event):
-                # breakpoint()
-                if args.fuse is not None or args.mark_gaps is not None:
-                    ts_datetime = get_timestamp_datetime(event)
-                    if ts_datetime is None:
-                        # timestamp unknown: ignore event
-                        if args.fuse is not None and fuse_maybe_last:
-                            show(fuse_maybe_last)
-                        continue
-                    elif last_ts_datetime is None:
-                        # first block ever: show
-                        last_ts_datetime = ts_datetime
-                    else:
-                        ts_delta = ts_datetime - last_ts_datetime
-                        last_ts_datetime = ts_datetime
-                        if args.fuse is not None:
-                            if ts_delta < args.fuse:
-                                # old block, ignore for now, but save for later
-                                # (will have to be printed if it was the last in block)
-                                fuse_maybe_last = event
-                                fuse_skipped += 1
-                                continue
-                            else:
-                                # new block: show last event from last block first
-                                if fuse_maybe_last:
-                                    show(
-                                        fuse_maybe_last,
-                                        "fuse_last",
-                                        lineno=1 + fuse_skipped + 1,
+            for event in events:
+                if visible(line, event):
+                    # breakpoint()
+                    if args.fuse is not None or args.mark_gaps is not None:
+                        ts_datetime = get_timestamp_datetime(event)
+                        if ts_datetime is None:
+                            # timestamp unknown: ignore event
+                            if args.fuse is not None and fuse_maybe_last:
+                                show(fuse_maybe_last)
+                            continue
+                        elif last_ts_datetime is None:
+                            # first block ever: show
+                            last_ts_datetime = ts_datetime
+                        else:
+                            ts_delta = ts_datetime - last_ts_datetime
+                            last_ts_datetime = ts_datetime
+                            if args.fuse is not None:
+                                if ts_delta < args.fuse:
+                                    # old block, ignore for now, but save for later
+                                    # (will have to be printed if it was the last in block)
+                                    fuse_maybe_last = event
+                                    fuse_skipped += 1
+                                    continue
+                                else:
+                                    # new block: show last event from last block first
+                                    if fuse_maybe_last:
+                                        show(
+                                            fuse_maybe_last,
+                                            "fuse_last",
+                                            lineno=1 + fuse_skipped + 1,
+                                        )
+                                        print("", file=sys.stderr)
+                            elif args.mark_gaps is not None:
+                                if ts_delta > args.mark_gaps:
+                                    show_gap_marker(ts_delta, terminal_width)
+                    if show_context and skipped > 0 and args.output_format == "default":
+                        show_skipped_marker(skipped)
+                    skipped = 0
+                    if args.max_events and stats.num_events_shown >= args.max_events:
+                        raise StoppedEarly
+                    if args.add_ts_delta:
+                        event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
+                    if args.levelmap and not args.stats_only:
+                        levelchars += 1
+                        if levelchars == 1:
+                            ts = get_timestamp_str_or_none(event)
+                            if ts:
+                                formatted_time = format_datetime(ts)
+                                # Cache value for more performance
+                                len_formatted_time = len(formatted_time)
+                                if args.color:
+                                    print(
+                                        colorize(
+                                            formatted_time,
+                                            THEMES[args.theme]["timestamp_key"],
+                                        ),
+                                        end=" ",
                                     )
-                                    print("", file=sys.stderr)
-                        elif args.mark_gaps is not None:
-                            if ts_delta > args.mark_gaps:
-                                show_gap_marker(ts_delta, terminal_width)
-                if show_context and skipped > 0 and args.output_format == "default":
-                    show_skipped_marker(skipped)
-                skipped = 0
-                if args.max_events and stats.num_events_shown >= args.max_events:
-                    raise StoppedEarly
-                if args.add_ts_delta:
-                    event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
-                if args.levelmap and not args.stats_only:
-                    levelchars += 1
-                    if levelchars == 1:
-                        ts = get_timestamp_str_or_none(event)
-                        if ts:
-                            formatted_time = format_datetime(ts)
-                            # Cache value for more performance
-                            len_formatted_time = len(formatted_time)
-                            if args.color:
-                                print(
-                                    colorize(
-                                        formatted_time,
-                                        THEMES[args.theme]["timestamp_key"],
-                                    ),
-                                    end=" ",
-                                )
-                            else:
-                                print(formatted_time, end=" ")
-                    elif len_formatted_time + 1 + levelchars + 1 == terminal_width:
-                        print("".join(colored_levelline))
-                        colored_levelline = []
-                        levelchars = 0
-                    colored_levelline.append(colored_levelchar(event))
+                                else:
+                                    print(formatted_time, end=" ")
+                        elif len_formatted_time + 1 + levelchars + 1 == terminal_width:
+                            print("".join(colored_levelline))
+                            colored_levelline = []
+                            levelchars = 0
+                        colored_levelline.append(colored_levelchar(event))
+                        stats = update_stats(stats, event)
+                        continue
+                    if not args.stats_only:
+                        for before_line in before_context:
+                            before_events = parse(before_line, args.input_format)
+                            # XXX: Could corrupt number of before lines, if multiple events per line
+                            for before_event in before_events:
+                                show(before_event, "before")
+                            stats = update_stats(stats, before_event)
+                        before_context.clear()
+                        after_context_num = args.after_context
+                        if args.fuse:
+                            show(event, "fuse_first")
+                            fuse_skipped = 0
+                        elif args.context or args.before_context or args.after_context:
+                            show(event, "match")
+                        else:
+                            show(event)
                     stats = update_stats(stats, event)
-                    continue
-                if not args.stats_only:
-                    for before_line in before_context:
-                        before_event = parse(before_line, args.input_format)
-                        show(before_event, "before")
-                        stats = update_stats(stats, before_event)
-                    before_context.clear()
-                    after_context_num = args.after_context
-                    if args.fuse:
-                        show(event, "fuse_first")
-                        fuse_skipped = 0
-                    elif args.context or args.before_context or args.after_context:
-                        show(event, "match")
-                    else:
-                        show(event)
-                stats = update_stats(stats, event)
-            elif after_context_num > 0:
-                if show_context and skipped > 0 and args.output_format == "default":
-                    show_skipped_marker(skipped)
-                skipped = 0
-                after_context_num -= 1
-                show(event, "after")
-                stats = update_stats(stats, event)
-            else:
-                if len(before_context) == args.before_context:
-                    skipped += 1
-                before_context.append(line)
+                elif after_context_num > 0:
+                    if show_context and skipped > 0 and args.output_format == "default":
+                        show_skipped_marker(skipped)
+                    skipped = 0
+                    after_context_num -= 1
+                    show(event, "after")
+                    stats = update_stats(stats, event)
+                else:
+                    if len(before_context) == args.before_context:
+                        skipped += 1
+                    before_context.append(line)
         skipped += len(before_context)
         if show_context and skipped > 0 and args.output_format == "default":
             show_skipped_marker(skipped)
