@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.55.0"
+__version__ = "0.56.0"
 
 INPUT_QUOTE = r"\""
 
@@ -324,9 +324,9 @@ def parse_jsonl(line):
         return result
     for key, val in flatten_object(json_data).items():
         if isinstance(val, str):
-            result[key] = val
+            result[sanitize_key(key)] = val
         else:
-            result[key] = repr(val)
+            result[sanitize_key(key)] = repr(val)
     return result
 
 
@@ -669,11 +669,11 @@ class WhitespaceString:
     def cols(self, *args, sep=None, outsep=None):
         """Returns a string containing selected columns from the internal whitespace-separated string.
 
-        This method extracts and combines specific columns from the string stored in the WhitespaceString object. 
+        This method extracts and combines specific columns from the string stored in the WhitespaceString object.
         It supports both single column indexing and slicing.
 
         * Input arguments:
-            * args: Accepts zero or more arguments representing column indices or slices. 
+            * args: Accepts zero or more arguments representing column indices or slices.
                     If no arguments are provided, the entire string is returned.
             * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
             * outsep (optional): Delimiter used to join the selected columns (defaults to sep or whitespace).
@@ -721,15 +721,17 @@ class WhitespaceString:
 
         for arg in args:
             # Split the input by commas for multiple indices or slices
-            indices_list = str(arg).split(',')
+            indices_list = str(arg).split(",")
 
             for index_or_slice in indices_list:
-                if ':' in index_or_slice:  # It's a slice
-                    parts = index_or_slice.split(':')
+                if ":" in index_or_slice:  # It's a slice
+                    parts = index_or_slice.split(":")
 
                     # Convert string parts to integers or None
                     # If there are less than 3 parts, fill the remaining with None
-                    parts = [int(p) if p else None for p in parts] + [None] * (3 - len(parts))
+                    parts = [int(p) if p else None for p in parts] + [None] * (
+                        3 - len(parts)
+                    )
 
                     start, stop, step = parts
 
@@ -2087,7 +2089,6 @@ class MyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_json("")
 
-
     def test_init(self):
         s = WhitespaceString("This is a test")
         self.assertEqual(s.string, "This is a test")
@@ -2123,7 +2124,7 @@ class MyTests(unittest.TestCase):
     def test_cols(self):
         s = WhitespaceString("This is  a test  with 7 columns")
         self.assertEqual(s.cols(), "This is a test with 7 columns")
-        self.assertEqual(s.cols(0,3), "This test")
+        self.assertEqual(s.cols(0, 3), "This test")
         self.assertEqual(s.cols("0,3"), "This test")
         self.assertEqual(s.cols("1"), "is")
         self.assertEqual(s.cols(1), "is")
@@ -2131,7 +2132,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.cols("1:3"), "is a")
         self.assertEqual(s.cols("-2,2,4:"), "7 a with 7 columns")
         self.assertEqual(s.cols("0,3", " "), "This test")
-    
+
     def test_cols_sep(self):
         s = WhitespaceString("This|is a|test with|4 columns")
         self.assertEqual(s.cols("1:3", sep="|"), "is a|test with")
@@ -2178,12 +2179,18 @@ def read_json_from_input(filename):
     return data
 
 
+def sanitize_key(key):
+    """Sanitize a JSON key to make it a valid Logfmt key"""
+    return "".join(char if char.isalnum() else "_" for char in key)
+
+
 def lines_from_jsonfiles(filenames):
     out = []
 
     def build_line(flat):
         line = ""
         for k, v in flat.items():
+            k = sanitize_key(k)
             if isinstance(v, str):
                 line += f'{k}="{v}" '
             else:
@@ -2220,7 +2227,9 @@ def lines_from_tsvfiles(filenames, delimiter="\t"):
         # TODO: Support files without header
         headers = next(reader)
         for row in reader:
-            line = " ".join(f'{key}="{value}"' for key, value in zip(headers, row))
+            line = " ".join(
+                f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
+            )
             yield line
 
 
