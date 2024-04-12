@@ -643,24 +643,7 @@ def get_timestamp_datetime(event):
         return None
 
 
-class SuperString:
-    def __init__(self, string):
-        self.string = string
-
-    def __str__(self):
-        return self.string
-
-    def __len__(self):
-        return len(self.string)
-
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return self.string[key]
-        else:
-            raise TypeError("WhitespaceString indices must be integers")
-
-    def __getattr__(self, name):
-        return getattr(self.string, name)
+class SuperString(str):
 
     def col(self, n):
         """
