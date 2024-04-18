@@ -1,6 +1,14 @@
+- --start and --stop regexes
+- Input format guessing
+- CSV input
+- TSV input without headers (--column-names specified by user)
 - Fix grep when used both with and without keys
 - Add -o for output to file
 - Allow to specify encodings for input/output
+- Highlighting regex matches
+- Autocompletion for bash
+- More stats: 
+- Continuously displaying the current message rate (sliding window or exponentail moving average)
 - README: Add common use cases
 - README: using complementary tools: jc, sqlite, jq, ...
 - (Simple) YAML output
