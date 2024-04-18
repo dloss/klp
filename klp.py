@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.56.0"
+__version__ = "0.57.0"
 
 INPUT_QUOTE = r"\""
 
@@ -406,6 +406,13 @@ EXPORTED_GLOBALS = build_globals_dict(
     + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
 )
 
+def print_with_event_sep(*myargs, **mykwargs):
+    global is_first_visible_line
+    if is_first_visible_line:
+        is_first_visible_line = False
+    else:
+        print(args.output_event_sep, end="", **mykwargs)
+    print(*myargs, end="", **mykwargs)
 
 def expand_color_codes(line):
     for _, (color, scolor) in COLOR_CODES.items():
@@ -760,7 +767,7 @@ def show(event, context_type="", lineno=None):
             show_default(event, context_type, lineno)
     elif args.output_format == "logfmt":
         show_logfmt(event)
-    elif args.output_format == "jsonl":
+    elif args.output_format in ["jsonl", "json"]:  # Reuse JSONL formatting for JSON
         show_jsonl(event)
     elif args.output_format == "tsv":
         show_tsv(event)
@@ -801,14 +808,14 @@ def unescape(s):
 
 
 def show_jsonl(event, ensure_ascii=False):
-    print(json.dumps(event, ensure_ascii=ensure_ascii))
+    print_with_event_sep(json.dumps(event, ensure_ascii=ensure_ascii))
 
 
 def show_by_template(event, template):
     template = template.replace("\\n", "\n").replace("\\t", "\t")
     try:
         out = template.format(**event)
-        print(out)
+        print_with_event_sep(out)
     except KeyError:
         pass
 
@@ -833,15 +840,13 @@ def show_by_eval_template(event, template):
     # Replace all expressions in the template
     out = pattern.sub(replace_expr, template)
     if out:
-        print(out)
-
+        print_with_event_sep(out)
 
 def show_tsv(event, sep="\t"):
     cols = []
     for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
-    print(sep.join(cols))
-
+    print_with_event_sep(sep.join(cols))
 
 def show_default(event, context_type="", lineno=None):
     colors = THEMES[args.theme]["context_prefix"]
@@ -937,10 +942,9 @@ def show_default(event, context_type="", lineno=None):
                 out.append(text)
     for line in out:
         if args.color:
-            print(expand_color_codes(line))
+            print_with_event_sep(expand_color_codes(line))
         else:
-            print(line)
-
+            print_with_event_sep(line)
 
 def show_logfmt(event, file=sys.stdout):
     elems = []
@@ -962,7 +966,8 @@ def show_logfmt(event, file=sys.stdout):
             elems.append(f"{key}={val}")
 
     line = " ".join(elems)
-    print(line, file=file)
+    print_with_event_sep(line, file=file)
+
 
 
 def print_err(*args, **kwargs):
@@ -1475,7 +1480,7 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "logfmt", "jsonl", "tsv", "psv"],
+        choices=["default", "logfmt", "jsonl", "json", "tsv", "psv"],
         default="default",
         help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
@@ -1592,7 +1597,13 @@ def parse_args():
         "--output-sep",
         metavar="STR",
         default=" ",
-        help="string to separate elements",
+        help="string to separate fields",
+    )
+    default_output.add_argument(
+        "--output-event-sep",
+        metavar="STR",
+        default="\n",
+        help="string to separate events. Default: newline",
     )
     default_output.add_argument(
         "--output-template",
@@ -1605,6 +1616,16 @@ def parse_args():
         metavar="STR",
         default="",
         help='''Python eval template for output, e.g. "{ts} {level.upper()} {'#'*len(msg)}"''',
+    )
+    default_output.add_argument(
+        "--header",
+        metavar="STR",
+        help="string to print before first element",
+    )
+    default_output.add_argument(
+        "--footer",
+        metavar="STR",
+        help="string to print before first event",
     )
 
     output_special = parser.add_argument_group("special output format options")
@@ -1782,7 +1803,7 @@ def parse_args():
         print_err("Time span must not be zero. This would not select any data.")
         sys.exit(1)
 
-    if args.plain or args.output_format in ["jsonl", "tsv", "psv"]:
+    if args.plain or args.output_format in ["jsonl", "tsv", "psv", "json"]:
         args.output_quote = '"'
     elif args.unicode:
         args.output_quote = "\u201c"
@@ -1800,6 +1821,16 @@ def parse_args():
     if args.output_sep:
         args.output_sep = args.output_sep.replace("\\n", "\n").replace("\\t", "\t")
 
+    # Fake JSON output by using JSONL with 
+    if args.output_format == "json":
+        args.header = "["
+        args.output_event_sep = ",\n"
+        args.footer = "\n]"
+    elif args.footer is None:
+        args.footer = ""
+    else:
+        args.footer = "\n" + args.footer
+    
     return args
 
 
@@ -2259,6 +2290,7 @@ def lines_from_datafiles(filenames, delimiter="\t"):
 
 def main():
     global args
+    global is_first_visible_line
     interrupted = False
     stats = Stats([], [], [], 0, 0, "", "", "")
     try:
@@ -2268,6 +2300,8 @@ def main():
                 sys.exit(0)
             else:
                 sys.exit(1)
+        if args.header:
+            print(args.header)
         if args.output_format == "tsv":
             # Header
             print("\t".join(args.keys))
@@ -2288,6 +2322,7 @@ def main():
         formatted_time = ""
         len_formatted_time = 0
         fuse_maybe_last = None
+        is_first_visible_line = True
         if args.input_format == "json":
             lines = lines_from_jsonfiles(args.files)
         elif args.input_format == "tsv":
@@ -2446,12 +2481,15 @@ def main():
         interrupted = True
         sys.stdout.flush()
 
+    if args.footer is not None:
+        print(args.footer)
+
     # Print stats even after CTRL-C or early stop
     if args.stats or args.stats_only:
         # New line only after ^C
         if interrupted:
             print_err()
-        if args.output_format == "jsonl":
+        if args.output_format in ["jsonl", "json"]:
             show_stats_json(stats)
         else:
             show_stats(stats)
