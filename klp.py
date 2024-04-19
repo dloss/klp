@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.57.1"
+__version__ = "0.57.2"
 
 INPUT_QUOTE = r"\""
 
@@ -672,14 +672,15 @@ class EnhancedString(str):
             return parts[n]
 
     def cols(self, *args, sep=None, outsep=None):
-        """Returns a string containing selected columns from the internal whitespace-separated string.
+        """Returns selected columns from the internal whitespace-separated string.
 
-        This method extracts and combines specific columns from the string stored in the WhitespaceString object.
+        This method extracts and optionally combines specific columns from the string stored in the EnhancedString object.
         It supports both single column indexing and slicing.
 
         * Input arguments:
             * args: Accepts zero or more arguments representing column indices or slices.
                     If no arguments are provided, the entire string is returned.
+                    If more than one argument is provided, returns a list
             * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
             * outsep (optional): Delimiter used to join the selected columns (defaults to sep or whitespace).
 
@@ -693,12 +694,12 @@ class EnhancedString(str):
 
         Examples:
 
-        >>> s = WhitespaceString("This is a test with 7 columns")
+        >>> s = EnhancedString("This is a test with 7 columns")
         >>> s.cols()  # Returns entire string by default
         'This is a test with 7 columns'
-        >>> s.cols(0, 3)  # Select columns 0 and 3
-        'This test'
         >>> s.cols("0,3")  # Select columns 0 and 3 using a comma-separated string
+        'This test'
+        >>> s.cols(0, 3)  # Select columns 0 and 3 and return list
         'This test'
         >>> s.cols("1")  # Select column 1
         'is'
@@ -710,15 +711,18 @@ class EnhancedString(str):
         'is a'
         >>> s.cols("-2,2,4:")  # Select columns using negative index and open-ended slice
         '7 a with 7 columns'
-        >>> s.cols("0,3", " ")  # Specify output separator
-        'This test'
-        >>> t = WhitespaceString("This|is a|test with|4 columns")
+        >>> t = EnhancedString("This|is a|test with|4 columns")
         >>> t.cols("1:3", sep="|")  # Specify a different column separator
         'is a|test with'
         >>> t.cols("-2,2,4:", sep="|", outsep=":")  # Specify both column and output separators
         'test with:test with'
         """
 
+        if outsep is None:
+            if sep is None:
+                outsep = " "
+            else:
+                outsep = sep
         result = []
         columns = self.split(sep)
         if not args:
@@ -728,6 +732,7 @@ class EnhancedString(str):
             # Split the input by commas for multiple indices or slices
             indices_list = str(arg).split(",")
 
+            arg_result = []
             for index_or_slice in indices_list:
                 if ":" in index_or_slice:  # It's a slice
                     parts = index_or_slice.split(":")
@@ -739,22 +744,18 @@ class EnhancedString(str):
                     )
 
                     start, stop, step = parts
-
-                    # Append the sliced part of the list to the result list
-                    result.extend(columns[slice(start, stop, step)])
+                    arg_result.extend(columns[slice(start, stop, step)])
                 else:  # It's a single index
                     try:
                         idx = int(index_or_slice)
-                        result.append(columns[idx])
+                        arg_result.append(columns[idx])
                     except (ValueError, IndexError):
                         # Ignore invalid or out-of-range integer inputs
                         pass
+            result.append(outsep.join(arg_result))
 
-        if outsep is None:
-            if sep is None:
-                outsep = " "
-            else:
-                outsep = sep
+        if len(args) > 1:
+            return [elem for elem in result]
         return outsep.join(result)
 
 
@@ -2169,14 +2170,16 @@ class MyTests(unittest.TestCase):
     def test_cols(self):
         s = EnhancedString("This is  a test  with 7 columns")
         self.assertEqual(s.cols(), "This is a test with 7 columns")
-        self.assertEqual(s.cols(0, 3), "This test")
+        self.assertEqual(s.cols(0, 3), ["This", "test"])
+        self.assertEqual(s.cols(0, -1, 2, 2), ["This", "columns", "a", "a"])
         self.assertEqual(s.cols("0,3"), "This test")
         self.assertEqual(s.cols("1"), "is")
         self.assertEqual(s.cols(1), "is")
         self.assertEqual(s.cols("14"), "")
         self.assertEqual(s.cols("1:3"), "is a")
         self.assertEqual(s.cols("-2,2,4:"), "7 a with 7 columns")
-        self.assertEqual(s.cols("0,3", " "), "This test")
+        self.assertEqual(s.cols("0,3", sep=" "), "This a")
+        self.assertEqual(s.cols(-2, "0,4", "3:", 1, outsep="_"), ["7", "This_with", "test_with_7_columns", "is"])
 
     def test_cols_sep(self):
         s = EnhancedString("This|is a|test with|4 columns")
