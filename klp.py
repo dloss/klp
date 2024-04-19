@@ -671,7 +671,7 @@ class EnhancedString(str):
         else:
             return parts[n]
 
-    def cols(self, *args, sep=None, outsep=None):
+    def cols(self, *args, sep=None, outsep=" "):
         """Returns selected columns from the internal whitespace-separated string.
 
         This method extracts and optionally combines specific columns from the string stored in the EnhancedString object.
@@ -682,7 +682,7 @@ class EnhancedString(str):
                     If no arguments are provided, the entire string is returned.
                     If more than one argument is provided, returns a list
             * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
-            * outsep (optional): Delimiter used to join the selected columns (defaults to sep or whitespace).
+            * outsep (optional): Delimiter used to join the selected columns (defaults to whitespace).
 
         * Column selection:
             * Supports single integer indices to select specific columns.
@@ -718,11 +718,6 @@ class EnhancedString(str):
         'test with:test with'
         """
 
-        if outsep is None:
-            if sep is None:
-                outsep = " "
-            else:
-                outsep = sep
         result = []
         columns = self.split(sep)
         if not args:
@@ -2183,7 +2178,7 @@ class MyTests(unittest.TestCase):
 
     def test_cols_sep(self):
         s = EnhancedString("This|is a|test with|4 columns")
-        self.assertEqual(s.cols("1:3", sep="|"), "is a|test with")
+        self.assertEqual(s.cols("1:3", sep="|"), "is a test with")
         self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
 
 
