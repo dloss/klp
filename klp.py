@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.57.0"
+__version__ = "0.57.1"
 
 INPUT_QUOTE = r"\""
 
@@ -406,6 +406,7 @@ EXPORTED_GLOBALS = build_globals_dict(
     + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
 )
 
+
 def print_with_event_sep(*myargs, **mykwargs):
     global is_first_visible_line
     if is_first_visible_line:
@@ -413,6 +414,7 @@ def print_with_event_sep(*myargs, **mykwargs):
     else:
         print(args.output_event_sep, end="", **mykwargs)
     print(*myargs, end="", **mykwargs)
+
 
 def expand_color_codes(line):
     for _, (color, scolor) in COLOR_CODES.items():
@@ -663,7 +665,7 @@ class EnhancedString(str):
             Die n-te Spalte des Strings oder None, wenn die Spalte nicht existiert.
         """
 
-        parts = self.string.split()
+        parts = self.split()
         if n < 0 or n >= len(parts):
             return None
         else:
@@ -718,7 +720,7 @@ class EnhancedString(str):
         """
 
         result = []
-        columns = self.string.split(sep)
+        columns = self.split(sep)
         if not args:
             args = ":"
 
@@ -842,11 +844,13 @@ def show_by_eval_template(event, template):
     if out:
         print_with_event_sep(out)
 
+
 def show_tsv(event, sep="\t"):
     cols = []
     for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
     print_with_event_sep(sep.join(cols))
+
 
 def show_default(event, context_type="", lineno=None):
     colors = THEMES[args.theme]["context_prefix"]
@@ -946,6 +950,7 @@ def show_default(event, context_type="", lineno=None):
         else:
             print_with_event_sep(line)
 
+
 def show_logfmt(event, file=sys.stdout):
     elems = []
     for key, val in event.items():
@@ -967,7 +972,6 @@ def show_logfmt(event, file=sys.stdout):
 
     line = " ".join(elems)
     print_with_event_sep(line, file=file)
-
 
 
 def print_err(*args, **kwargs):
@@ -1170,6 +1174,15 @@ def input_exec(code, event):
         exec(code, EXPORTED_GLOBALS, local_vars)
         return local_vars
 
+    def stringify(event):
+        # Make sure the output values are all strings, like we expect in other parts of the code,
+        # and uppress non-existing fields
+        return {
+            str(key): str(val)
+            for key, val in event.items()
+            if val is not None and key != "__" and key != "___"
+        }
+
     # Allow special methods on String
     local_vars = {key: EnhancedString(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
@@ -1192,17 +1205,8 @@ def input_exec(code, event):
                 if val is not None:
                     event[key] = val
             del event["__"]
-            events = [event]
-
-            # Make sure the output values are all strings, like we expect in other parts of the code,
-            # and uppress non-existing fields
-            event = {
-                str(key): str(val)
-                for key, val in event.items()
-                if val is not None and key != "__" and key != "___"
-            }
-            del event["_"]
-            result = [event]
+        del event["_"]
+        result = [stringify(event)]
     except Exception as e:
         if args.debug or args.debug_eval:
             print(
@@ -1821,7 +1825,7 @@ def parse_args():
     if args.output_sep:
         args.output_sep = args.output_sep.replace("\\n", "\n").replace("\\t", "\t")
 
-    # Fake JSON output by using JSONL with 
+    # Fake JSON output by using JSONL with
     if args.output_format == "json":
         args.header = "["
         args.output_event_sep = ",\n"
@@ -1830,7 +1834,7 @@ def parse_args():
         args.footer = ""
     else:
         args.footer = "\n" + args.footer
-    
+
     return args
 
 
@@ -2132,7 +2136,7 @@ class MyTests(unittest.TestCase):
 
     def test_init(self):
         s = EnhancedString("This is a test")
-        self.assertEqual(s.string, "This is a test")
+        self.assertEqual(s, "This is a test")
 
     def test_str(self):
         s = EnhancedString("This is a test")
