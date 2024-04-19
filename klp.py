@@ -682,6 +682,7 @@ class EnhancedString(str):
                     If no arguments are provided, the entire string is returned.
                     If more than one argument is provided, returns a list
             * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
+                    Can be a compiled regex
             * outsep (optional): Delimiter used to join the selected columns (defaults to whitespace).
 
         * Column selection:
@@ -719,7 +720,12 @@ class EnhancedString(str):
         """
 
         result = []
-        columns = self.split(sep)
+        if isinstance(sep, re.Pattern):
+            print("Pattern", sep, type(sep))
+            columns = re.split(sep, self)
+            print("Columns", columns)
+        else:
+            columns = self.split(sep)
         if not args:
             args = ":"
 
@@ -2180,6 +2186,10 @@ class MyTests(unittest.TestCase):
         s = EnhancedString("This|is a|test with|4 columns")
         self.assertEqual(s.cols("1:3", sep="|"), "is a test with")
         self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
+
+    def test_cols_regexsep(self):
+        s = EnhancedString("This2334is7453a654test232with232regex")
+        self.assertEqual(s.cols("1:5", sep=re.compile(r'\d+')), "is a test with")
 
 
 def do_tests():
