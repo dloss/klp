@@ -1030,7 +1030,7 @@ def show_stats(stats):
     )
 
 
-def show_stats_json(stats, ensure_ascii):
+def show_stats_json(stats, ensure_ascii=False):
     print_err(
         json.dumps(dataclasses.asdict(stats), indent=2, ensure_ascii=ensure_ascii)
     )
