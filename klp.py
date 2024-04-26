@@ -697,7 +697,7 @@ class EnhancedString(str):
 
         >>> s = EnhancedString("This is a test with 7 columns")
         >>> s.cols()  # Returns entire string by default
-        'This is a test with 7 columns'
+        ["This", "is", "a", "test", "with", "7", "columns"]
         >>> s.cols("0,3")  # Select columns 0 and 3 using a comma-separated string
         'This test'
         >>> s.cols(0, 3)  # Select columns 0 and 3 and return list
@@ -727,7 +727,7 @@ class EnhancedString(str):
         else:
             columns = self.split(sep)
         if not args:
-            args = ":"
+            return columns
 
         for arg in args:
             # Split the input by commas for multiple indices or slices
@@ -2170,7 +2170,7 @@ class MyTests(unittest.TestCase):
 
     def test_cols(self):
         s = EnhancedString("This is  a test  with 7 columns")
-        self.assertEqual(s.cols(), "This is a test with 7 columns")
+        self.assertEqual(s.cols(), ["This", "is", "a", "test", "with", "7", "columns"])
         self.assertEqual(s.cols(0, 3), ["This", "test"])
         self.assertEqual(s.cols(0, -1, 2, 2), ["This", "columns", "a", "a"])
         self.assertEqual(s.cols("0,3"), "This test")
