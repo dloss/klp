@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.57.2"
+__version__ = "0.58.0"
 
 INPUT_QUOTE = r"\""
 
@@ -1324,6 +1324,7 @@ def parse_args():
     )
     input.add_argument(
         "--input-exec",
+        "-I",
         metavar="CODE",
         default="",
         help="execute Python code to transform event after input parsing",
@@ -1549,7 +1550,6 @@ def parse_args():
     )
     default_output.add_argument(
         "--no-indent",
-        "-I",
         action="store_true",
         help="don't wrap at terminal width and don't indent subsequent lines",
     )
@@ -2180,7 +2180,10 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.cols("1:3"), "is a")
         self.assertEqual(s.cols("-2,2,4:"), "7 a with 7 columns")
         self.assertEqual(s.cols("0,3", sep=" "), "This a")
-        self.assertEqual(s.cols(-2, "0,4", "3:", 1, outsep="_"), ["7", "This_with", "test_with_7_columns", "is"])
+        self.assertEqual(
+            s.cols(-2, "0,4", "3:", 1, outsep="_"),
+            ["7", "This_with", "test_with_7_columns", "is"],
+        )
 
     def test_cols_sep(self):
         s = EnhancedString("This|is a|test with|4 columns")
@@ -2189,7 +2192,7 @@ class MyTests(unittest.TestCase):
 
     def test_cols_regexsep(self):
         s = EnhancedString("This2334is7453a654test232with232regex")
-        self.assertEqual(s.cols("1:5", sep=re.compile(r'\d+')), "is a test with")
+        self.assertEqual(s.cols("1:5", sep=re.compile(r"\d+")), "is a test with")
 
 
 def do_tests():
