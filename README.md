@@ -310,7 +310,7 @@ $ klp examples/qryn.jsonl -j --input-exec "method=_['req.method'].lower()"
 ### Synthetic fields
 
 klp can add some additional fields to the event.
-For performance reasons this is only done if you explitly list these keys using `--keys`/`-k`.
+For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
 
 * `_ts`: timestamp showing when the event was shown by klp
 * `_ts_delta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
@@ -318,7 +318,7 @@ For performance reasons this is only done if you explitly list these keys using 
 
 ## Complementary tools
 
-These tools aren't specialized on log files, but useful to post-process or view klp`s output, particulary the JSONL or TSV formats:
+These tools aren't specialized on log files, but useful to post-process or view klp`s output, particularly the JSONL or TSV formats:
 
 - [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
 - [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
