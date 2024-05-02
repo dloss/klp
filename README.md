@@ -145,11 +145,11 @@ $ cat mylog.txt | klp -k -p timestamp,message
 
 ### Filter on log level
 
-Use `--loglevel`/`-l` to restrict the output to specific log levels.
+Use `--loglevels`/`-l` to restrict the output to specific log levels.
 You can give a comma-separated list of levels.
 
 ```bash
-$ cat mylog.txt | klp --loglevel warning,error,fatal
+$ cat mylog.txt | klp -l warning,error,fatal
 ```
 
 Exclude log levels with `--not-loglevel`/`-L`.
