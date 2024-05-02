@@ -275,7 +275,6 @@ Input formats (`--input-format`/`-f`):
 - `json`: JSON (only for complete files, not for streaming)
 - `tsv`: Tab separated values (keys have to be set manually with `-k`)
 - `psv`: Pipe separated values (keys have to be set manually with `-k`)
-- `tap`: Output of `linkerd viz tap`
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
 - `unix`: common format of Unix server logs (timestamp, hostname, service, optional pid, message)

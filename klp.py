@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.58.0"
+__version__ = "0.59.0"
 
 INPUT_QUOTE = r"\""
 
@@ -1303,7 +1303,6 @@ def parse_args():
             "json",
             "tsv",
             "psv",
-            "tap",
             "clf",
             "combined",
             "unix",
@@ -1311,7 +1310,7 @@ def parse_args():
             "data",
         ],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. tap is from 'linkerd viz tap'. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
+        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
@@ -1749,9 +1748,6 @@ def parse_args():
     if args.localtime and args.utc:
         print_err("Choose either localtime or UTC")
         sys.exit(1)
-
-    if args.input_format == "tap":
-        args.prefix += "_type="
 
     if args.context > 0:
         args.before_context = args.context
