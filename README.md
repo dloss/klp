@@ -200,7 +200,8 @@ If you need a logical AND, use an appropriate regex or pipe the output to anothe
 To specify lines that should NOT be processed, use `--grep-not`/`-G`/`-v`.
 
 Search is case-sensitive by default. 
-Prepend `(?i)`to the regex for case-insensitive matches. 
+Use `--ignore-case`/`-i` for case-insensitive matches.
+If you want case-insensitive matching only for specific regexes, prepend `(?i)` to them.
 
 By default, `--grep` searches on the whole line. 
 To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
