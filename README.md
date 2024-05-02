@@ -291,20 +291,20 @@ The JSONL and TSV output formats are useful for further processing with tools li
 
 ### Advanced input transformations using Python code
 
-Use `--input-exec` to specify Python code that transforms the event after it has been parsed.
+Use `--input-exec`/`-I` to specify Python code that transforms the event after it has been parsed.
 This allows you to introduce new fields based on existing ones, or even develop an ad-hoc parser for an unknown format.
 All functions available for output formatting (see above) are available here as well:
 
 ```bash
-$ klp examples/mylog.logfmt --input-exec "msg_len=len(msg); del msg"
-$ klp examples/alertmanager.logfmt --input-exec "path=(extract_path(file) or None)" -k path
-$ klp -f line BGL_2k.log --input-exec "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
+$ klp examples/mylog.logfmt -I "msg_len=len(msg); del msg"
+$ klp examples/alertmanager.logfmt -I "path=(extract_path(file) or None)" -k path
+$ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
 ```
 
 To allow key names that are not valid Python identifiers, the parsed event dict is available as an underscore:
 
 ```bash
-$ klp examples/qryn.jsonl -j --input-exec "method=_['req.method'].lower()"
+$ klp examples/qryn.jsonl -j -I "method=_['req.method'].lower()"
 ```
 
 ### Synthetic fields
