@@ -207,7 +207,8 @@ By default, `--grep` searches on the whole line.
 To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
 
 klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
-Use `--grep-builtin`/`-r` to use them.
+Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`/`-R` for ignoring them.
+
 
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
