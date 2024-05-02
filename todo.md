@@ -1,5 +1,6 @@
 - Document --mark-gaps and --fuse
 - Document --utc and --localtime
+- Document double and triple underscore handling for --input-exec
 - --start and --stop regexes
 - Input format guessing
 - CSV input
