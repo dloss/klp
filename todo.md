@@ -1,3 +1,5 @@
+- Document --mark-gaps and --fuse
+- Document --utc and --localtime
 - --start and --stop regexes
 - Input format guessing
 - CSV input
@@ -5,6 +7,8 @@
 - Fix grep when used both with and without keys
 - Add -o for output to file
 - Allow to specify encodings for input/output
+- --grep-map just showing if a line matches
+- --grep-time-context (context by timespan, not number of lines)
 - Highlighting regex matches
 - Autocompletion for bash
 - More stats: 
