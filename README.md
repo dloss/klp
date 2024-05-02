@@ -102,6 +102,8 @@ Keys seen: timestamp,log_level,source,target,thread_id,message
 Log levels seen: DEBUG,TRACE,INFO (keys: log_level)
 ```
 
+Or use `--stats`/`-s` to print those stats (to stderr), in addition to regular output.
+
 Use `--levelmap`/`-M` to print only the first character of the log level of each event.
 The timestamp is for the first event shown in that line:
 
@@ -209,7 +211,6 @@ To limit the search to a specific key, prepend that key and a tilde to the regex
 klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
 Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`/`-R` for ignoring them.
 
-
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
 
@@ -238,7 +239,7 @@ Use `--skip` to avoid parsing the first lines.
 
 ### Customize the output formatting
 
-Experiment with `--indent`, `--expand`, `--output-sep` and `--each-key` to change the formatting of the output.
+Experiment with `--indent`, `--no-indent`, `--expand`, `--output-sep`, `--no-wrap`, `--each-key`, `--header` and `--footer` to change the formatting of the output.
 
 For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as `{ts} {level.upper()} {'#'*len(msg)}`.
 The following Python modules can be used in these expressions:
