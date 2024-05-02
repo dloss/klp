@@ -1199,7 +1199,7 @@ def input_exec(code, event):
                 for key, val in ev.items():
                     if val is not None:
                         out_event[key] = val
-                events.append(out_event)
+                events.append(stringify(out_event))
             result = events
         # One output event
         elif "__" in event:
@@ -1207,8 +1207,8 @@ def input_exec(code, event):
                 if val is not None:
                     event[key] = val
             del event["__"]
-        del event["_"]
-        result = [stringify(event)]
+            del event["_"]
+            result = [stringify(event)]
     except Exception as e:
         if args.debug or args.debug_eval:
             print(
