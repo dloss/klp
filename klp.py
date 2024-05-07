@@ -301,8 +301,13 @@ def parse(line, format):
         print_err("Unknown input format.")
         exit()
     if args.input_exec:
-        # Transformation could return multiple events
-        events = input_exec(args.input_exec, event)
+        events = [event]
+        for code in args.input_exec:
+            new_events = []
+            for event in events:
+                # Transformation could return multiple events
+                new_events.extend(input_exec(code, event))
+            events = new_events
     else:
         events = [event]
     return events
@@ -1209,6 +1214,9 @@ def input_exec(code, event):
             del event["__"]
             del event["_"]
             result = [stringify(event)]
+        else:
+            del event["_"]
+            result = [stringify(event)]
     except Exception as e:
         if args.debug or args.debug_eval:
             print(
@@ -1324,7 +1332,8 @@ def parse_args():
         "--input-exec",
         "-I",
         metavar="CODE",
-        default="",
+        default=[],
+        action="append",
         help="execute Python code to transform event after input parsing",
     )
 
