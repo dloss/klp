@@ -72,8 +72,8 @@ COLOR_CODES = {
     "cyan": ("\x1b[36m", "\x07"),
     "white": ("\x1b[37m", "\x08"),
     # Skip 0x09 to 0x0D (not supported by textwrap.wrap)
-    "bright_black": ("\x1b[1;30m", "\x0E"),
-    "bright_red": ("\x1b[1;31m", "\x0F"),
+    "bright_black": ("\x1b[1;30m", "\x0e"),
+    "bright_red": ("\x1b[1;31m", "\x0f"),
     "bright_green": ("\x1b[1;32m", "\x10"),
     "bright_yellow": ("\x1b[1;33m", "\x11"),
     "bright_blue": ("\x1b[1;34m", "\x12"),
@@ -653,7 +653,6 @@ def get_timestamp_datetime(event):
 
 
 class EnhancedString(str):
-
     def col(self, n):
         """
         Extrahiert die n-te Spalte aus dem String.
