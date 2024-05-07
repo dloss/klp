@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.59.0"
+__version__ = "0.59.1"
 
 INPUT_QUOTE = r"\""
 
@@ -1189,6 +1189,7 @@ def input_exec(code, event):
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
     events = []
+    result = []
     try:
         event = exec_and_get_locals(code, local_vars)
         # Multiple output events
@@ -1214,7 +1215,6 @@ def input_exec(code, event):
                 f"[Error executing {args.input_exec!r}: {e}. {event=}]",
                 file=sys.stderr,
             )
-        return []
     return result
 
 
