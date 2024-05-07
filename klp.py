@@ -308,6 +308,7 @@ def parse(line, format):
                 # Transformation could return multiple events
                 new_events.extend(input_exec(code, event))
             events = new_events
+        events = [stringify(ev) for ev in events]
     else:
         events = [event]
     return events
@@ -1173,56 +1174,51 @@ def reorder(event):
     }
 
 
+def stringify(event):
+    # Make sure the output values are all strings, like we expect in other parts of the code,
+    # and uppress non-existing fields
+    return {
+        str(key): str(val)
+        for key, val in event.items()
+        if val is not None and key not in ("__", "___")
+    }
+
+
 def input_exec(code, event):
     def exec_and_get_locals(code, local_vars):
-        if local_vars is None:
-            local_vars = {}
+        local_vars = local_vars or {}
         exec(code, EXPORTED_GLOBALS, local_vars)
         return local_vars
 
-    def stringify(event):
-        # Make sure the output values are all strings, like we expect in other parts of the code,
-        # and uppress non-existing fields
+    def remove_underscores(event):
         return {
-            str(key): str(val)
+            key: val
             for key, val in event.items()
-            if val is not None and key != "__" and key != "___"
+            if val is not None and key not in ("_", "__", "___")
         }
 
     # Allow special methods on String
     local_vars = {key: EnhancedString(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
-    events = []
-    result = []
     try:
         event = exec_and_get_locals(code, local_vars)
-        # Multiple output events
-        if "___" in event:
-            for ev in event["___"]:
-                out_event = {}
-                for key, val in ev.items():
-                    if val is not None:
-                        out_event[key] = val
-                events.append(stringify(out_event))
-            result = events
-        # One output event
-        elif "__" in event:
-            for key, val in event["__"].items():
-                if val is not None:
-                    event[key] = val
-            del event["__"]
-            del event["_"]
-            result = [stringify(event)]
-        else:
-            del event["_"]
-            result = [stringify(event)]
+
+        if "___" in event:  # Multiple output events
+            result = [ev for ev in event["___"] if ev is not None]
+        elif "__" in event:  # One output event
+            merged_event = {**event, **event["__"]}
+            del merged_event["__"]
+            result = [remove_underscores(merged_event)]
+        else:  # No special output
+            result = [remove_underscores(event)]
     except Exception as e:
         if args.debug or args.debug_eval:
             print(
                 f"[Error executing {args.input_exec!r}: {e}. {event=}]",
                 file=sys.stderr,
             )
+        result = []
     return result
 
 
