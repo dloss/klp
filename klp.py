@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.59.1"
+__version__ = "0.60.0"
 
 INPUT_QUOTE = r"\""
 
@@ -308,7 +308,6 @@ def parse(line, format):
                 # Transformation could return multiple events
                 new_events.extend(input_exec(code, event))
             events = new_events
-        events = [stringify(ev) for ev in events]
     else:
         events = [event]
     return events
@@ -881,6 +880,7 @@ def show_default(event, context_type="", lineno=None):
         elems = []
         for key, val in part.items():
             key_lower = key.lower()
+            val = str(val)
             double_quotes_needed = not args.plain and RE_WHITESPACE.search(val)
             val = (
                 escape_doublequotes_quoted(val)
@@ -961,7 +961,8 @@ def show_default(event, context_type="", lineno=None):
 def show_logfmt(event, file=sys.stdout):
     elems = []
     for key, val in event.items():
-        double_quotes_needed = not args.plain and RE_WHITESPACE.search(val)
+        val = str(val)
+        double_quotes_needed = not args.plain and RE_WHITESPACE.search(str(val))
         val = (
             escape_doublequotes_quoted(val)
             if double_quotes_needed
@@ -1171,16 +1172,6 @@ def reorder(event):
         key: event[key]
         for key in args.keys or event.keys()
         if key in event and key not in args.keys_not
-    }
-
-
-def stringify(event):
-    # Make sure the output values are all strings, like we expect in other parts of the code,
-    # and uppress non-existing fields
-    return {
-        str(key): str(val)
-        for key, val in event.items()
-        if val is not None and key not in ("__", "___")
     }
 
 
