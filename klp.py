@@ -218,7 +218,7 @@ def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
         )
         return pretty_json
     except json.JSONDecodeError as e:
-        raise ValueError("Invalid JSON string: {e}")
+        raise ValueError(f"Invalid JSON string: {e}")
 
 
 def guess_datetime(timestamp, with_args=True):
@@ -330,7 +330,7 @@ def parse_jsonl(line):
     except (ValueError, json.decoder.JSONDecodeError) as exc:
         if args.debug:
             print_err(repr(line))
-            print_err(f"Invalid JSON syntax in the above line:", exc)
+            print_err("Invalid JSON syntax in the above line:", exc)
         return result
     for key, val in flatten_object(json_data).items():
         if isinstance(val, str):
@@ -486,7 +486,7 @@ def format_ts_delta(timedelta):
         return "unknown"
     # XXX: better heuristics
     s = str(timedelta)
-    if not "." in s:
+    if "." not in s:
         s += ".000000"
     return s
 
@@ -1268,8 +1268,8 @@ def positive_int(value):
     return ivalue
 
 
-def flatten_sublists(l):
-    return [item for sublist in l for item in sublist]
+def flatten_sublists(li):
+    return [item for sublist in li for item in sublist]
 
 
 def parse_args():
@@ -1590,7 +1590,7 @@ def parse_args():
         "--expand",
         "-E",
         action="store_true",
-        help=f"split values at \\n and \\t characters and show on separate lines",
+        help="split values at \\n and \\t characters and show on separate lines",
     )
     default_output.add_argument(
         "--output-sep",
@@ -2197,10 +2197,10 @@ def flatten_object(json_data, separator="."):
     flattened = {}
 
     def _flatten(x, name=""):
-        if type(x) is dict:
+        if isinstance(x, dict):
             for a in x:
                 _flatten(x[a], name + a + separator)
-        elif type(x) is list:
+        elif isinstance(x, list):
             i = 0
             for a in x:
                 _flatten(a, name + str(i) + separator)
@@ -2247,7 +2247,7 @@ def lines_from_jsonfiles(filenames):
         filenames = ["-"]
     for filename in filenames:
         data = read_json_from_input(filename)
-        if type(data) is list:
+        if isinstance(data, list):
             for elem in data:
                 flat = flatten_object(elem)
                 line = build_line(flat)
