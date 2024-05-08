@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.60.0"
+__version__ = "0.60.1"
 
 INPUT_QUOTE = r"\""
 
@@ -673,7 +673,7 @@ class EnhancedString(str):
         if n < 0 or n >= len(parts):
             return None
         else:
-            return parts[n]
+            return EnhancedString(parts[n])
 
     def cols(self, *args, sep=None, outsep=" "):
         """Returns selected columns from the internal whitespace-separated string.
@@ -730,6 +730,7 @@ class EnhancedString(str):
             print("Columns", columns)
         else:
             columns = self.split(sep)
+        columns = [EnhancedString(c) for c in columns]
         if not args:
             return columns
 
@@ -760,8 +761,8 @@ class EnhancedString(str):
             result.append(outsep.join(arg_result))
 
         if len(args) > 1:
-            return [elem for elem in result]
-        return outsep.join(result)
+            return [EnhancedString(elem) for elem in result]
+        return EnhancedString(outsep.join(result))
 
 
 def show(event, context_type="", lineno=None):
