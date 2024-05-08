@@ -657,28 +657,116 @@ def get_timestamp_datetime(event):
         return None
 
 
-class EnhancedString(str):
+class EStr(str):
+    def __init__(self, content):
+        super().__init__()
+
+    def __new__(cls, content):
+        return super(EStr, cls).__new__(cls, content)
+
+    def __add__(self, other):
+        return EStr(super().__add__(other))
+
+    def __mul__(self, other):
+        return EStr(super().__mul__(other))
+
+    def __getitem__(self, key):
+        return EStr(super().__getitem__(key))
+
+    def upper(self):
+        return EStr(super().upper())
+
+    def lower(self):
+        return EStr(super().lower())
+
+    def capitalize(self):
+        return EStr(super().capitalize())
+
+    def title(self):
+        return EStr(super().title())
+
+    def swapcase(self):
+        return EStr(super().swapcase())
+
+    def strip(self, chars=None):
+        return EStr(super().strip(chars))
+
+    def lstrip(self, chars=None):
+        return EStr(super().lstrip(chars))
+
+    def rstrip(self, chars=None):
+        return EStr(super().rstrip(chars))
+
+    def split(self, sep=None, maxsplit=-1):
+        return [EStr(x) for x in super().split(sep, maxsplit)]
+
+    def rsplit(self, sep=None, maxsplit=-1):
+        return [EStr(x) for x in super().rsplit(sep, maxsplit)]
+
+    def join(self, iterable):
+        return EStr(super().join(iterable))
+
+    def replace(self, old, new, count=-1):
+        return EStr(super().replace(old, new, count))
+
+    def center(self, width, fillchar=" "):
+        return EStr(super().center(width, fillchar))
+
+    def ljust(self, width, fillchar=" "):
+        return EStr(super().ljust(width, fillchar))
+
+    def rjust(self, width, fillchar=" "):
+        return EStr(super().rjust(width, fillchar))
+
+    def zfill(self, width):
+        return EStr(super().zfill(width))
+
+    def partition(self, sep):
+        a, b, c = super().partition(sep)
+        return (EStr(a), EStr(b), EStr(c))
+
+    def rpartition(self, sep):
+        a, b, c = super().rpartition(sep)
+        return (EStr(a), EStr(b), EStr(c))
+
+    def format(self, *args, **kwargs):
+        return EStr(super().format(*args, **kwargs))
+
+    def format_map(self, mapping):
+        return EStr(super().format_map(mapping))
+
+    def slice(self, start, end=None):
+        return EStr(super().__getitem__(slice(start, end)))
+
+    def casefold(self):
+        return EStr(super().casefold())
+
+    def splitlines(self, keepends=False):
+        return [EStr(line) for line in super().splitlines(keepends)]
+
+    def expandtabs(self, tabsize=8):
+        return EStr(super().expandtabs(tabsize))
+
     def col(self, n):
-        """
-        Extrahiert die n-te Spalte aus dem String.
+        """Extracts the nth column from the string.
 
         Args:
-            n: Spaltennummer (0-basiert).
+            n: Column number (0-based).
 
         Returns:
-            Die n-te Spalte des Strings oder None, wenn die Spalte nicht existiert.
+            The nth column of the string, or None if the column does not exist.
         """
 
         parts = self.split()
         if n < 0 or n >= len(parts):
             return None
         else:
-            return EnhancedString(parts[n])
+            return EStr(parts[n])
 
     def cols(self, *args, sep=None, outsep=" "):
         """Returns selected columns from the internal whitespace-separated string.
 
-        This method extracts and optionally combines specific columns from the string stored in the EnhancedString object.
+        This method extracts and optionally combines specific columns from the string stored in the EStr object.
         It supports both single column indexing and slicing.
 
         * Input arguments:
@@ -699,7 +787,7 @@ class EnhancedString(str):
 
         Examples:
 
-        >>> s = EnhancedString("This is a test with 7 columns")
+        >>> s = EStr("This is a test with 7 columns")
         >>> s.cols()  # Returns entire string by default
         ["This", "is", "a", "test", "with", "7", "columns"]
         >>> s.cols("0,3")  # Select columns 0 and 3 using a comma-separated string
@@ -716,7 +804,7 @@ class EnhancedString(str):
         'is a'
         >>> s.cols("-2,2,4:")  # Select columns using negative index and open-ended slice
         '7 a with 7 columns'
-        >>> t = EnhancedString("This|is a|test with|4 columns")
+        >>> t = EStr("This|is a|test with|4 columns")
         >>> t.cols("1:3", sep="|")  # Specify a different column separator
         'is a|test with'
         >>> t.cols("-2,2,4:", sep="|", outsep=":")  # Specify both column and output separators
@@ -728,7 +816,7 @@ class EnhancedString(str):
             columns = re.split(sep, self)
         else:
             columns = self.split(sep)
-        columns = [EnhancedString(c) for c in columns]
+        columns = [EStr(c) for c in columns]
         if not args:
             return columns
 
@@ -759,8 +847,8 @@ class EnhancedString(str):
             result.append(outsep.join(arg_result))
 
         if len(args) > 1:
-            return [EnhancedString(elem) for elem in result]
-        return EnhancedString(outsep.join(result))
+            return [EStr(elem) for elem in result]
+        return EStr(outsep.join(result))
 
 
 def show(event, context_type="", lineno=None):
@@ -1188,7 +1276,7 @@ def input_exec(code, event):
         }
 
     # Allow special methods on String
-    local_vars = {key: EnhancedString(val) for key, val in event.items()}
+    local_vars = {key: EStr(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
     try:
@@ -2127,19 +2215,19 @@ class MyTests(unittest.TestCase):
             extract_json("")
 
     def test_init(self):
-        s = EnhancedString("This is a test")
+        s = EStr("This is a test")
         self.assertEqual(s, "This is a test")
 
     def test_str(self):
-        s = EnhancedString("This is a test")
+        s = EStr("This is a test")
         self.assertEqual(str(s), "This is a test")
 
     def test_len(self):
-        s = EnhancedString("This is a test")
+        s = EStr("This is a test")
         self.assertEqual(len(s), 14)
 
     def test_getitem(self):
-        s = EnhancedString("This is a test")
+        s = EStr("This is a test")
         self.assertEqual(s[0], "T")
         self.assertEqual(s[1], "h")
         self.assertEqual(s[2], "i")
@@ -2151,7 +2239,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s[8], "a")
 
     def test_col(self):
-        s = EnhancedString("This is a test")
+        s = EStr("This is a test")
         self.assertEqual(s.col(0), "This")
         self.assertEqual(s.col(1), "is")
         self.assertEqual(s.col(2), "a")
@@ -2159,7 +2247,7 @@ class MyTests(unittest.TestCase):
         self.assertEqual(s.col(4), None)
 
     def test_cols(self):
-        s = EnhancedString("This is  a test  with 7 columns")
+        s = EStr("This is  a test  with 7 columns")
         self.assertEqual(s.cols(), ["This", "is", "a", "test", "with", "7", "columns"])
         self.assertEqual(s.cols(0, 3), ["This", "test"])
         self.assertEqual(s.cols(0, -1, 2, 2), ["This", "columns", "a", "a"])
@@ -2176,12 +2264,12 @@ class MyTests(unittest.TestCase):
         )
 
     def test_cols_sep(self):
-        s = EnhancedString("This|is a|test with|4 columns")
+        s = EStr("This|is a|test with|4 columns")
         self.assertEqual(s.cols("1:3", sep="|"), "is a test with")
         self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
 
     def test_cols_regexsep(self):
-        s = EnhancedString("This2334is7453a654test232with232regex")
+        s = EStr("This2334is7453a654test232with232regex")
         self.assertEqual(s.cols("1:5", sep=re.compile(r"\d+")), "is a test with")
 
 
