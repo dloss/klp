@@ -725,9 +725,7 @@ class EnhancedString(str):
 
         result = []
         if isinstance(sep, re.Pattern):
-            print("Pattern", sep, type(sep))
             columns = re.split(sep, self)
-            print("Columns", columns)
         else:
             columns = self.split(sep)
         columns = [EnhancedString(c) for c in columns]
