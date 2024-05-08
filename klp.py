@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.60.1"
+__version__ = "0.60.2"
 
 INPUT_QUOTE = r"\""
 
@@ -849,6 +849,42 @@ class EStr(str):
         if len(args) > 1:
             return [EStr(elem) for elem in result]
         return EStr(outsep.join(result))
+
+    def extract_json(self):
+        return EStr(extract_json(self))
+
+    def extract_regex(self):
+        return EStr(extract_regex(self))
+
+    def format_datetime(self):
+        return EStr(format_datetime(self))
+
+    def guess_datetime(self):
+        return guess_datetime(self)
+
+    def parse_logfmt(self):
+        return parse_logfmt(self)
+
+    def parse_jsonl(self):
+        return parse_jsonl(self)
+
+    def parse_clf(self):
+        return parse_clf(self)
+
+    def parse_combined(self):
+        return parse_combined(self)
+
+    def parse_unix(self):
+        return parse_unix(self)
+
+    def parse_line(self):
+        return parse_line(self)
+
+    def parse_data(self):
+        return parse_data(self)
+
+    def pprint_json(self, *args, **kwargs):
+        return EStr(pprint_json(self, *args, **kwargs))
 
 
 def show(event, context_type="", lineno=None):
