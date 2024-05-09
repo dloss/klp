@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.60.3"
+__version__ = "0.60.4"
 
 INPUT_QUOTE = r"\""
 
@@ -183,6 +183,10 @@ def build_globals_dict(modules):
     return d
 
 
+def print_output(*myargs, **kwargs):
+    print(*myargs, **kwargs, file=args.output_file)
+
+
 def extract_json(text):
     """Extract the first JSON object or array from a given text"""
     json_start_chars = {"{", "["}
@@ -228,7 +232,7 @@ def guess_datetime(timestamp, with_args=True):
         converter = datetime_converters[i]
         try:
             datetime = converter(timestamp)
-            # print("guess", i, timestamp, "as", datetime, datetime.tzname()) # debug
+            # print("guess", i, timestamp, "as", datetime, datetime.tzname(), file=sys.stderr) # debug
             break
         except (AttributeError, ValueError, TypeError):
             continue
@@ -432,8 +436,8 @@ def print_with_event_sep(*myargs, **mykwargs):
     if is_first_visible_line:
         is_first_visible_line = False
     else:
-        print(args.output_event_sep, end="", **mykwargs)
-    print(*myargs, end="", **mykwargs)
+        print_output(args.output_event_sep, end="", **mykwargs)
+    print_output(*myargs, end="", **mykwargs)
 
 
 def expand_color_codes(line):
@@ -1100,7 +1104,7 @@ def show_default(event, context_type="", lineno=None):
             print_with_event_sep(line)
 
 
-def show_logfmt(event, file=sys.stdout):
+def show_logfmt(event):
     elems = []
     for key, val in event.items():
         val = str(val)
@@ -1121,7 +1125,7 @@ def show_logfmt(event, file=sys.stdout):
             elems.append(f"{key}={val}")
 
     line = " ".join(elems)
-    print_with_event_sep(line, file=file)
+    print_with_event_sep(line)
 
 
 def print_err(*args, **kwargs):
@@ -1290,7 +1294,7 @@ def visible(line, event):
                         raise StoppedEarly
                     return False
     except ValueError as exc:
-        print(exc)
+        print(exc, file=sys.stderr)
         sys.exit(1)
 
     if args.loglevels or args.loglevels_not:
@@ -1674,6 +1678,12 @@ def parse_args():
         action="store_true",
         help="don't use unicode symbols to simplify/beautify output by replacing characters",
     )
+    output.add_argument(
+        "--output-file",
+        "-o",
+        metavar="PATH",
+        help="write output to given file. Deactivates color unless explicitly requested. Default: stdout",
+    )
 
     default_output = parser.add_argument_group("default output format options")
     default_output.add_argument(
@@ -1850,7 +1860,7 @@ def parse_args():
 
     args.color = (
         args.color
-        or sys.stdout.isatty()
+        or (not args.output_file and sys.stdout.isatty())
         and not (args.no_color or "NO_COLOR" in os.environ)
     )
 
@@ -1980,7 +1990,7 @@ def parse_args():
 
 def show_skipped_marker(skipped):
     colors = THEMES[args.theme]["skipped_marker"]
-    print(
+    print_output(
         colorize("\n  [...", colors["before"]),
         colorize(str(skipped), colors["number"]),
         colorize(
@@ -1995,7 +2005,7 @@ def show_gap_marker(timedelta, width):
     colors = THEMES[args.theme]["gap_marker"]
     label = f"time gap: {timedelta}"
     separator = "_" * int((terminal_width - len(label) - 3) / 2)
-    print(
+    print_output(
         colorize(separator, colors["before"]),
         colorize(label, colors["label"]),
         colorize(
@@ -2457,19 +2467,27 @@ def main():
     stats = Stats([], [], [], 0, 0, "", "", "")
     try:
         args = parse_args()
+        if args.output_file:
+            try:
+                args.output_file = open(args.output_file, "w")
+            except FileNotFoundError:
+                print("Could not open output file for writing:", repr(args.output_file))
+                sys.exit(1)
+        else:
+            args.output_file = sys.stdout
         if args.selftest:
             if do_tests().wasSuccessful():
                 sys.exit(0)
             else:
                 sys.exit(1)
         if args.header:
-            print(args.header)
+            print_output(args.header)
         if args.output_format == "tsv":
             # Header
-            print("\t".join(args.keys))
+            print_output("\t".join(args.keys))
         elif args.output_format == "psv":
             # Header
-            print("|".join(args.keys))
+            print_output("|".join(args.keys))
         show_context = (
             args.context or args.before_context or args.after_context
         ) and not args.stats_only
@@ -2556,7 +2574,7 @@ def main():
                                             "fuse_last",
                                             lineno=1 + fuse_skipped + 1,
                                         )
-                                        print("", file=sys.stderr)
+                                        print_output("", file=sys.stderr)
                             elif args.mark_gaps is not None:
                                 if ts_delta > args.mark_gaps:
                                     show_gap_marker(ts_delta, terminal_width)
@@ -2576,7 +2594,7 @@ def main():
                                 # Cache value for more performance
                                 len_formatted_time = len(formatted_time)
                                 if args.color:
-                                    print(
+                                    print_output(
                                         colorize(
                                             formatted_time,
                                             THEMES[args.theme]["timestamp_key"],
@@ -2584,9 +2602,9 @@ def main():
                                         end=" ",
                                     )
                                 else:
-                                    print(formatted_time, end=" ")
+                                    print_output(formatted_time, end=" ")
                         elif len_formatted_time + 1 + mapchars + 1 == terminal_width:
-                            print("".join(colored_mapline))
+                            print_output("".join(colored_mapline))
                             colored_mapline = []
                             mapchars = 0
                         if args.levelmap:
@@ -2627,12 +2645,12 @@ def main():
         if show_context and skipped > 0 and args.output_format == "default":
             show_skipped_marker(skipped)
         if colored_mapline:
-            print("".join(colored_mapline))
+            print_output("".join(colored_mapline))
         if fuse_maybe_last:
             show(fuse_maybe_last, "fuse_last", lineno=1 + fuse_skipped + 1)
 
     except FileNotFoundError as exc:
-        print(exc)
+        print(exc, file=sys.err)
         sys.exit(1)
     except IOError as exc:
         # Ignore broken pipe errors (e.g. caused by piping our output to head)
@@ -2644,10 +2662,10 @@ def main():
         pass
     except KeyboardInterrupt:
         interrupted = True
-        sys.stdout.flush()
+        args.output_file.flush()
 
     if args.footer is not None:
-        print(args.footer)
+        print_output(args.footer)
 
     # Print stats even after CTRL-C or early stop
     if args.stats or args.stats_only:
