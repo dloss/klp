@@ -320,6 +320,20 @@ def parse_logfmt(text):
     }
 
 
+def parse_kv(text, sep=None, kvsep="="):
+    if isinstance(sep, re.Pattern):
+        columns = re.split(sep, text)
+    else:
+        columns = text.split(sep)
+
+    result = {}
+    for column in columns:
+        if kvsep in column:
+            key, val = column.split(kvsep, maxsplit=1)
+            result[key] = val
+    return result
+
+
 def parse_jsonl(line):
     # Only handle top-level strings. Everything else is converted into a string
     result = {}
@@ -399,6 +413,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         extract_regex,
         format_datetime,
         guess_datetime,
+        parse_kv,
         parse_logfmt,
         parse_jsonl,
         parse_clf,
@@ -862,6 +877,9 @@ class EStr(str):
 
     def guess_datetime(self):
         return guess_datetime(self)
+
+    def parse_kv(self, *args, **kwargs):
+        return parse_kv(self, *args, **kwargs)
 
     def parse_logfmt(self):
         return parse_logfmt(self)
