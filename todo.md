@@ -2,12 +2,13 @@
 - Document --utc and --localtime
 - Document double and triple underscore handling for --input-exec
 - Document parse_kv()
+- Document --output-file
 - --start and --stop regexes
 - Input format guessing
 - CSV input
 - TSV input without headers (--column-names specified by user)
+- syslog input
 - Fix grep when used both with and without keys
-- Add -o for output to file
 - Allow to specify encodings for input/output
 - --grep-map just showing if a line matches
 - --grep-time-context (context by timespan, not number of lines)
