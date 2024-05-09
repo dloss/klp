@@ -757,6 +757,7 @@ class EStr(str):
             The nth column of the string, or None if the column does not exist.
         """
 
+        n = int(n)  # allow strings to be more consistent with cols()
         parts = self.split()
         if n < 0 or n >= len(parts):
             return None
