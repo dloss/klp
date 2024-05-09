@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.60.2"
+__version__ = "0.60.3"
 
 INPUT_QUOTE = r"\""
 
@@ -1769,7 +1769,12 @@ def parse_args():
         "--levelmap",
         "-M",
         action="store_true",
-        help="output log levels only to give a big picture overview",
+        help="output first char of log levels only to give a big picture overview",
+    )
+    output_special.add_argument(
+        "--map",
+        metavar="KEY",
+        help="output first char the given key only to give a big picture overview",
     )
     output_special.add_argument(
         "--mark-gaps",
@@ -1984,16 +1989,25 @@ def show_gap_marker(timedelta, width):
 
 
 def colored_levelchar(event):
-    _, loglevel = get_log_level(event)
-    if loglevel is None:
-        return "."
-    if args.color:
-        return colorize(
-            loglevel[0],
-            THEMES[args.theme]["levels"].get(loglevel.lower(), "off"),
-        )
-    else:
-        return loglevel[0]
+    key, _ = get_log_level(event)
+    return colored_mapchar(event, key)
+
+
+def colored_mapchar(event, key):
+    val = event.get(key, ".")
+    color = None
+    if val == ".":
+        color = THEMES[args.theme]["quotes"] if args.color else None
+    elif args.color:
+        if key in MSG_KEYS:
+            color = THEMES[args.theme]["message_key"]
+        elif key in TS_KEYS:
+            color = THEMES[args.theme]["timestamp_key"]
+        elif key in LEVEL_KEYS:
+            color = THEMES[args.theme]["levels"].get(val.lower(), "off")
+    if args.color and color:
+        return colorize(val[0], color)
+    return val[0]
 
 
 def file_generator(filenames):
@@ -2447,8 +2461,8 @@ def main():
         ts_delta = 0
         skipped = 0
         fuse_skipped = 0
-        colored_levelline = []
-        levelchars = 0
+        colored_mapline = []
+        mapchars = 0
         formatted_time = ""
         len_formatted_time = 0
         fuse_maybe_last = None
@@ -2535,9 +2549,9 @@ def main():
                         raise StoppedEarly
                     if args.add_ts_delta:
                         event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
-                    if args.levelmap and not args.stats_only:
-                        levelchars += 1
-                        if levelchars == 1:
+                    if (args.levelmap or args.map) and not args.stats_only:
+                        mapchars += 1
+                        if mapchars == 1:
                             ts = get_timestamp_str_or_none(event)
                             if ts:
                                 formatted_time = format_datetime(ts)
@@ -2553,11 +2567,14 @@ def main():
                                     )
                                 else:
                                     print(formatted_time, end=" ")
-                        elif len_formatted_time + 1 + levelchars + 1 == terminal_width:
-                            print("".join(colored_levelline))
-                            colored_levelline = []
-                            levelchars = 0
-                        colored_levelline.append(colored_levelchar(event))
+                        elif len_formatted_time + 1 + mapchars + 1 == terminal_width:
+                            print("".join(colored_mapline))
+                            colored_mapline = []
+                            mapchars = 0
+                        if args.levelmap:
+                            colored_mapline.append(colored_levelchar(event))
+                        else:
+                            colored_mapline.append(colored_mapchar(event, args.map))
                         stats = update_stats(stats, event)
                         continue
                     if not args.stats_only:
@@ -2591,8 +2608,8 @@ def main():
         skipped += len(before_context)
         if show_context and skipped > 0 and args.output_format == "default":
             show_skipped_marker(skipped)
-        if colored_levelline:
-            print("".join(colored_levelline))
+        if colored_mapline:
+            print("".join(colored_mapline))
         if fuse_maybe_last:
             show(fuse_maybe_last, "fuse_last", lineno=1 + fuse_skipped + 1)
 
