@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.60.4"
+__version__ = "0.61.0"
 
 INPUT_QUOTE = r"\""
 
@@ -263,7 +263,7 @@ def extract_regex(pattern, s, *groupargs):
     match = re.search(pattern, s)
     if match:
         return match.group(*groupargs)
-    return ""
+    return None
 
 
 def extract_builtin_regex(regex_name, s):
@@ -272,7 +272,7 @@ def extract_builtin_regex(regex_name, s):
         match = re.search(pattern, s)
         if match:
             return match.group()
-    return ""
+    return None
 
 
 def create_extraction_function(regex_name):
@@ -989,7 +989,7 @@ def show_by_eval_template(event, template):
         except Exception as e:
             if args.debug or args.debug_eval:
                 print(f"[Error evaluating {expr!r}: {e}. {event=}]", file=sys.stderr)
-            return ""
+            return None
 
     # Replace all expressions in the template
     out = pattern.sub(replace_expr, template)
@@ -2220,8 +2220,8 @@ class MyTests(unittest.TestCase):
         self.assertEqual(parse_logfmt(text), expected)
 
     def test_parse_logfmt_empty_string(self):
-        text = ""
         expected = {}
+        text = ""
         self.assertEqual(parse_logfmt(text), expected)
 
     def test_escape1(self):
