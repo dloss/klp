@@ -431,6 +431,13 @@ EXPORTED_GLOBALS = build_globals_dict(
 )
 
 
+def list_exported_objects(ignore_underscore=True):
+    funcs = EXPORTED_GLOBALS
+    if ignore_underscore:
+        funcs = [f for name, f in funcs.items() if not name.startswith("_")]
+    return funcs
+
+
 def print_with_event_sep(*myargs, **mykwargs):
     global is_first_visible_line
     if is_first_visible_line:
@@ -1849,10 +1856,26 @@ def parse_args():
         help="show version number",
     )
     other.add_argument(
+        "--help-python-objs",
+        action="store_true",
+        help="show modules and functions available for Python expressions/code (apart from builtins)",
+    )
+    other.add_argument(
         "-h", "--help", action="help", help="show this help message and exit"
     )
 
     args = parser.parse_args()
+
+    if args.help_python_objs:
+        exported_objects = list_exported_objects(ignore_underscore=True)
+        max_name_length = max(len(obj.__name__) for obj in exported_objects)
+        for obj in list_exported_objects(ignore_underscore=True):
+            try:
+                doc = obj.__doc__.splitlines()[0]
+            except (AttributeError, KeyError):
+                doc = ""
+            print(f"{obj.__name__.ljust(max_name_length)} {doc}")
+        sys.exit(0)
 
     if sys.stdin.isatty() and not args.files and not args.selftest:
         parser.print_usage()
