@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.61.0"
+__version__ = "0.61.2"
 
 INPUT_QUOTE = r"\""
 
@@ -288,7 +288,7 @@ def parse(line, format):
         event = parse_logfmt(line)
     elif format == "jsonl":
         event = parse_jsonl(line)
-    elif format in ["json", "tsv", "psv"]:
+    elif format in ["json", "csv", "tsv", "psv"]:
         # Files have been converted to logfmt
         event = parse_logfmt(line)
     elif format == "clf":
@@ -941,6 +941,8 @@ def show(event, context_type="", lineno=None):
         show_logfmt(event)
     elif args.output_format in ["jsonl", "json"]:  # Reuse JSONL formatting for JSON
         show_jsonl(event)
+    elif args.output_format == "csv":
+        show_tsv(event, sep=",")
     elif args.output_format == "tsv":
         show_tsv(event)
     elif args.output_format == "psv":
@@ -1467,6 +1469,7 @@ def parse_args():
             "logfmt",
             "jsonl",
             "json",
+            "csv",
             "tsv",
             "psv",
             "clf",
@@ -1476,7 +1479,7 @@ def parse_args():
             "data",
         ],
         default="logfmt",
-        help="format of the input data. Default: logfmt. tsv and psv need a header line. json cannot be streamed. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
+        help="format of the input data. Default: logfmt. csv, tsv and psv need a header line. json cannot be streamed. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
@@ -1653,7 +1656,7 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "logfmt", "jsonl", "json", "tsv", "psv"],
+        choices=["default", "logfmt", "jsonl", "json", "csv", "tsv", "psv"],
         default="default",
         help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
@@ -1911,9 +1914,9 @@ def parse_args():
     if args.jsonl_output:
         args.output_format = "jsonl"
 
-    if args.output_format in ["tsv", "psv"] and not args.keys:
+    if args.output_format in ["csv", "tsv", "psv"] and not args.keys:
         print_err(
-            "TSV or PSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
+            "CSV, TSV or PSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
         )
         sys.exit(1)
 
@@ -1999,7 +2002,7 @@ def parse_args():
         print_err("Time span must not be zero. This would not select any data.")
         sys.exit(1)
 
-    if args.plain or args.output_format in ["jsonl", "tsv", "psv", "json"]:
+    if args.plain or args.output_format in ["jsonl", "csv", "tsv", "psv", "json"]:
         args.output_quote = '"'
     elif args.unicode:
         args.output_quote = "\u201c"
@@ -2524,7 +2527,10 @@ def main():
                 sys.exit(1)
         if args.header:
             print_output(args.header)
-        if args.output_format == "tsv":
+        if args.output_format == "csv":
+            # Header
+            print_output(",".join(args.keys))
+        elif args.output_format == "tsv":
             # Header
             print_output("\t".join(args.keys))
         elif args.output_format == "psv":
@@ -2547,6 +2553,8 @@ def main():
         is_first_visible_line = True
         if args.input_format == "json":
             lines = lines_from_jsonfiles(args.files)
+        elif args.input_format == "csv":
+            lines = lines_from_tsvfiles(args.files, delimiter=",")
         elif args.input_format == "tsv":
             lines = lines_from_tsvfiles(args.files)
         elif args.input_format == "psv":
