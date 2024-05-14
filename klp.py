@@ -644,6 +644,10 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%y/%m/%d %H:%M:%S").astimezone(),
     # BGL
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d-%H.%M.%S.%f").astimezone(),
+    # Wireshark
+    lambda s: dt.datetime.strptime(s[:26], "%b %d, %Y %H:%M:%S.%f")
+    .replace(microsecond=int(s[26:]) // 1000)
+    .astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
