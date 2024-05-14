@@ -687,6 +687,13 @@ def get_timestamp_datetime(event):
         return None
 
 
+def estr_or_none(val):
+    if val is None:
+        return None
+    else:
+        return EStr(val)
+
+
 class EStr(str):
     def __init__(self, content):
         super().__init__()
@@ -695,61 +702,61 @@ class EStr(str):
         return super(EStr, cls).__new__(cls, content)
 
     def __add__(self, other):
-        return EStr(super().__add__(other))
+        return estr_or_none(super().__add__(other))
 
     def __mul__(self, other):
-        return EStr(super().__mul__(other))
+        return estr_or_none(super().__mul__(other))
 
     def __getitem__(self, key):
-        return EStr(super().__getitem__(key))
+        return estr_or_none(super().__getitem__(key))
 
     def upper(self):
-        return EStr(super().upper())
+        return estr_or_none(super().upper())
 
     def lower(self):
-        return EStr(super().lower())
+        return estr_or_none(super().lower())
 
     def capitalize(self):
-        return EStr(super().capitalize())
+        return estr_or_none(super().capitalize())
 
     def title(self):
-        return EStr(super().title())
+        return estr_or_none(super().title())
 
     def swapcase(self):
-        return EStr(super().swapcase())
+        return estr_or_none(super().swapcase())
 
     def strip(self, chars=None):
-        return EStr(super().strip(chars))
+        return estr_or_none(super().strip(chars))
 
     def lstrip(self, chars=None):
-        return EStr(super().lstrip(chars))
+        return estr_or_none(super().lstrip(chars))
 
     def rstrip(self, chars=None):
-        return EStr(super().rstrip(chars))
+        return estr_or_none(super().rstrip(chars))
 
     def split(self, sep=None, maxsplit=-1):
-        return [EStr(x) for x in super().split(sep, maxsplit)]
+        return [estr_or_none(x) for x in super().split(sep, maxsplit)]
 
     def rsplit(self, sep=None, maxsplit=-1):
-        return [EStr(x) for x in super().rsplit(sep, maxsplit)]
+        return [estr_or_none(x) for x in super().rsplit(sep, maxsplit)]
 
     def join(self, iterable):
-        return EStr(super().join(iterable))
+        return estr_or_none(super().join(iterable))
 
     def replace(self, old, new, count=-1):
-        return EStr(super().replace(old, new, count))
+        return estr_or_none(super().replace(old, new, count))
 
     def center(self, width, fillchar=" "):
-        return EStr(super().center(width, fillchar))
+        return estr_or_none(super().center(width, fillchar))
 
     def ljust(self, width, fillchar=" "):
-        return EStr(super().ljust(width, fillchar))
+        return estr_or_none(super().ljust(width, fillchar))
 
     def rjust(self, width, fillchar=" "):
-        return EStr(super().rjust(width, fillchar))
+        return estr_or_none(super().rjust(width, fillchar))
 
     def zfill(self, width):
-        return EStr(super().zfill(width))
+        return estr_or_none(super().zfill(width))
 
     def partition(self, sep):
         a, b, c = super().partition(sep)
@@ -760,22 +767,22 @@ class EStr(str):
         return (EStr(a), EStr(b), EStr(c))
 
     def format(self, *args, **kwargs):
-        return EStr(super().format(*args, **kwargs))
+        return estr_or_none(super().format(*args, **kwargs))
 
     def format_map(self, mapping):
-        return EStr(super().format_map(mapping))
+        return estr_or_none(super().format_map(mapping))
 
     def slice(self, start, end=None):
-        return EStr(super().__getitem__(slice(start, end)))
+        return estr_or_none(super().__getitem__(slice(start, end)))
 
     def casefold(self):
-        return EStr(super().casefold())
+        return estr_or_none(super().casefold())
 
     def splitlines(self, keepends=False):
-        return [EStr(line) for line in super().splitlines(keepends)]
+        return [estr_or_none(line) for line in super().splitlines(keepends)]
 
     def expandtabs(self, tabsize=8):
-        return EStr(super().expandtabs(tabsize))
+        return estr_or_none(super().expandtabs(tabsize))
 
     def col(self, n):
         """Extracts the nth column from the string.
@@ -792,7 +799,7 @@ class EStr(str):
         if n < 0 or n >= len(parts):
             return None
         else:
-            return EStr(parts[n])
+            return estr_or_none(parts[n])
 
     def cols(self, *args, sep=None, outsep=" "):
         """Returns selected columns from the internal whitespace-separated string.
@@ -879,22 +886,22 @@ class EStr(str):
 
         if len(args) > 1:
             return [EStr(elem) for elem in result]
-        return EStr(outsep.join(result))
+        return estr_or_none(outsep.join(result))
 
     def extract_json(self):
-        return EStr(extract_json(self))
+        return estr_or_none(extract_json(self))
 
-    def extract_regex(self):
-        return EStr(extract_regex(self))
+    def extract_regex(self, pattern, *groupargs):
+        return estr_or_none(extract_regex(pattern, self, *groupargs))
 
     def format_datetime(self):
-        return EStr(format_datetime(self))
+        return estr_or_none(format_datetime(self))
 
     def guess_datetime(self):
         return guess_datetime(self)
 
-    def parse_kv(self, *args, **kwargs):
-        return parse_kv(self, *args, **kwargs)
+    def parse_kv(self, sep=None, kvsep="="):
+        return parse_kv(self, sep, kvsep)
 
     def parse_logfmt(self):
         return parse_logfmt(self)
@@ -917,8 +924,8 @@ class EStr(str):
     def parse_data(self):
         return parse_data(self)
 
-    def pprint_json(self, *args, **kwargs):
-        return EStr(pprint_json(self, *args, **kwargs))
+    def pprint_json(self, indent=2, sort_keys=True, ensure_ascii=False):
+        return estr_or_none(pprint_json(self, indent, sort_keys, ensure_ascii))
 
 
 def show(event, context_type="", lineno=None):
