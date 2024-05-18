@@ -1514,12 +1514,6 @@ def parse_args():
         help="CSV/TSV/PSV quoting used for input format. Default: minimal",
     )
     input.add_argument(
-        "--add-ts",
-        action="store_true",
-        help="set '_ts' key to current time when processing the event",
-    )
-
-    input.add_argument(
         "--prefix",
         metavar="STR",
         default="",
@@ -1990,6 +1984,7 @@ def parse_args():
             quoting=args.output_quoting,
         )
 
+    args.add_ts = "_ts" in args.keys
     args.add_ts_delta = "_ts_delta" in args.keys
 
     global TS_KEYS
@@ -2658,13 +2653,13 @@ def main():
                     before_context.append(line)
                     continue
 
+            if args.add_ts:
+                line = line + f' _ts="{now_rfc3339()}"'
             if args.prefix:
                 line = args.prefix + line
             events = parse(line, args.input_format)
 
             for event in events:
-                if args.add_ts:
-                    event["_ts"] = now_rfc3339()
                 if visible(line, event):
                     # breakpoint()
                     if args.fuse is not None or args.mark_gaps is not None:
