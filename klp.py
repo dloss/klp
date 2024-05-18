@@ -1022,7 +1022,7 @@ def show_by_eval_template(event, template):
 
 def show_csv(event, writer):
     cols = []
-    for key in event.keys():
+    for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
     writer.writerow(cols)
 
