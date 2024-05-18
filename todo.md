@@ -5,8 +5,6 @@
 - Document --output-file
 - --start and --stop regexes
 - Input format guessing
-- CSV input
-- TSV input without headers (--column-names specified by user)
 - syslog input
 - Fix grep when used both with and without keys
 - Allow to specify encodings for input/output
