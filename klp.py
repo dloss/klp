@@ -2700,7 +2700,7 @@ def main():
             show(fuse_maybe_last, "fuse_last", lineno=1 + fuse_skipped + 1)
 
     except FileNotFoundError as exc:
-        print(exc, file=sys.err)
+        print(exc, file=sys.stderr)
         sys.exit(1)
     except IOError as exc:
         # Ignore broken pipe errors (e.g. caused by piping our output to head)
