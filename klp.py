@@ -944,12 +944,8 @@ def show(event, context_type="", lineno=None):
         show_logfmt(event)
     elif args.output_format in ["jsonl", "json"]:  # Reuse JSONL formatting for JSON
         show_jsonl(event)
-    elif args.output_format in ("csv"):
+    elif args.output_format in ("csv", "tsv", "psv"):
         show_csv(event, args.writer)
-    elif args.output_format == "tsv":
-        show_tsv(event)
-    elif args.output_format == "psv":
-        show_tsv(event, sep="|")
 
 
 def escape_doublequotes_quoted(s):
@@ -1025,13 +1021,6 @@ def show_csv(event, writer):
     for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
     writer.writerow(cols)
-
-
-def show_tsv(event, sep="\t"):
-    cols = []
-    for key in args.keys:
-        cols.append(escape_plain(event.get(key, "")))
-    print_with_event_sep(sep.join(cols))
 
 
 def show_default(event, context_type="", lineno=None):
