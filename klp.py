@@ -2553,16 +2553,8 @@ def lines_from_csvfiles(
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
-        if filename.lower().endswith(".zip"):
-            with zipfile.ZipFile(filename, "r") as z:
-                for name in z.namelist():
-                    with z.open(name) as f:
-                        yield from process_csv(
-                            io.TextIOWrapper(f), delimiter, quoting, has_header
-                        )
-        else:
-            with file_opener(filename) as f:
-                yield from process_csv(f, delimiter, quoting, has_header)
+        with file_opener(filename) as f:
+            yield from process_csv(f, delimiter, quoting, has_header)
 
 
 def process_csv(file_obj, delimiter, quoting, has_header):
