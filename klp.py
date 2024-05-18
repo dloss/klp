@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.62.0"
+__version__ = "0.62.1"
 
 INPUT_QUOTE = r"\""
 
@@ -2787,8 +2787,11 @@ def main():
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         sys.exit(1)
-    except IOError as exc:
+    except BrokenPipeError:
         # Ignore broken pipe errors (e.g. caused by piping our output to head)
+        sys.stderr.close()  # Suppress further error messages
+        pass
+    except IOError as exc:
         if exc.errno == errno.EPIPE:
             pass
         else:
