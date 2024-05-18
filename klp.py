@@ -8,11 +8,13 @@ For logs in key=value format (and some others), show only the interesting parts
 """
 
 import argparse
+import contextlib
 import csv
 import dataclasses
 import datetime as dt
 import errno
 import gzip
+import io
 import json
 import os
 import pprint
@@ -21,6 +23,7 @@ import shutil
 import sys
 import textwrap
 import unittest
+import zipfile
 
 # Some modules to make available for filtering and templating
 import base64
@@ -2538,41 +2541,55 @@ def lines_from_jsonfiles(filenames):
     return out
 
 
+@contextlib.contextmanager
+def file_opener(filename):
+    if filename in ["-", None]:
+        yield sys.stdin
+    elif filename.lower().endswith(".gz"):
+        with gzip.open(filename, "rt") as f:
+            yield f
+    elif filename.lower().endswith(".zip"):
+        with zipfile.ZipFile(filename, "r") as z:
+            for name in z.namelist():
+                with z.open(name) as f:
+                    yield io.TextIOWrapper(f)
+    else:
+        with open(filename, "r") as f:
+            yield f
+
+
 def lines_from_csvfiles(
-    filenames,
-    delimiter=",",
-    quoting=csv.QUOTE_MINIMAL,
-    has_header=True,
+    filenames, delimiter=",", quoting=csv.QUOTE_MINIMAL, has_header=True
 ):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
-        if filename in ["-", None]:
-            f = sys.stdin
-        elif filename.lower().endswith(".gz"):
-            f = gzip.open(filename, "rt")
+        if filename.lower().endswith(".zip"):
+            with zipfile.ZipFile(filename, "r") as z:
+                for name in z.namelist():
+                    with z.open(name) as f:
+                        yield from process_csv(
+                            io.TextIOWrapper(f), delimiter, quoting, has_header
+                        )
         else:
-            f = open(filename, "r")
+            with file_opener(filename) as f:
+                yield from process_csv(f, delimiter, quoting, has_header)
 
-        reader = csv.reader(f, delimiter=delimiter, quoting=quoting)
 
-        if has_header:
-            headers = next(reader)
+def process_csv(file_obj, delimiter, quoting, has_header):
+    reader = csv.reader(file_obj, delimiter=delimiter, quoting=quoting)
+    if has_header:
+        headers = next(reader)
+    else:
+        headers = None
+    for row in reader:
+        if headers:
+            line = " ".join(
+                f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
+            )
         else:
-            headers = None
-
-        for row in reader:
-            if headers:
-                line = " ".join(
-                    f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
-                )
-            else:
-                line = " ".join(
-                    f'col{index}="{value}"' for index, value in enumerate(row)
-                )
-            yield line
-
-        f.close()
+            line = " ".join(f'col{index}="{value}"' for index, value in enumerate(row))
+        yield line
 
 
 def lines_from_datafiles(filenames, delimiter="\t"):
