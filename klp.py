@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.62.1"
+__version__ = "0.63.0"
 
 INPUT_QUOTE = r"\""
 
@@ -2481,16 +2481,20 @@ def flatten_object(json_data, separator="."):
 
 
 def read_json_from_input(filename):
-    if filename in ["-", None]:
-        data = json.load(sys.stdin)
-    else:
-        if filename.lower().endswith(".gz"):
-            with gzip.open(filename, "rt") as f:
-                data = json.load(f)
+    try:
+        if filename in ["-", None]:
+            data = json.load(sys.stdin)
         else:
-            with open(filename, "r") as f:
-                data = json.load(f)
-    return data
+            if filename.lower().endswith(".gz"):
+                with gzip.open(filename, "rt") as f:
+                    data = json.load(f)
+            else:
+                with open(filename, "r") as f:
+                    data = json.load(f)
+        return data
+    except json.decoder.JSONDecodeError as exc:
+        if args.debug:
+            print_err("Invalid JSON syntax:", exc)
 
 
 def sanitize_key(key):
