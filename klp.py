@@ -1493,6 +1493,11 @@ def parse_args():
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
     )
     input.add_argument(
+        "--input-encoding",
+        default="utf-8",
+        help="Text encoding of the input data. Default: utf-8",
+    )
+    input.add_argument(
         "--no-header",
         action="store_false",
         dest="has_header",
@@ -2142,22 +2147,14 @@ def colored_mapchar(event, key):
     return val[0]
 
 
-def file_generator(filenames):
+def file_generator(filenames, encoding="utf-8"):
     """Yields lines from multiple files, which may be compressed."""
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
-        if filename in ["-"]:
-            for line in sys.stdin:
+        with file_opener(filename, encoding=encoding) as f:
+            for line in f:
                 yield line
-        elif filename.lower().endswith(".gz"):
-            with gzip.open(filename, "rt") as f:
-                for line in f:
-                    yield line
-        else:
-            with open(filename, "r") as f:
-                for line in f:
-                    yield line
 
 
 class MyTests(unittest.TestCase):
@@ -2531,29 +2528,33 @@ def lines_from_jsonfiles(filenames):
 
 
 @contextlib.contextmanager
-def file_opener(filename):
+def file_opener(filename, encoding="utf-8"):
     if filename in ["-", None]:
         yield sys.stdin
     elif filename.lower().endswith(".gz"):
-        with gzip.open(filename, "rt") as f:
+        with gzip.open(filename, "rt", encoding=encoding) as f:
             yield f
     elif filename.lower().endswith(".zip"):
         with zipfile.ZipFile(filename, "r") as z:
             for name in z.namelist():
                 with z.open(name) as f:
-                    yield io.TextIOWrapper(f)
+                    yield io.TextIOWrapper(f, encoding=encoding)
     else:
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding=encoding) as f:
             yield f
 
 
 def lines_from_csvfiles(
-    filenames, delimiter=",", quoting=csv.QUOTE_MINIMAL, has_header=True
+    filenames,
+    delimiter=",",
+    quoting=csv.QUOTE_MINIMAL,
+    has_header=True,
+    encoding="utf-8",
 ):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
-        with file_opener(filename) as f:
+        with file_opener(filename, encoding=encoding) as f:
             yield from process_csv(f, delimiter, quoting, has_header)
 
 
@@ -2623,12 +2624,15 @@ def main():
             lines = lines_from_jsonfiles(args.files)
         elif args.input_format in ("csv", "tsv", "psv"):
             lines = lines_from_csvfiles(
-                args.files, delimiter=args.input_delimiter, has_header=args.has_header
+                args.files,
+                delimiter=args.input_delimiter,
+                has_header=args.has_header,
+                encoding=args.input_encoding,
             )
         elif args.input_format == "data":
             lines = lines_from_datafiles(args.files)
         else:
-            lines = file_generator(args.files)
+            lines = file_generator(args.files, encoding=args.input_encoding)
         for line_number, line in enumerate(lines):
             stats.num_lines_seen += 1
             if args.skip and args.skip >= stats.num_lines_seen:
