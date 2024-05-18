@@ -32,7 +32,7 @@ import math
 import random
 import string
 
-__version__ = "0.61.2"
+__version__ = "0.62.0"
 
 INPUT_QUOTE = r"\""
 
@@ -941,8 +941,8 @@ def show(event, context_type="", lineno=None):
         show_logfmt(event)
     elif args.output_format in ["jsonl", "json"]:  # Reuse JSONL formatting for JSON
         show_jsonl(event)
-    elif args.output_format == "csv":
-        show_tsv(event, sep=",")
+    elif args.output_format in ("csv"):
+        show_csv(event, args.writer)
     elif args.output_format == "tsv":
         show_tsv(event)
     elif args.output_format == "psv":
@@ -1015,6 +1015,13 @@ def show_by_eval_template(event, template):
     out = pattern.sub(replace_expr, template)
     if out:
         print_with_event_sep(out)
+
+
+def show_csv(event, writer):
+    cols = []
+    for key in event.keys():
+        cols.append(escape_plain(event.get(key, "")))
+    writer.writerow(cols)
 
 
 def show_tsv(event, sep="\t"):
@@ -1406,6 +1413,15 @@ def make_regex_dict(specs):
     return result, new_specs
 
 
+def quoting_type(text):
+    return {
+        "minimal": csv.QUOTE_MINIMAL,
+        "all": csv.QUOTE_ALL,
+        "nonnumeric": csv.QUOTE_NONNUMERIC,
+        "none": csv.QUOTE_NONE,
+    }.get(text, None)
+
+
 def csv_type(text):
     return [] if text is None else text.split(",")
 
@@ -1483,6 +1499,22 @@ def parse_args():
     )
     input.add_argument(
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
+    )
+    input.add_argument(
+        "--no-header",
+        action="store_false",
+        dest="has_header",
+        help="CSV quoting used for input format. Default: minimal",
+    )
+    input.add_argument(
+        "--input-delimiter",
+        help="CSV/TSV/PSV input delimiter",
+    )
+    input.add_argument(
+        "--input-quoting",
+        choices=["minimal", "all", "nonnumeric", "none"],
+        default="minimal",
+        help="CSV quoting used for input format. Default: minimal",
     )
     input.add_argument(
         "--prefix",
@@ -1662,6 +1694,16 @@ def parse_args():
     )
     output.add_argument(
         "--jsonl-output", "-J", action="store_true", help="output in JSON Lines format"
+    )
+    output.add_argument(
+        "--output-delimiter",
+        help="CSV/TSV/PSV output delimiter",
+    )
+    output.add_argument(
+        "--output-quoting",
+        choices=["minimal", "all", "nonnumeric", "none"],
+        default="minimal",
+        help="CSV/TSV/PSV quoting used for output format. Default: minimal",
     )
     output.add_argument(
         "--max-events",
@@ -1909,16 +1951,41 @@ def parse_args():
         and not (args.no_color or "NO_COLOR" in os.environ)
     )
 
+    args.input_quoting = quoting_type(args.input_quoting)
+    args.output_quoting = quoting_type(args.output_quoting)
+    if args.output_file:
+        try:
+            args.output_file = open(args.output_file, "w")
+        except FileNotFoundError:
+            print("Could not open output file for writing:", repr(args.output_file))
+            sys.exit(1)
+    else:
+        args.output_file = sys.stdout
+
     if args.jsonl_input:
         args.input_format = "jsonl"
     if args.jsonl_output:
         args.output_format = "jsonl"
 
-    if args.output_format in ["csv", "tsv", "psv"] and not args.keys:
-        print_err(
-            "CSV, TSV or PSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
+    delimiter_defaults = {"csv": ",", "tsv": "\t", "psv": "|"}
+    if args.input_format in ["csv", "tsv", "psv"]:
+        if args.input_delimiter is None:
+            args.input_delimiter = delimiter_defaults.get(args.input_format)
+
+    if args.output_format in ["csv", "tsv", "psv"]:
+        if not args.keys:
+            print_err(
+                "CSV, TSV or PSV format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
+            )
+            sys.exit(1)
+        # Delimiter defaults by filetype
+        if args.output_delimiter is None:
+            args.output_delimiter = delimiter_defaults.get(args.output_format)
+        args.writer = csv.writer(
+            args.output_file,
+            delimiter=args.output_delimiter,
+            quoting=args.output_quoting,
         )
-        sys.exit(1)
 
     args.add_ts = "_ts" in args.keys
     args.add_ts_delta = "_ts_delta" in args.keys
@@ -2471,7 +2538,12 @@ def lines_from_jsonfiles(filenames):
     return out
 
 
-def lines_from_tsvfiles(filenames, delimiter="\t"):
+def lines_from_csvfiles(
+    filenames,
+    delimiter=",",
+    quoting=csv.QUOTE_MINIMAL,
+    has_header=True,
+):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -2481,14 +2553,26 @@ def lines_from_tsvfiles(filenames, delimiter="\t"):
             f = gzip.open(filename, "rt")
         else:
             f = open(filename, "r")
-        reader = csv.reader(f, delimiter=delimiter)
-        # TODO: Support files without header
-        headers = next(reader)
+
+        reader = csv.reader(f, delimiter=delimiter, quoting=quoting)
+
+        if has_header:
+            headers = next(reader)
+        else:
+            headers = None
+
         for row in reader:
-            line = " ".join(
-                f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
-            )
+            if headers:
+                line = " ".join(
+                    f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
+                )
+            else:
+                line = " ".join(
+                    f'col{index}="{value}"' for index, value in enumerate(row)
+                )
             yield line
+
+        f.close()
 
 
 def lines_from_datafiles(filenames, delimiter="\t"):
@@ -2512,14 +2596,6 @@ def main():
     stats = Stats([], [], [], 0, 0, "", "", "")
     try:
         args = parse_args()
-        if args.output_file:
-            try:
-                args.output_file = open(args.output_file, "w")
-            except FileNotFoundError:
-                print("Could not open output file for writing:", repr(args.output_file))
-                sys.exit(1)
-        else:
-            args.output_file = sys.stdout
         if args.selftest:
             if do_tests().wasSuccessful():
                 sys.exit(0)
@@ -2527,15 +2603,9 @@ def main():
                 sys.exit(1)
         if args.header:
             print_output(args.header)
-        if args.output_format == "csv":
+        if args.output_format in ("csv", "tsv", "psv"):
             # Header
-            print_output(",".join(args.keys))
-        elif args.output_format == "tsv":
-            # Header
-            print_output("\t".join(args.keys))
-        elif args.output_format == "psv":
-            # Header
-            print_output("|".join(args.keys))
+            args.writer.writerow(args.keys)
         show_context = (
             args.context or args.before_context or args.after_context
         ) and not args.stats_only
@@ -2553,12 +2623,10 @@ def main():
         is_first_visible_line = True
         if args.input_format == "json":
             lines = lines_from_jsonfiles(args.files)
-        elif args.input_format == "csv":
-            lines = lines_from_tsvfiles(args.files, delimiter=",")
-        elif args.input_format == "tsv":
-            lines = lines_from_tsvfiles(args.files)
-        elif args.input_format == "psv":
-            lines = lines_from_tsvfiles(args.files, delimiter="|")
+        elif args.input_format in ("csv", "tsv", "psv"):
+            lines = lines_from_csvfiles(
+                args.files, delimiter=args.input_delimiter, has_header=args.has_header
+            )
         elif args.input_format == "data":
             lines = lines_from_datafiles(args.files)
         else:
