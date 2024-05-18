@@ -1986,7 +1986,6 @@ def parse_args():
 
     args.add_ts = "_ts" in args.keys
     args.add_ts_delta = "_ts_delta" in args.keys
-    args.add_line = "_line" in args.keys or "_line_number" in args.keys
 
     global TS_KEYS
     if args.ts_key:
@@ -2654,18 +2653,11 @@ def main():
                     before_context.append(line)
                     continue
 
-            if args.add_line:
-                event = {
-                    "_line": line.rstrip(),
-                    "_line_number": line_number,
-                    "_ts": now_rfc3339(),
-                }
-            else:
-                if args.add_ts:
-                    line = line + f' _ts="{now_rfc3339()}"'
-                if args.prefix:
-                    line = args.prefix + line
-                events = parse(line, args.input_format)
+            if args.add_ts:
+                line = line + f' _ts="{now_rfc3339()}"'
+            if args.prefix:
+                line = args.prefix + line
+            events = parse(line, args.input_format)
 
             for event in events:
                 if visible(line, event):
