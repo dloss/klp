@@ -1496,7 +1496,7 @@ def parse_args():
         "--no-header",
         action="store_false",
         dest="has_header",
-        help="CSV quoting used for input format. Default: minimal",
+        help="CSV/TSV/PSV has no header. Will auto-generate numbered column keys",
     )
     input.add_argument(
         "--input-delimiter",
@@ -1506,7 +1506,7 @@ def parse_args():
         "--input-quoting",
         choices=["minimal", "all", "nonnumeric", "none"],
         default="minimal",
-        help="CSV quoting used for input format. Default: minimal",
+        help="CSV/TSV/PSV quoting used for input format. Default: minimal",
     )
     input.add_argument(
         "--prefix",
