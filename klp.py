@@ -1514,12 +1514,6 @@ def parse_args():
         help="CSV/TSV/PSV quoting used for input format. Default: minimal",
     )
     input.add_argument(
-        "--prefix",
-        metavar="STR",
-        default="",
-        help="prepend given string to each log line before parsing it",
-    )
-    input.add_argument(
         "--input-exec",
         "-I",
         metavar="CODE",
@@ -2655,8 +2649,6 @@ def main():
 
             if args.add_ts:
                 line = line + f' _ts="{now_rfc3339()}"'
-            if args.prefix:
-                line = args.prefix + line
             events = parse(line, args.input_format)
 
             for event in events:
