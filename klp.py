@@ -2827,6 +2827,20 @@ def lines_from_datafiles(filenames, delimiter="\t"):
         yield data  # f'data="{data}"'
 
 
+def skip_line_on_non_match(line, before_context, after_context_num, skipped, stats):
+    if (args.grep_not and any(regex.search(line) for regex in args.grep_not)) or (
+        args.grep and not any(regex.search(line) for regex in args.grep)
+    ):
+        if after_context_num == 0:
+            if args.max_events and stats.num_events_shown >= args.max_events:
+                raise StoppedEarly
+            if len(before_context) == args.before_context:
+                skipped += 1
+            before_context.append(line)
+            return True, skipped
+    return False, skipped
+
+
 def main():
     global args
     global is_first_visible_line
@@ -2876,19 +2890,11 @@ def main():
             stats.num_lines_seen += 1
             if args.skip and args.skip >= stats.num_lines_seen:
                 continue
-            # Do whole-line matches here to prevent parsing if line is not included
-            if (
-                args.grep_not and any(regex.search(line) for regex in args.grep_not)
-            ) or (args.grep and not any(regex.search(line) for regex in args.grep)):
-                if after_context_num == 0:
-                    if args.max_events and stats.num_events_shown >= args.max_events:
-                        raise StoppedEarly
-                    # Only skip if there are no after_context lines to be printed
-                    if len(before_context) == args.before_context:
-                        skipped += 1
-                    before_context.append(line)
-                    continue
-
+            skip, skipped = skip_line_on_non_match(
+                line, before_context, after_context_num, skipped, stats
+            )
+            if skip:
+                continue
             events = parse(line, args.input_format)
 
             for event in events:
