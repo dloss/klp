@@ -314,9 +314,8 @@ $ klp examples/qryn.jsonl -j -I "method=_['req.method'].lower()"
 klp can add some additional fields to the event.
 For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
 
-* `_ts`: timestamp showing when the event was shown by klp
-* `_ts_delta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
-* `_line`: the complete line from the log file or string. This can be used to show timestamps for lines that aren't logfmt or JSONL.
+* `_klp_timedelta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
+* `_klp_ts`: timestamp showing when the event was shown by klp
 
 ## Complementary tools
 

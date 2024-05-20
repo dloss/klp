@@ -40,7 +40,7 @@ __version__ = "0.64.0"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
-TS_KEYS = "_ts_delta ts time timestamp t at _ts".split()
+TS_KEYS = "_klp_timedelta ts time timestamp t at _ts _klp_ts".split()
 MSG_KEYS = "msg message".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity".split()
 
@@ -528,7 +528,7 @@ def add_ts_delta(event, last_ts_datetime):
         delta = ts_datetime - last_ts_datetime
     last_ts_datetime = ts_datetime
     # Add to start of event dict so that delta is displayed first
-    new_event = {"_ts_delta": format_ts_delta(delta)}
+    new_event = {"_klp_timedelta": format_ts_delta(delta)}
     new_event.update(event)
     return new_event, last_ts_datetime
 
@@ -1978,8 +1978,8 @@ def parse_args():
             quoting=args.output_quoting,
         )
 
-    args.add_ts = "_ts" in args.keys
-    args.add_ts_delta = "_ts_delta" in args.keys
+    args.add_ts = "_klp_ts" in args.keys
+    args.add_ts_delta = "_klp_timedelta" in args.keys
 
     global TS_KEYS
     if args.ts_key:
@@ -2630,7 +2630,7 @@ def main():
             lines = lines_from_datafiles(args.files)
         else:
             lines = file_generator(args.files, encoding=args.input_encoding)
-        for line_number, line in enumerate(lines):
+        for line in lines:
             stats.num_lines_seen += 1
             if args.skip and args.skip >= stats.num_lines_seen:
                 continue
@@ -2648,7 +2648,7 @@ def main():
                     continue
 
             if args.add_ts:
-                line = line + f' _ts="{now_rfc3339()}"'
+                line = line + f' _klp_ts="{now_rfc3339()}"'
             events = parse(line, args.input_format)
 
             for event in events:
