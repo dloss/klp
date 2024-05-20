@@ -3,12 +3,13 @@
 - Document double and triple underscore handling for --input-exec
 - Document parse_kv()
 - Document --output-file
+- Document --keymap
 - --start and --stop regexes
 - Input format guessing
 - syslog input
 - Fix grep when used both with and without keys
 - Allow to specify output encoding
-- --grep-map just showing if a line matches
+- --grepmap just showing if a line matches
 - --grep-time-context (context by timespan, not number of lines)
 - Highlighting regex matches
 - Autocompletion for bash

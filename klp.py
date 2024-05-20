@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.63.0"
+__version__ = "0.64.0"
 
 INPUT_QUOTE = r"\""
 
@@ -1868,7 +1868,7 @@ def parse_args():
         help="output first char of log levels only to give a big picture overview",
     )
     output_special.add_argument(
-        "--map",
+        "--keymap",
         metavar="KEY",
         help="output first char the given key only to give a big picture overview",
     )
@@ -2701,7 +2701,7 @@ def main():
                         raise StoppedEarly
                     if args.add_ts_delta:
                         event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
-                    if (args.levelmap or args.map) and not args.stats_only:
+                    if (args.levelmap or args.keymap) and not args.stats_only:
                         mapchars += 1
                         if mapchars == 1:
                             ts = get_timestamp_str_or_none(event)
@@ -2726,7 +2726,7 @@ def main():
                         if args.levelmap:
                             colored_mapline.append(colored_levelchar(event))
                         else:
-                            colored_mapline.append(colored_mapchar(event, args.map))
+                            colored_mapline.append(colored_mapchar(event, args.keymap))
                         stats = update_stats(stats, event)
                         continue
                     if not args.stats_only:
