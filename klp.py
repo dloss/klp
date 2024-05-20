@@ -2647,11 +2647,11 @@ def main():
                     before_context.append(line)
                     continue
 
-            if args.add_ts:
-                line = line + f' _klp_ts="{now_rfc3339()}"'
             events = parse(line, args.input_format)
 
             for event in events:
+                if args.add_ts:
+                    event["_klp_ts"] = now_rfc3339()
                 if visible(line, event):
                     # breakpoint()
                     if args.fuse is not None or args.mark_gaps is not None:
