@@ -1528,13 +1528,24 @@ def matches_python_expr(expr, event):  #
         return False
 
 
-def visible(line, event):
+def make_greppable(event):
+    return " ".join(f'{k}="{v}"' for k, v in event.items())
+
+
+def visible(event):
     if (
-        (args.grep_not and any(regex.search(line) for regex in args.grep_not))
-        or (args.grep and not any(regex.search(line) for regex in args.grep))
+        (
+            args.grep_not
+            and any(regex.search(make_greppable(event)) for regex in args.grep_not)
+        )
+        or (
+            args.grep
+            and not any(regex.search(make_greppable(event)) for regex in args.grep)
+        )
         or (args.where and not matches_python_expr(args.where, event))
     ):
         return False
+
     if not event:
         return False
 
@@ -2900,7 +2911,7 @@ def main():
             for event in events:
                 if args.add_ts:
                     event["_klp_ts"] = now_rfc3339()
-                if visible(line, event):
+                if visible(event):
                     # breakpoint()
                     if args.fuse is not None or args.mark_gaps is not None:
                         ts_datetime = get_timestamp_datetime(event)
