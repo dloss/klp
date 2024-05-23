@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.64.1"
+__version__ = "0.65.0"
 
 INPUT_QUOTE = r"\""
 
@@ -2393,14 +2393,16 @@ def colored_mapchar(event, key):
     return val[0]
 
 
-def file_generator(filenames, encoding="utf-8"):
+def events_from_files(filenames, format, encoding="utf-8"):
     """Yields lines from multiple files, which may be compressed."""
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            for line in f:
-                yield line
+            for i, line in enumerate(f):
+                events = parse(line, format)
+                for event in events:
+                    yield event, i + 1
 
 
 class MyTests(unittest.TestCase):
@@ -2748,8 +2750,8 @@ def sanitize_key(key):
     return "".join(char if char.isalnum() else "_" for char in key)
 
 
-def lines_from_jsonfiles(filenames):
-    out = []
+def events_from_jsonfiles_generator(filenames):
+    lineno = 0
 
     def build_line(flat):
         line = ""
@@ -2769,12 +2771,13 @@ def lines_from_jsonfiles(filenames):
             for elem in data:
                 flat = flatten_object(elem)
                 line = build_line(flat)
-                out.append(line)
+                lineno += 1
+                yield parse_logfmt(line), lineno
         else:
             flat = flatten_object(data)
             line = build_line(flat)
-            out.append(line)
-    return out
+            lineno += 1
+            yield parse_logfmt(line), lineno
 
 
 @contextlib.contextmanager
@@ -2794,7 +2797,7 @@ def file_opener(filename, encoding="utf-8"):
             yield f
 
 
-def lines_from_csvfiles(
+def events_from_csvfiles_generator(
     filenames,
     delimiter=",",
     quoting=csv.QUOTE_MINIMAL,
@@ -2814,17 +2817,17 @@ def process_csv(file_obj, delimiter, quoting, has_header):
         headers = next(reader)
     else:
         headers = None
-    for row in reader:
+    for i, row in enumerate(reader):
         if headers:
             line = " ".join(
                 f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
             )
         else:
             line = " ".join(f'col{index}="{value}"' for index, value in enumerate(row))
-        yield line
+        yield parse_logfmt(line), i + 1
 
 
-def lines_from_datafiles(filenames, delimiter="\t"):
+def events_from_datafiles_generator(filenames, delimiter="\t"):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -2835,21 +2838,8 @@ def lines_from_datafiles(filenames, delimiter="\t"):
         else:
             f = open(filename, "r")
         data = f.read()
-        yield data  # f'data="{data}"'
-
-
-def skip_line_on_non_match(line, before_context, after_context_num, skipped, stats):
-    if (args.grep_not and any(regex.search(line) for regex in args.grep_not)) or (
-        args.grep and not any(regex.search(line) for regex in args.grep)
-    ):
-        if after_context_num == 0:
-            if args.max_events and stats.num_events_shown >= args.max_events:
-                raise StoppedEarly
-            if len(before_context) == args.before_context:
-                skipped += 1
-            before_context.append(line)
-            return True, skipped
-    return False, skipped
+        # XXX: What is the correct number of lines to return?
+        yield {"data": data}, 1
 
 
 def main():
@@ -2885,30 +2875,46 @@ def main():
         fuse_maybe_last = None
         is_first_visible_line = True
         if args.input_format == "json":
-            lines = lines_from_jsonfiles(args.files)
+            event_lineno_generator = events_from_jsonfiles_generator(args.files)
         elif args.input_format in ("csv", "tsv", "psv"):
-            lines = lines_from_csvfiles(
+            event_lineno_generator = events_from_csvfiles_generator(
                 args.files,
                 delimiter=args.input_delimiter,
                 has_header=args.has_header,
                 encoding=args.input_encoding,
             )
         elif args.input_format == "data":
-            lines = lines_from_datafiles(args.files)
+            event_lineno_generator = events_from_datafiles_generator(args.files)
         else:
-            lines = file_generator(args.files, encoding=args.input_encoding)
-        for line in lines:
-            stats.num_lines_seen += 1
+            event_lineno_generator = events_from_files(
+                args.files, args.input_format, encoding=args.input_encoding
+            )
+        for event, lineno in event_lineno_generator:
+            stats.num_lines_seen = lineno
             if args.skip and args.skip >= stats.num_lines_seen:
                 continue
-            skip, skipped = skip_line_on_non_match(
-                line, before_context, after_context_num, skipped, stats
-            )
-            if skip:
-                continue
-            events = parse(line, args.input_format)
 
-            for event in events:
+            if args.grep or args.grep_not:
+                greppable = make_greppable(event)
+                if (
+                    args.grep_not
+                    and any(regex.search(greppable) for regex in args.grep_not)
+                ) or (
+                    args.grep
+                    and not any(regex.search(greppable) for regex in args.grep)
+                ):
+                    if after_context_num == 0:
+                        if (
+                            args.max_events
+                            and stats.num_events_shown >= args.max_events
+                        ):
+                            raise StoppedEarly
+                        if len(before_context) == args.before_context:
+                            skipped += 1
+                        before_context.append(event)
+                        continue
+
+            for event, lineno in event_lineno_generator:
                 if args.add_ts:
                     event["_klp_ts"] = now_rfc3339()
                 if visible(event):
@@ -3007,7 +3013,7 @@ def main():
                 else:
                     if len(before_context) == args.before_context:
                         skipped += 1
-                    before_context.append(line)
+                    before_context.append(event)
         skipped += len(before_context)
         if show_context and skipped > 0 and args.output_format == "default":
             show_skipped_marker(skipped)
