@@ -191,28 +191,28 @@ def print_output(*myargs, **kwargs):
 
 
 def extract_json(text):
-    """Extract the first JSON object or array from a given text"""
+    """Extract the first JSON object or array from a given text."""
     json_start_chars = {"{", "["}
     json_end_chars = {"}": "{", "]": "["}
     start = None
+    stack = []
 
     for i, char in enumerate(text):
-        if start is None and char in json_start_chars:
-            start = i
-            stack = [char]
-        elif start is not None:
-            if char in json_start_chars:
-                stack.append(char)
-            elif char in json_end_chars and stack and json_end_chars[char] == stack[-1]:
+        if char in json_start_chars:
+            if start is None:
+                start = i
+            stack.append(char)
+        elif char in json_end_chars:
+            if stack and stack[-1] == json_end_chars[char]:
                 stack.pop()
                 if not stack:
+                    json_str = text[start : i + 1]
                     try:
-                        json_str = text[start : i + 1]
                         json.loads(json_str)
                         return json_str
                     except json.JSONDecodeError:
-                        start = None
-                        stack = []
+                        pass
+                    start = None
 
     raise ValueError(f"Could not extract JSON from {text!r}")
 
@@ -287,36 +287,36 @@ def create_extraction_function(regex_name):
 
 
 def parse(line, format):
-    if format == "logfmt":
-        event = parse_logfmt(line)
-    elif format == "jsonl":
-        event = parse_jsonl(line)
-    elif format in ["json", "csv", "tsv", "psv"]:
-        # Files have been converted to logfmt
-        event = parse_logfmt(line)
-    elif format == "clf":
-        event = parse_clf(line)
-    elif format == "combined":
-        event = parse_combined(line)
-    elif format == "unix":
-        event = parse_unix(line)
-    elif format == "line":
-        event = parse_line(line)
-    elif format == "data":
-        event = parse_data(line)
-    else:
-        print_err("Unknown input format.")
-        exit()
+    format_parsers = {
+        "logfmt": parse_logfmt,
+        "jsonl": parse_jsonl,
+        "json": parse_logfmt,
+        "csv": parse_logfmt,
+        "tsv": parse_logfmt,
+        "psv": parse_logfmt,
+        "clf": parse_clf,
+        "combined": parse_combined,
+        "unix": parse_unix,
+        "line": parse_line,
+        "data": parse_data,
+    }
+
+    parser = format_parsers.get(format)
+    if not parser:
+        raise ValueError(f"Unknown input format: {format}")
+
+    event = parser(line)
+
     if args.input_exec:
         events = [event]
         for code in args.input_exec:
             new_events = []
             for event in events:
-                # Transformation could return multiple events
                 new_events.extend(input_exec(code, event))
             events = new_events
     else:
         events = [event]
+
     return events
 
 
