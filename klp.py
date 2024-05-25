@@ -1189,8 +1189,10 @@ def show(event, context_type="", lineno=None):
             show_default(event, context_type, lineno)
     elif args.output_format == "logfmt":
         show_logfmt(event)
-    elif args.output_format in ["jsonl", "json"]:  # Reuse JSONL formatting for JSON
+    elif args.output_format == "jsonl":
         show_jsonl(event)
+    elif args.output_format == "json":
+        show_json(event)
     elif args.output_format in ("csv", "tsv", "psv"):
         show_csv(event, args.writer)
 
@@ -1227,8 +1229,12 @@ def unescape(s):
     )
 
 
-def show_jsonl(event, ensure_ascii=False):
+def show_json(event, ensure_ascii=False):
     print_with_event_sep(json.dumps(event, ensure_ascii=ensure_ascii))
+
+
+def show_jsonl(event, ensure_ascii=False):
+    print_output(json.dumps(event, ensure_ascii=ensure_ascii))
 
 
 def show_by_template(event, template):
