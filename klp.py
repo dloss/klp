@@ -191,7 +191,25 @@ def print_output(*myargs, **kwargs):
 
 
 def extract_json(text):
-    """Extract the first JSON object or array from a given text."""
+    """
+    Extract the first JSON object or array from a given text.
+
+    Parameters:
+    text (str): The string containing the text from which to extract the JSON object or array.
+
+    Returns:
+    str: The first valid JSON object or array found in the given text.
+
+    Raises:
+    ValueError: If no valid JSON object or array can be found in the input text.
+
+    Example:
+    >>> extract_json('foo { "key": "value" } bar')
+    '{ "key": "value" }'
+
+    >>> extract_json('foo [1, 2, 3] bar')
+    '[1, 2, 3]'
+    """
     json_start_chars = {"{", "["}
     json_end_chars = {"}": "{", "]": "["}
     start = None
@@ -218,6 +236,30 @@ def extract_json(text):
 
 
 def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
+    """
+    Pretty-print a JSON string.
+
+    Args:
+        json_string (str): The JSON string to be pretty-printed.
+        indent (int, optional): Number of spaces to use for indentation. Defaults to 2.
+        sort_keys (bool, optional): Whether to sort the dictionary keys. Defaults to True.
+        ensure_ascii (bool, optional): Whether to escape non-ASCII characters. Defaults to False.
+
+    Returns:
+        str: A pretty-printed JSON string.
+
+    Raises:
+        ValueError: If the provided string is not a valid JSON.
+
+    Example:
+        >>> input_json = '{"name":"John", "age":30, "city":"New York"}'
+        >>> pprint_json(input_json, indent=4)
+        '{
+            "age": 30,
+            "city": "New York",
+            "name": "John"
+        }'
+    """
     try:
         parsed_json = json.loads(json_string)
         pretty_json = json.dumps(
@@ -228,7 +270,22 @@ def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
         raise ValueError(f"Invalid JSON string: {e}")
 
 
-def guess_datetime(timestamp, with_args=True):
+def guess_datetime(timestamp):
+    """
+    Attempt to convert a given timestamp string into a datetime object using various datetime converters.
+
+    Args:
+        timestamp (str): The timestamp string to be converted.
+
+    Returns:
+        datetime or None: A datetime object if conversion is successful, otherwise None.
+
+    Raises:
+        AttributeError, ValueError, TypeError: These exceptions are caught during conversion attempts and ignored.
+
+    Side Effects:
+        The global `dt_conv_order` list is updated to prioritize successful converters for future use.
+    """
     global dt_conv_order
     datetime = None
     for i in dt_conv_order:
@@ -247,8 +304,36 @@ def guess_datetime(timestamp, with_args=True):
 
 def format_datetime(val):
     """
-    Formats a given string into a standardized ISO format string with milliseconds precision.
-    Guesses the datetime format.
+    Formats a given datetime string into a standardized ISO 8601 format string with milliseconds precision.
+
+    The function converts the input datetime string to either local time or UTC time based on the specified
+    command-line arguments (`--localtime` or `--utc`). It then formats the datetime object into the ISO 8601
+    format, including milliseconds.
+
+    Args:
+        val (str): The datetime string to be formatted.
+
+    Returns:
+        str: The formatted datetime string in ISO 8601 format with milliseconds precision. The returned string
+             will be in local time if `--localtime` is True, or in UTC time with a "Z" suffix if `--utc`
+             is True.
+
+    Raises:
+        ValueError: If the input `val` cannot be parsed as a datetime.
+
+    Notes:
+        - The function uses the `to_datetime` function to parse the input datetime string.
+        - The `args` object is expected to have the boolean attributes `localtime` and `utc` which determine
+          the desired timezone for the output.
+
+    Example:
+        >>> args.localtime = True
+        >>> format_datetime("2023-10-05 14:48:00")
+        '2023-10-05T14:48:00.000Z'
+
+        >>> args.utc = True
+        >>> format_datetime("2023-10-05 14:48:00")
+        '2023-10-05T14:48:00.000Z'
     """
     if args.localtime:
         val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
@@ -263,6 +348,24 @@ def format_datetime(val):
 
 
 def extract_regex(pattern, s, *groupargs):
+    """
+    Extracts substring(s) from a given string that matches a specified regular expression pattern.
+
+    Parameters:
+    pattern (str): The regular expression pattern to search for.
+    s (str): The string to search within.
+    *groupargs (int): Variable length argument list specifying group indices to retrieve from the match.
+
+    Returns:
+    str or tuple: The matched group(s) if the pattern is found; otherwise, None.
+
+    Examples:
+    >>> extract_regex(r"(\d+)", "There are 123 apples", 0)
+    '123'
+
+    >>> extract_regex(r"(\d+)\D+(\d+)", "12 apples and 34 oranges", 1, 2)
+    ('12', '34')
+    """
     match = re.search(pattern, s)
     if match:
         return match.group(*groupargs)
@@ -321,6 +424,19 @@ def parse(line, format):
 
 
 def parse_logfmt(text):
+    """
+    Parses a logfmt-formatted string into a dictionary.
+
+    logfmt is a log format that produces logs as a single line where key-value pairs are
+    separated by spaces, and values can be unquoted or quoted.
+
+    Args:
+        text (str): A logfmt-formatted string.
+
+    Returns:
+        dict: A dictionary where keys are the logfmt keys and values are the corresponding
+        unescaped quoted values or unquoted values.
+    """
     return {
         key: (unescape(quoted_val) if quoted_val else unquoted_val)
         for key, quoted_val, unquoted_val in RE_LOGFMT.findall(text)
@@ -328,6 +444,23 @@ def parse_logfmt(text):
 
 
 def parse_kv(text, sep=None, kvsep="="):
+    """
+    Parses a string into key-value pairs based on given separators.
+
+    Args:
+        text (str): The input string to parse.
+        sep (str or re.Pattern, optional): The separator that divides different key-value pairs in the input string.
+                                           If None, any whitespace string is a separator.
+                                           Can also be a compiled regular expression.
+        kvsep (str, optional): The separator that divides keys from values within each pair. Default is "=".
+
+    Returns:
+        dict: A dictionary where the keys are extracted from the input string based on the separators.
+              Only columns containing the key-value separator will be included.
+
+    Raises:
+        ValueError: If there are issues with splitting or interpreting the key-value pairs.
+    """
     if isinstance(sep, re.Pattern):
         columns = re.split(sep, text)
     else:
@@ -342,6 +475,30 @@ def parse_kv(text, sep=None, kvsep="="):
 
 
 def parse_jsonl(line):
+    """
+    Parses a line of JSONL (JSON Lines) and extracts the top-level strings, converting
+    non-string values to their string representations.
+
+    The function focuses on handling top-level strings within a JSON object. Any text
+    before or after the JSON object in the given line is ignored. If the JSON object
+    is invalid, an empty dictionary is returned.
+
+    Args:
+        line (str): A string containing a JSON object within a line of text.
+
+    Returns:
+        dict: A dictionary where the keys represent the sanitized JSON keys and the
+              values are the top-level string or stringified non-string values of the
+              JSON object.
+
+    Raises:
+        None. If JSON decoding fails, an empty dictionary is returned. If `--debug`
+        is enabled, the function will print debug information about the error.
+
+    Example:
+        >>> parse_jsonl('some text {"key": "value", "num": 123} and more text')
+        {'key': 'value', 'num': '123'}
+    """
     # Only handle top-level strings. Everything else is converted into a string
     result = {}
     try:
@@ -362,6 +519,17 @@ def parse_jsonl(line):
 
 
 def parse_clf(line):
+    """
+    Parses a line in Common Log Format (CLF) and returns a dictionary of its components.
+
+    Args:
+        line (str): A single line string in CLF format.
+
+    Returns:
+        dict: A dictionary containing the components of the CLF line. If the 'size' field
+              in the log is '-', it is converted to '0'. Returns an empty dictionary if
+              the line does not match the expected CLF format.
+    """
     match = RE_CLF.match(line)
     if match:
         d = match.groupdict()
@@ -373,6 +541,22 @@ def parse_clf(line):
 
 
 def parse_combined(line):
+    """
+    Parse a log entry in Combined Log Format.
+
+    This function uses a regular expression to match and parse a line of text
+    representing a log entry in Combined Log Format. If the match is successful,
+    it returns a dictionary containing the parsed data. If the size field in the
+    log entry is "-", it replaces it with "0". If the match is unsuccessful, it
+    returns an empty dictionary.
+
+    Args:
+        line (str): A single log entry in Combined Log Format.
+
+    Returns:
+        dict: A dictionary with the parsed log data, or an empty dictionary if
+              the log entry doesn't match the Combined Log Format.
+    """
     match = RE_COMBINED.match(line)
     if match:
         d = match.groupdict()
@@ -384,6 +568,19 @@ def parse_combined(line):
 
 
 def parse_unix(line):
+    """
+    Parse a line of log data in typical format for Unix servers
+    (timestamp, hostname, service, and optional pid)
+    and extract structured information.
+
+    Args:
+        line (str): A single line of log data in Unix format.
+
+    Returns:
+        dict: A dictionary containing the extracted components where the keys are
+              'timestamp', 'hostname', 'service', and 'message'. The 'pid' key is included
+              only if it is present in the log line; otherwise, it is excluded.
+    """
     match = RE_UNIX.match(line)
     if match:
         return {
@@ -394,10 +591,31 @@ def parse_unix(line):
 
 
 def parse_line(line):
+    """
+    Parses a single line of text.
+
+    Strips any trailing whitespace characters and returns
+    the cleaned line in a dictionary with the key 'line'.
+
+    Args:
+        line (str): The line of text to be parsed.
+
+    Returns:
+        dict: A dictionary containing the cleaned line with the key 'line'.
+    """
     return {"line": line.rstrip()}
 
 
 def parse_data(data):
+    """
+    Convert the input data to a string and return it within a dictionary.
+
+    Args:
+        data (any): The input data to be converted to a string.
+
+    Returns:
+        dict: A dictionary with the key 'data' and the value being the input data converted to a string.
+    """
     return {"data": str(data)}
 
 
@@ -475,6 +693,30 @@ class StoppedEarly(Exception):
 
 
 def timedelta_from(duration):
+    """
+    Convert a duration string into a datetime.timedelta object.
+
+    The duration string should be composed of numerical values followed by supported time units.
+    For example: "5d" for 5 days, "3h30m" for 3 hours and 30 minutes, "2.5s" for 2.5 seconds.
+
+    Supported time units are:
+      - "us": microseconds
+      - "ms": milliseconds (converted to microseconds internally)
+      - "s": seconds
+      - "m": minutes
+      - "h": hours
+      - "d": days
+      - "w": weeks
+
+    Args:
+        duration (str): The duration string to be converted.
+
+    Returns:
+        datetime.timedelta: A timedelta object representing the duration.
+
+    Raises:
+        argparse.ArgumentTypeError: If the duration string is invalid or contains unsupported time units.
+    """
     pattern = re.compile(r"([-\d.]+)([a-z]+)")
     matches = pattern.findall(duration)
     if not matches:
@@ -559,7 +801,7 @@ def datetime_from(text):
     elif text == "now":
         return dt.datetime.now(tz=dt.timezone.utc)
     else:
-        datetime = guess_datetime(text, with_args=False)
+        datetime = guess_datetime(text)
         if datetime is None:
             raise argparse.ArgumentTypeError(f"Not a valid timestamp: {text}")
         return datetime
