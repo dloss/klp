@@ -1288,7 +1288,11 @@ def show_default(event, context_type="", lineno=None):
         for key, val in part.items():
             key_lower = key.lower()
             val = str(val)
-            double_quotes_needed = not args.plain and RE_WHITESPACE.search(val)
+            double_quotes_needed = args.output_quoting == csv.QUOTE_ALL or (
+                not args.plain
+                and args.output_quoting != csv.QUOTE_NONE
+                and RE_WHITESPACE.search(val)
+            )
             val = (
                 escape_doublequotes_quoted(val)
                 if double_quotes_needed
@@ -1947,7 +1951,7 @@ def parse_args():
         "--output-quoting",
         choices=["minimal", "all", "nonnumeric", "none"],
         default="minimal",
-        help="CSV/TSV/PSV quoting used for output format. Default: minimal",
+        help="quoting used for output format. Default: minimal",
     )
     output.add_argument(
         "--max-events",
