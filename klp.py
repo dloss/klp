@@ -669,7 +669,7 @@ def print_json_elem(*myargs, **mykwargs):
     if is_first_visible_line:
         is_first_visible_line = False
     else:
-        print_output(",", end="", **mykwargs)
+        print_output(args.output_event_sep, end="", **mykwargs)
     print_output(*myargs, end="", flush=True, **mykwargs)
 
 
@@ -2345,7 +2345,7 @@ def parse_args():
     if args.output_sep:
         args.output_sep = args.output_sep.replace("\\n", "\n").replace("\\t", "\t")
 
-    # Fake JSON output by using JSONL with
+    # Fake JSON output by using JSONL
     if args.output_format == "json":
         args.header = "["
         args.output_event_sep = ",\n"
