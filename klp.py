@@ -2920,107 +2920,106 @@ def main():
                         before_context.append(event)
                         continue
 
-            for event, lineno in event_lineno_generator:
-                if args.add_ts:
-                    event["_klp_ts"] = now_rfc3339()
-                if visible(event):
-                    # breakpoint()
-                    if args.fuse is not None or args.mark_gaps is not None:
-                        ts_datetime = get_timestamp_datetime(event)
-                        if ts_datetime is None:
-                            # timestamp unknown: ignore event
-                            if args.fuse is not None and fuse_maybe_last:
-                                show(fuse_maybe_last)
-                            continue
-                        elif last_ts_datetime is None:
-                            # first block ever: show
-                            last_ts_datetime = ts_datetime
-                        else:
-                            ts_delta = ts_datetime - last_ts_datetime
-                            last_ts_datetime = ts_datetime
-                            if args.fuse is not None:
-                                if ts_delta < args.fuse:
-                                    # old block, ignore for now, but save for later
-                                    # (will have to be printed if it was the last in block)
-                                    fuse_maybe_last = event
-                                    fuse_skipped += 1
-                                    continue
-                                else:
-                                    # new block: show last event from last block first
-                                    if fuse_maybe_last:
-                                        show(
-                                            fuse_maybe_last,
-                                            "fuse_last",
-                                            lineno=1 + fuse_skipped + 1,
-                                        )
-                                        print("", file=sys.stderr)
-                                        fuse_maybe_last = None
-                            elif args.mark_gaps is not None:
-                                if ts_delta > args.mark_gaps:
-                                    show_gap_marker(ts_delta, terminal_width)
-                    if show_context and skipped > 0 and args.output_format == "default":
-                        show_skipped_marker(skipped)
-                    skipped = 0
-                    if args.max_events and stats.num_events_shown >= args.max_events:
-                        raise StoppedEarly
-                    if args.add_ts_delta:
-                        event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
-                    if (args.levelmap or args.keymap) and not args.stats_only:
-                        mapchars += 1
-                        if mapchars == 1:
-                            ts = get_timestamp_str_or_none(event)
-                            if ts:
-                                formatted_time = format_datetime(ts)
-                                # Cache value for more performance
-                                len_formatted_time = len(formatted_time)
-                                if args.color:
-                                    print_output(
-                                        colorize(
-                                            formatted_time,
-                                            THEMES[args.theme]["timestamp_key"],
-                                        ),
-                                        end=" ",
-                                    )
-                                else:
-                                    print_output(formatted_time, end=" ")
-                        elif len_formatted_time + 1 + mapchars + 1 == terminal_width:
-                            print_output("".join(colored_mapline))
-                            colored_mapline = []
-                            mapchars = 0
-                        if args.levelmap:
-                            colored_mapline.append(colored_levelchar(event))
-                        else:
-                            colored_mapline.append(colored_mapchar(event, args.keymap))
-                        stats = update_stats(stats, event)
+            if args.add_ts:
+                event["_klp_ts"] = now_rfc3339()
+            if visible(event):
+                # breakpoint()
+                if args.fuse is not None or args.mark_gaps is not None:
+                    ts_datetime = get_timestamp_datetime(event)
+                    if ts_datetime is None:
+                        # timestamp unknown: ignore event
+                        if args.fuse is not None and fuse_maybe_last:
+                            show(fuse_maybe_last)
                         continue
-                    if not args.stats_only:
-                        for before_line in before_context:
-                            before_events = parse(before_line, args.input_format)
-                            # XXX: Could corrupt number of before lines, if multiple events per line
-                            for before_event in before_events:
-                                show(before_event, "before")
-                            stats = update_stats(stats, before_event)
-                        before_context.clear()
-                        after_context_num = args.after_context
-                        if args.fuse:
-                            show(event, "fuse_first")
-                            fuse_skipped = 0
-                        elif args.context or args.before_context or args.after_context:
-                            show(event, "match")
-                        else:
-                            show(event)
+                    elif last_ts_datetime is None:
+                        # first block ever: show
+                        last_ts_datetime = ts_datetime
+                    else:
+                        ts_delta = ts_datetime - last_ts_datetime
+                        last_ts_datetime = ts_datetime
+                        if args.fuse is not None:
+                            if ts_delta < args.fuse:
+                                # old block, ignore for now, but save for later
+                                # (will have to be printed if it was the last in block)
+                                fuse_maybe_last = event
+                                fuse_skipped += 1
+                                continue
+                            else:
+                                # new block: show last event from last block first
+                                if fuse_maybe_last:
+                                    show(
+                                        fuse_maybe_last,
+                                        "fuse_last",
+                                        lineno=1 + fuse_skipped + 1,
+                                    )
+                                    print("", file=sys.stderr)
+                                    fuse_maybe_last = None
+                        elif args.mark_gaps is not None:
+                            if ts_delta > args.mark_gaps:
+                                show_gap_marker(ts_delta, terminal_width)
+                if show_context and skipped > 0 and args.output_format == "default":
+                    show_skipped_marker(skipped)
+                skipped = 0
+                if args.max_events and stats.num_events_shown >= args.max_events:
+                    raise StoppedEarly
+                if args.add_ts_delta:
+                    event, last_ts_datetime = add_ts_delta(event, last_ts_datetime)
+                if (args.levelmap or args.keymap) and not args.stats_only:
+                    mapchars += 1
+                    if mapchars == 1:
+                        ts = get_timestamp_str_or_none(event)
+                        if ts:
+                            formatted_time = format_datetime(ts)
+                            # Cache value for more performance
+                            len_formatted_time = len(formatted_time)
+                            if args.color:
+                                print_output(
+                                    colorize(
+                                        formatted_time,
+                                        THEMES[args.theme]["timestamp_key"],
+                                    ),
+                                    end=" ",
+                                )
+                            else:
+                                print_output(formatted_time, end=" ")
+                    elif len_formatted_time + 1 + mapchars + 1 == terminal_width:
+                        print_output("".join(colored_mapline))
+                        colored_mapline = []
+                        mapchars = 0
+                    if args.levelmap:
+                        colored_mapline.append(colored_levelchar(event))
+                    else:
+                        colored_mapline.append(colored_mapchar(event, args.keymap))
                     stats = update_stats(stats, event)
-                elif after_context_num > 0:
-                    if show_context and skipped > 0 and args.output_format == "default":
-                        show_skipped_marker(skipped)
-                    skipped = 0
-                    after_context_num -= 1
-                    show(event, "after")
-                    stats = update_stats(stats, event)
-                else:
-                    if len(before_context) == args.before_context:
-                        skipped += 1
-                    before_context.append(event)
+                    continue
+                if not args.stats_only:
+                    for before_line in before_context:
+                        before_events = parse(before_line, args.input_format)
+                        # XXX: Could corrupt number of before lines, if multiple events per line
+                        for before_event in before_events:
+                            show(before_event, "before")
+                        stats = update_stats(stats, before_event)
+                    before_context.clear()
+                    after_context_num = args.after_context
+                    if args.fuse:
+                        show(event, "fuse_first")
+                        fuse_skipped = 0
+                    elif args.context or args.before_context or args.after_context:
+                        show(event, "match")
+                    else:
+                        show(event)
+                stats = update_stats(stats, event)
+            elif after_context_num > 0:
+                if show_context and skipped > 0 and args.output_format == "default":
+                    show_skipped_marker(skipped)
+                skipped = 0
+                after_context_num -= 1
+                show(event, "after")
+                stats = update_stats(stats, event)
+            else:
+                if len(before_context) == args.before_context:
+                    skipped += 1
+                before_context.append(event)
         skipped += len(before_context)
         if show_context and skipped > 0 and args.output_format == "default":
             show_skipped_marker(skipped)
