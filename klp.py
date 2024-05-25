@@ -664,12 +664,12 @@ def list_exported_objects(ignore_underscore=True):
     return funcs
 
 
-def print_with_event_sep(*myargs, **mykwargs):
+def print_json_elem(*myargs, **mykwargs):
     global is_first_visible_line
     if is_first_visible_line:
         is_first_visible_line = False
     else:
-        print_output(args.output_event_sep, end="", **mykwargs)
+        print_output(",", end="", **mykwargs)
     print_output(*myargs, end="", flush=True, **mykwargs)
 
 
@@ -1230,7 +1230,7 @@ def unescape(s):
 
 
 def show_json(event, ensure_ascii=False):
-    print_with_event_sep(json.dumps(event, ensure_ascii=ensure_ascii))
+    print_json_elem(json.dumps(event, ensure_ascii=ensure_ascii))
 
 
 def show_jsonl(event, ensure_ascii=False):
@@ -1241,7 +1241,7 @@ def show_by_template(event, template):
     template = template.replace("\\n", "\n").replace("\\t", "\t")
     try:
         out = template.format(**event)
-        print_with_event_sep(out)
+        print_output(out, end=args.output_event_sep)
     except KeyError:
         pass
 
@@ -1266,7 +1266,7 @@ def show_by_eval_template(event, template):
     # Replace all expressions in the template
     out = pattern.sub(replace_expr, template)
     if out:
-        print_with_event_sep(out)
+        print_output(out, end=args.output_event_sep)
 
 
 def show_csv(event, writer):
@@ -1375,9 +1375,9 @@ def show_default(event, context_type="", lineno=None):
                 out.append(text)
     for line in out:
         if args.color:
-            print_with_event_sep(expand_color_codes(line))
+            print_output(expand_color_codes(line), end=args.output_event_sep)
         else:
-            print_with_event_sep(line)
+            print_output(line, end=args.output_event_sep)
 
 
 def show_logfmt(event):
@@ -1401,7 +1401,7 @@ def show_logfmt(event):
             elems.append(f"{key}={val}")
 
     line = " ".join(elems)
-    print_with_event_sep(line)
+    print_output(line)
 
 
 def print_err(*args, **kwargs):
@@ -2376,14 +2376,12 @@ def show_gap_marker(timedelta, width):
     label = f"time gap: {timedelta}"
     separator = "_" * int((terminal_width - len(label) - 3) / 2)
     print(
-        args.output_event_sep + colorize(separator, colors["before"]),
+        colorize(separator, colors["before"]),
         colorize(label, colors["label"]),
         colorize(
             "_" * int((terminal_width - 1 - len(label) - 1 - len(separator))),
             colors["after"],
         ),
-        end="",
-        flush=True,
         file=sys.stderr,
     )
 
