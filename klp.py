@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.64.0"
+__version__ = "0.64.1"
 
 INPUT_QUOTE = r"\""
 
@@ -2349,7 +2349,7 @@ def show_gap_marker(timedelta, width):
     colors = THEMES[args.theme]["gap_marker"]
     label = f"time gap: {timedelta}"
     separator = "_" * int((terminal_width - len(label) - 3) / 2)
-    print_output(
+    print(
         colorize(separator, colors["before"]),
         colorize(label, colors["label"]),
         colorize(
@@ -2924,7 +2924,7 @@ def main():
                                             "fuse_last",
                                             lineno=1 + fuse_skipped + 1,
                                         )
-                                        print_output("", file=sys.stderr)
+                                        print("", file=sys.stderr)
                             elif args.mark_gaps is not None:
                                 if ts_delta > args.mark_gaps:
                                     show_gap_marker(ts_delta, terminal_width)
