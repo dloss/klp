@@ -389,7 +389,7 @@ def create_extraction_function(regex_name):
     return extraction_function
 
 
-def parse(line, format):
+def parse_linebased(line, format):
     def identity(x):
         return x
 
@@ -2404,14 +2404,14 @@ def colored_mapchar(event, key):
     return val[0]
 
 
-def events_from_files(filenames, format, encoding="utf-8"):
-    """Yields lines from multiple files, which may be compressed."""
+def events_from_linebased(filenames, format, encoding="utf-8"):
+    """Yields events from (multiple) line-based files, which may be compressed."""
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
             for i, line in enumerate(f):
-                events = parse(line, format)
+                events = parse_linebased(line, format)
                 for event in events:
                     yield event, i + 1
 
@@ -2882,7 +2882,7 @@ def main():
         elif args.input_format == "data":
             event_lineno_generator = events_from_datafiles_generator(args.files)
         else:
-            event_lineno_generator = events_from_files(
+            event_lineno_generator = events_from_linebased(
                 args.files, args.input_format, encoding=args.input_encoding
             )
         for event, lineno in event_lineno_generator:
@@ -2983,11 +2983,8 @@ def main():
                     stats = update_stats(stats, event)
                     continue
                 if not args.stats_only:
-                    for before_line in before_context:
-                        before_events = parse(before_line, args.input_format)
-                        # XXX: Could corrupt number of before lines, if multiple events per line
-                        for before_event in before_events:
-                            show(before_event, "before")
+                    for before_event in before_context:
+                        show(before_event, "before")
                         stats = update_stats(stats, before_event)
                     before_context.clear()
                     after_context_num = args.after_context
