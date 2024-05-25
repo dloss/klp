@@ -390,13 +390,16 @@ def create_extraction_function(regex_name):
 
 
 def parse(line, format):
+    def identity(x):
+        return x
+
     format_parsers = {
         "logfmt": parse_logfmt,
         "jsonl": parse_jsonl,
         "json": parse_logfmt,
-        "csv": parse_logfmt,
-        "tsv": parse_logfmt,
-        "psv": parse_logfmt,
+        "csv": identity,
+        "tsv": identity,
+        "psv": identity,
         "clf": parse_clf,
         "combined": parse_combined,
         "unix": parse_unix,
@@ -2825,12 +2828,10 @@ def process_csv(file_obj, delimiter, quoting, has_header):
         headers = None
     for i, row in enumerate(reader):
         if headers:
-            line = " ".join(
-                f'{sanitize_key(key)}="{value}"' for key, value in zip(headers, row)
-            )
+            event = {sanitize_key(key): value for key, value in zip(headers, row)}
         else:
-            line = " ".join(f'col{index}="{value}"' for index, value in enumerate(row))
-        yield parse_logfmt(line), i + 1
+            event = {f"col{index}": value for index, value in enumerate(row)}
+        yield event, i + 1
 
 
 def events_from_datafiles_generator(filenames, delimiter="\t"):
