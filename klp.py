@@ -2354,7 +2354,7 @@ def parse_args():
 
 def show_skipped_marker(skipped):
     colors = THEMES[args.theme]["skipped_marker"]
-    print_output(
+    print(
         colorize("\n  [...", colors["before"]),
         colorize(str(skipped), colors["number"]),
         colorize(
