@@ -394,17 +394,19 @@ def parse(line, format):
         return x
 
     format_parsers = {
+        # line-based
         "logfmt": parse_logfmt,
         "jsonl": parse_jsonl,
-        "json": parse_logfmt,
-        "csv": identity,
-        "tsv": identity,
-        "psv": identity,
         "clf": parse_clf,
         "combined": parse_combined,
         "unix": parse_unix,
         "line": parse_line,
-        "data": parse_data,
+        # Non-line-based (have already been parsed)
+        "json": identity,
+        "csv": identity,
+        "tsv": identity,
+        "psv": identity,
+        "data": identity,
     }
 
     parser = format_parsers.get(format)
@@ -2761,32 +2763,19 @@ def sanitize_key(key):
 
 def events_from_jsonfiles_generator(filenames):
     lineno = 0
-
-    def build_line(flat):
-        line = ""
-        for k, v in flat.items():
-            k = sanitize_key(k)
-            if isinstance(v, str):
-                line += f'{k}="{v}" '
-            else:
-                line += f"{k}={v} "
-        return line
-
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         data = read_json_from_input(filename)
         if isinstance(data, list):
             for elem in data:
-                flat = flatten_object(elem)
-                line = build_line(flat)
+                event = flatten_object(elem)
                 lineno += 1
-                yield parse_logfmt(line), lineno
+                yield event, lineno
         else:
-            flat = flatten_object(data)
-            line = build_line(flat)
+            event = flatten_object(data)
             lineno += 1
-            yield parse_logfmt(line), lineno
+            yield event, lineno
 
 
 @contextlib.contextmanager
