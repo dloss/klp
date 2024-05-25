@@ -665,7 +665,7 @@ def print_with_event_sep(*myargs, **mykwargs):
         is_first_visible_line = False
     else:
         print_output(args.output_event_sep, end="", **mykwargs)
-    print_output(*myargs, end="", **mykwargs)
+    print_output(*myargs, end="", flush=True, **mykwargs)
 
 
 def expand_color_codes(line):
@@ -2361,12 +2361,14 @@ def show_gap_marker(timedelta, width):
     label = f"time gap: {timedelta}"
     separator = "_" * int((terminal_width - len(label) - 3) / 2)
     print(
-        colorize(separator, colors["before"]),
+        args.output_event_sep + colorize(separator, colors["before"]),
         colorize(label, colors["label"]),
         colorize(
             "_" * int((terminal_width - 1 - len(label) - 1 - len(separator))),
             colors["after"],
         ),
+        end="",
+        flush=True,
         file=sys.stderr,
     )
 
