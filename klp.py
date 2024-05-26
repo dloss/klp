@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.65.0"
+__version__ = "0.65.1"
 
 INPUT_QUOTE = r"\""
 
@@ -389,6 +389,17 @@ def create_extraction_function(regex_name):
     return extraction_function
 
 
+def apply_input_exec(event):
+    events = [event]
+    if args.input_exec:
+        for code in args.input_exec:
+            new_events = []
+            for event in events:
+                new_events.extend(input_exec(code, event))
+            events = new_events
+    return events
+
+
 def parse_linebased(line, format):
     def identity(x):
         return x
@@ -413,19 +424,7 @@ def parse_linebased(line, format):
     if not parser:
         raise ValueError(f"Unknown input format: {format}")
 
-    event = parser(line)
-
-    if args.input_exec:
-        events = [event]
-        for code in args.input_exec:
-            new_events = []
-            for event in events:
-                new_events.extend(input_exec(code, event))
-            events = new_events
-    else:
-        events = [event]
-
-    return events
+    return parser(line)
 
 
 def parse_logfmt(text):
@@ -2414,10 +2413,13 @@ def events_from_linebased(filenames, format, encoding="utf-8"):
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            for i, line in enumerate(f):
-                events = parse_linebased(line, format)
+            lineno = 0
+            for line in f:
+                event = parse_linebased(line, format)
+                events = apply_input_exec(event)
                 for event in events:
-                    yield event, i + 1
+                    lineno += 1
+                    yield event, lineno
 
 
 class MyTests(unittest.TestCase):
@@ -2773,13 +2775,15 @@ def events_from_jsonfiles_generator(filenames):
         data = read_json_from_input(filename)
         if isinstance(data, list):
             for elem in data:
-                event = flatten_object(elem)
+                events = apply_input_exec(flatten_object(elem))
+                for event in events:
+                    lineno += 1
+                    yield event, lineno
+        else:
+            events = apply_input_exec(flatten_object(data))
+            for event in events:
                 lineno += 1
                 yield event, lineno
-        else:
-            event = flatten_object(data)
-            lineno += 1
-            yield event, lineno
 
 
 @contextlib.contextmanager
@@ -2819,12 +2823,15 @@ def process_csv(file_obj, delimiter, quoting, has_header):
         headers = next(reader)
     else:
         headers = None
-    for i, row in enumerate(reader):
+    lineno = 0
+    for row in reader:
         if headers:
             event = {sanitize_key(key): value for key, value in zip(headers, row)}
         else:
             event = {f"col{index}": value for index, value in enumerate(row)}
-        yield event, i + 1
+        for event in apply_input_exec(event):
+            lineno += 1
+            yield event, lineno
 
 
 def events_from_datafiles_generator(filenames, delimiter="\t"):
@@ -2839,7 +2846,10 @@ def events_from_datafiles_generator(filenames, delimiter="\t"):
             f = open(filename, "r")
         data = f.read()
         # XXX: What is the correct number of lines to return?
-        yield {"data": data}, 1
+        events = apply_input_exec({"data": data})
+        print(events)
+        for i, event in enumerate(events):
+            yield event, i + 1
 
 
 def main():
