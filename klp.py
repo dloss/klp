@@ -2768,6 +2768,7 @@ def sanitize_key(key):
 def events_from_jsonfiles_generator(filenames):
     if not filenames:
         filenames = ["-"]
+    lineno = 0
     for filename in filenames:
         data = read_json_from_input(filename)
         if isinstance(data, list):
@@ -2777,9 +2778,10 @@ def events_from_jsonfiles_generator(filenames):
                 for event in events:
                     yield event, lineno
         else:
+            lineno += 1
             events = apply_input_exec(flatten_object(data))
             for event in events:
-                yield event, len(data.splitlines())
+                yield event, lineno
 
 
 @contextlib.contextmanager
@@ -2839,11 +2841,10 @@ def events_from_datafiles_generator(filenames, delimiter="\t"):
         else:
             f = open(filename, "r")
         data = f.read()
-        # XXX: What is the correct number of lines to return?
+        numlines = len(data.splitlines())
         events = apply_input_exec({"data": data})
-        print(events)
         for event in events:
-            yield event, len(data.splitlines())
+            yield event, numlines
 
 
 def main():
