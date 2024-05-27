@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.65.1"
+__version__ = "0.65.2"
 
 INPUT_QUOTE = r"\""
 
@@ -2766,7 +2766,6 @@ def sanitize_key(key):
 
 
 def events_from_jsonfiles_generator(filenames):
-    lineno = 0
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -2780,8 +2779,7 @@ def events_from_jsonfiles_generator(filenames):
         else:
             events = apply_input_exec(flatten_object(data))
             for event in events:
-                lineno += 1
-                yield event, lineno
+                yield event, len(data.splitlines())
 
 
 @contextlib.contextmanager
