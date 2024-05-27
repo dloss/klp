@@ -2413,13 +2413,11 @@ def events_from_linebased(filenames, format, encoding="utf-8"):
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            lineno = 0
-            for line in f:
+            for i, line in enumerate(f):
                 event = parse_linebased(line, format)
                 events = apply_input_exec(event)
                 for event in events:
-                    lineno += 1
-                    yield event, lineno
+                    yield event, i + 1
 
 
 class MyTests(unittest.TestCase):
@@ -2775,9 +2773,9 @@ def events_from_jsonfiles_generator(filenames):
         data = read_json_from_input(filename)
         if isinstance(data, list):
             for elem in data:
+                lineno += 1
                 events = apply_input_exec(flatten_object(elem))
                 for event in events:
-                    lineno += 1
                     yield event, lineno
         else:
             events = apply_input_exec(flatten_object(data))
@@ -2823,15 +2821,13 @@ def process_csv(file_obj, delimiter, quoting, has_header):
         headers = next(reader)
     else:
         headers = None
-    lineno = 0
-    for row in reader:
+    for i, row in enumerate(reader):
         if headers:
             event = {sanitize_key(key): value for key, value in zip(headers, row)}
         else:
             event = {f"col{index}": value for index, value in enumerate(row)}
         for event in apply_input_exec(event):
-            lineno += 1
-            yield event, lineno
+            yield event, i + 1
 
 
 def events_from_datafiles_generator(filenames, delimiter="\t"):
@@ -2848,8 +2844,8 @@ def events_from_datafiles_generator(filenames, delimiter="\t"):
         # XXX: What is the correct number of lines to return?
         events = apply_input_exec({"data": data})
         print(events)
-        for i, event in enumerate(events):
-            yield event, i + 1
+        for event in events:
+            yield event, len(data.splitlines())
 
 
 def main():
