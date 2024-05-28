@@ -2743,45 +2743,34 @@ def flatten_object(json_data, separator="."):
     return flattened
 
 
-def read_json_from_input(filename):
-    try:
-        if filename in ["-", None]:
-            data = json.load(sys.stdin)
-        else:
-            if filename.lower().endswith(".gz"):
-                with gzip.open(filename, "rt") as f:
-                    data = json.load(f)
-            else:
-                with open(filename, "r") as f:
-                    data = json.load(f)
-        return data
-    except json.decoder.JSONDecodeError as exc:
-        if args.debug:
-            print_err("Invalid JSON syntax:", exc)
-
-
 def sanitize_key(key):
     """Sanitize a JSON key to make it a valid Logfmt key"""
     return "".join(char if char.isalnum() else "_" for char in key)
 
 
-def events_from_jsonfiles_generator(filenames):
+def events_from_jsonfiles_generator(filenames, encoding="utf-8"):
     if not filenames:
         filenames = ["-"]
     lineno = 0
     for filename in filenames:
-        data = read_json_from_input(filename)
-        if isinstance(data, list):
-            for elem in data:
-                lineno += 1
-                events = apply_input_exec(flatten_object(elem))
-                for event in events:
-                    yield event, lineno
-        else:
-            lineno += 1
-            events = apply_input_exec(flatten_object(data))
-            for event in events:
-                yield event, lineno
+        with file_opener(filename, encoding=encoding) as f:
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError as e:
+                if args.debug:
+                    print_err("Invalid JSON syntax:", e)
+            else:
+                if isinstance(data, list):
+                    for elem in data:
+                        lineno += 1
+                        events = apply_input_exec(flatten_object(elem))
+                        for event in events:
+                            yield event, lineno
+                else:
+                    lineno += 1
+                    events = apply_input_exec(flatten_object(data))
+                    for event in events:
+                        yield event, lineno
 
 
 @contextlib.contextmanager
@@ -2830,21 +2819,16 @@ def process_csv(file_obj, delimiter, quoting, has_header):
             yield event, i + 1
 
 
-def events_from_datafiles_generator(filenames, delimiter="\t"):
+def events_from_datafiles_generator(filenames, delimiter="\t", encoding="utf-8"):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
-        if filename in ["-", None]:
-            f = sys.stdin
-        elif filename.lower().endswith(".gz"):
-            f = gzip.open(filename, "rt")
-        else:
-            f = open(filename, "r")
-        data = f.read()
-        numlines = len(data.splitlines())
-        events = apply_input_exec({"data": data})
-        for event in events:
-            yield event, numlines
+        with file_opener(filename, encoding=encoding) as f:
+            data = f.read()
+            numlines = len(data.splitlines())
+            events = apply_input_exec({"data": data})
+            for event in events:
+                yield event, numlines
 
 
 def main():
