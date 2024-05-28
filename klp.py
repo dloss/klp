@@ -2819,7 +2819,7 @@ def process_csv(file_obj, delimiter, quoting, has_header):
             yield event, i + 1
 
 
-def events_from_datafiles_generator(filenames, delimiter="\t", encoding="utf-8"):
+def events_from_datafiles_generator(filenames, encoding="utf-8"):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -2864,7 +2864,9 @@ def main():
         fuse_maybe_last = None
         is_first_visible_line = True
         if args.input_format == "json":
-            event_lineno_generator = events_from_jsonfiles_generator(args.files)
+            event_lineno_generator = events_from_jsonfiles_generator(
+                args.files, encoding=args.input_encoding
+            )
         elif args.input_format in ("csv", "tsv", "psv"):
             event_lineno_generator = events_from_csvfiles_generator(
                 args.files,
@@ -2873,7 +2875,9 @@ def main():
                 encoding=args.input_encoding,
             )
         elif args.input_format == "data":
-            event_lineno_generator = events_from_datafiles_generator(args.files)
+            event_lineno_generator = events_from_datafiles_generator(
+                args.files, encoding=args.input_encoding
+            )
         else:
             event_lineno_generator = events_from_linebased(
                 args.files, args.input_format, encoding=args.input_encoding
