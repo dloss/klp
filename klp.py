@@ -2818,11 +2818,14 @@ def process_csv(file_obj, delimiter, quoting, has_header, skip):
     skip_lines(reader, skip)
     if has_header:
         headers = next(reader)
+        headers = [key for key in headers if key]
     else:
         headers = None
     for i, row in enumerate(reader):
         if headers:
-            event = {sanitize_key(key): value for key, value in zip(headers, row)}
+            event = {
+                sanitize_key(key): value for key, value in zip(headers, row) if key
+            }
         else:
             event = {f"col{index}": value for index, value in enumerate(row)}
         for event in apply_input_exec(event):
