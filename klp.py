@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.65.2"
+__version__ = "0.65.3"
 
 INPUT_QUOTE = r"\""
 
@@ -2344,15 +2344,11 @@ def parse_args():
     if args.output_sep:
         args.output_sep = args.output_sep.replace("\\n", "\n").replace("\\t", "\t")
 
-    # Fake JSON output by using JSONL
+    # Fake JSON output by wrapping JSONL items in a JSON array, separated by commas
     if args.output_format == "json":
         args.header = "["
         args.output_event_sep = ",\n"
         args.footer = "\n]"
-    elif args.footer is None:
-        args.footer = ""
-    else:
-        args.footer = "\n" + args.footer
 
     return args
 
