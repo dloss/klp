@@ -2746,9 +2746,13 @@ def sanitize_key(key):
 
 
 def skip_lines(fileobj, n):
-    if n:
-        for _ in range(n):
-            next(fileobj)
+    if n is not None and n > 0:
+        try:
+            for _ in range(n):
+                next(fileobj)
+        except StopIteration:
+            # End of file reached before skipping all lines
+            pass
 
 
 def events_from_jsonfiles_generator(filenames, encoding="utf-8", skip=None):
