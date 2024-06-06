@@ -2403,12 +2403,13 @@ def colored_mapchar(event, key):
     return val[0]
 
 
-def events_from_linebased(filenames, format, encoding="utf-8"):
+def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
     """Yields events from (multiple) line-based files, which may be compressed."""
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
+            skip_lines(f, skip)
             for i, line in enumerate(f):
                 event = parse_linebased(line, format)
                 events = apply_input_exec(event)
@@ -2744,12 +2745,19 @@ def sanitize_key(key):
     return "".join(char if char.isalnum() else "_" for char in key)
 
 
-def events_from_jsonfiles_generator(filenames, encoding="utf-8"):
+def skip_lines(fileobj, n):
+    if n:
+        for _ in range(n):
+            next(fileobj)
+
+
+def events_from_jsonfiles_generator(filenames, encoding="utf-8", skip=None):
     if not filenames:
         filenames = ["-"]
     lineno = 0
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
+            skip_lines(f, skip)
             try:
                 data = json.load(f)
             except json.decoder.JSONDecodeError as e:
@@ -2792,16 +2800,18 @@ def events_from_csvfiles_generator(
     quoting=csv.QUOTE_MINIMAL,
     has_header=True,
     encoding="utf-8",
+    skip=None,
 ):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            yield from process_csv(f, delimiter, quoting, has_header)
+            yield from process_csv(f, delimiter, quoting, has_header, skip)
 
 
-def process_csv(file_obj, delimiter, quoting, has_header):
+def process_csv(file_obj, delimiter, quoting, has_header, skip):
     reader = csv.reader(file_obj, delimiter=delimiter, quoting=quoting)
+    skip_lines(reader, skip)
     if has_header:
         headers = next(reader)
     else:
@@ -2815,11 +2825,12 @@ def process_csv(file_obj, delimiter, quoting, has_header):
             yield event, i + 1
 
 
-def events_from_datafiles_generator(filenames, encoding="utf-8"):
+def events_from_datafiles_generator(filenames, encoding="utf-8", skip=None):
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
+            skip_lines(f, skip)
             data = f.read()
             numlines = len(data.splitlines())
             events = apply_input_exec({"data": data})
@@ -2861,7 +2872,7 @@ def main():
         is_first_visible_line = True
         if args.input_format == "json":
             event_lineno_generator = events_from_jsonfiles_generator(
-                args.files, encoding=args.input_encoding
+                args.files, encoding=args.input_encoding, skip=args.skip
             )
         elif args.input_format in ("csv", "tsv", "psv"):
             event_lineno_generator = events_from_csvfiles_generator(
@@ -2869,19 +2880,21 @@ def main():
                 delimiter=args.input_delimiter,
                 has_header=args.has_header,
                 encoding=args.input_encoding,
+                skip=args.skip,
             )
         elif args.input_format == "data":
             event_lineno_generator = events_from_datafiles_generator(
-                args.files, encoding=args.input_encoding
+                args.files, encoding=args.input_encoding, skip=args.skip
             )
         else:
             event_lineno_generator = events_from_linebased(
-                args.files, args.input_format, encoding=args.input_encoding
+                args.files,
+                args.input_format,
+                encoding=args.input_encoding,
+                skip=args.skip,
             )
         for event, lineno in event_lineno_generator:
             stats.num_lines_seen = lineno
-            if args.skip and args.skip >= stats.num_lines_seen:
-                continue
 
             if args.grep or args.grep_not:
                 greppable = make_greppable(event)
