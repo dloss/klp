@@ -640,6 +640,9 @@ EXPORTED_GLOBALS = build_globals_dict(
         textwrap,
         extract_json,
         extract_regex,
+    ]
+    + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
+    + [
         format_datetime,
         guess_datetime,
         parse_kv,
@@ -652,7 +655,6 @@ EXPORTED_GLOBALS = build_globals_dict(
         parse_data,
         pprint_json,
     ]
-    + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
 )
 
 
