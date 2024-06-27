@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.65.3"
+__version__ = "0.66.0"
 
 INPUT_QUOTE = r"\""
 
@@ -2178,7 +2178,7 @@ def parse_args():
         help="show version number",
     )
     other.add_argument(
-        "--help-python-objs",
+        "--help-python",
         action="store_true",
         help="show modules and functions available for Python expressions/code (apart from builtins)",
     )
@@ -2188,7 +2188,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if args.help_python_objs:
+    if args.help_python:
         exported_objects = list_exported_objects(ignore_underscore=True)
         max_name_length = max(len(obj.__name__) for obj in exported_objects)
         for obj in list_exported_objects(ignore_underscore=True):
