@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.66.0"
+__version__ = "0.67.0"
 
 INPUT_QUOTE = r"\""
 
@@ -2957,7 +2957,7 @@ def main():
                                         "fuse_last",
                                         lineno=1 + fuse_skipped + 1,
                                     )
-                                    print("", file=sys.stderr)
+                                    show_gap_marker(ts_delta, terminal_width)
                                     fuse_maybe_last = None
                         elif args.mark_gaps is not None:
                             if ts_delta > args.mark_gaps:
