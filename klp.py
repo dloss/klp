@@ -85,6 +85,9 @@ COLOR_CODES = {
     "bright_white": ("\x1b[1;37m", "\x15"),
     "bold": ("\x1b[1m", "\x16"),
     "off": ("\x1b[0m", "\x17"),
+    "underline": ("\x1b[4m", "\x18"),
+    "italic": ("\x1b[3m", "\x19"),
+    "reverse": ("\x1b[7m", "\x1a"),
 }
 COLOR = {key: color for key, (color, _) in COLOR_CODES.items()}
 SCOLOR = {key: scolor for key, (_, scolor) in COLOR_CODES.items()}
@@ -148,6 +151,36 @@ THEMES = {
         },
         "skipped_marker": {"before": "blue", "number": "black", "after": "blue"},
         "gap_marker": {"before": "blue", "label": "black", "after": "blue"},
+    },
+    "tty": {
+        "keys": "italic",
+        "quotes": "off",
+        "message_key": "off",
+        "timestamp_key": "off",
+        "levels": {
+            "trace": "off",
+            "debug": "off",
+            "info": "off",
+            "notice": "off",
+            "warn": "bold",
+            "warning": "bold",
+            "error": "reverse",
+            "err": "reverse",
+            "fatal": "reverse",
+            "panic": "reverse",
+            "alert": "reverse",
+            "crit": "reverse",
+            "emerg": "reverse",
+        },
+        "context_prefix": {
+            "before": "off",
+            "match": "reverse",
+            "after": "off",
+            "fuse_first": "italic",
+            "fuse_last": "italic",
+        },
+        "skipped_marker": {"before": "off", "number": "underline", "after": "off"},
+        "gap_marker": {"before": "off", "label": "underline", "after": "off"},
     },
 }
 
