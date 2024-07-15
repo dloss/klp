@@ -250,6 +250,17 @@ BUILTIN_REGEXES = {
     "jwt": [r"eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*"],
     "hexcolor": [r"#[0-9A-Fa-f]{6}\b"],
     "version": [r"\b([vV])?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9]+)?\b"],
+    "oauth": [r"\bya29\.[0-9A-Za-z_-]+\b"],
+    "mimetype": [r"\b[\w-]+/[\w-]+(?:\+[\w-]+)?\b"],
+    "md5": [r"\b[a-fA-F0-9]{32}\b"],
+    "sha1": [r"\b[a-fA-F0-9]{40}\b"],
+    "sha256": [r"\b[a-fA-F0-9]{64}\b"],
+    "winregistry": [r"HKEY_[A-Z_]+(?:\\[A-Za-z0-9_]+)+"],
+    "function": [r"\b\w+\([^)]*\)"],
+    "pid": [
+        r"\bPID[:=]?\s*\d+\b",
+        r"\[(\d+)\]",  # Often used format [12345]
+    ],
 }
 
 
