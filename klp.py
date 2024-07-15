@@ -220,10 +220,11 @@ BUILTIN_REGEXES = {
     "err": [
         r"(?i)\b((error|err|panic|crit|critical|alert|fatal|emerg|failed|failure|exception))\b"
     ],
-    "function": [r"\b((\w+\([^)]*\)))"],
     "fqdn": [
         r"\b(((?:[a-z](?:[a-z0-9-]{0,63}[a-z0-9])?\.){2,}[a-z0-9][a-z0-9-]{0,8}))"
     ],
+    "function": [r"\b((\w+\([^)]*\)))"],
+    "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
     "ipv4": [
         r"\b((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\b"
@@ -232,7 +233,6 @@ BUILTIN_REGEXES = {
         r"\b(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\b"
     ],
     "json": [r"((\{[^{}]*?\}))"],
-    "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "isotime": [
         r"\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b)"
     ],
@@ -1961,6 +1961,41 @@ def parse_args():
         help=f"don't process lines according to one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
     )
     grep.add_argument(
+        "--start-after",
+        metavar="REGEX",
+        default=[],
+        action="append",
+        help="start processing events after a line matching REGX has been found",
+    )
+    grep.add_argument(
+        "--start-with",
+        metavar="REGEX",
+        default=[],
+        action="append",
+        help="start processing events when a line matching REGEX is found",
+    )
+    grep.add_argument(
+        "--stop-with",
+        metavar="REGEX",
+        default=[],
+        action="append",
+        help="stop processing events after a line matching REGEX is found",
+    )
+    grep.add_argument(
+        "--stop-before",
+        metavar="REGEX",
+        default=[],
+        action="append",
+        help="stop processing events when a line matching REGEX is found",
+    )
+    grep.add_argument(
+        "--num-blocks",
+        metavar="NUM",
+        default=1,
+        type=int,
+        help="stop processing after NUM start/stop blocks (default: 1, unlimited: -1)",
+    )
+    grep.add_argument(
         "--ignore-case",
         "-i",
         action="store_true",
@@ -2534,11 +2569,50 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
             skip_lines(f, skip)
-            for i, line in enumerate(f):
+
+            blocks_found = 0
+            started = not (args.start_after or args.start_with)
+
+            for i, line in enumerate(f, start=1):
+                if not started:
+                    if args.start_after and any(
+                        re.search(pattern, line) for pattern in args.start_after
+                    ):
+                        started = True
+                        continue
+                    if args.start_with and any(
+                        re.search(pattern, line) for pattern in args.start_with
+                    ):
+                        started = True
+                    else:
+                        continue
+
+                if args.stop_before and any(
+                    re.search(pattern, line) for pattern in args.stop_before
+                ):
+                    blocks_found += 1
+                    if args.num_blocks != -1 and blocks_found == args.num_blocks:
+                        break
+                    started = False
+                    continue
+
+                if args.stop_with and any(
+                    re.search(pattern, line) for pattern in args.stop_with
+                ):
+                    event = parse_linebased(line, format)
+                    events = apply_input_exec(event)
+                    for event in events:
+                        yield event, i
+                    blocks_found += 1
+                    if args.num_blocks != -1 and blocks_found == args.num_blocks:
+                        break
+                    started = False
+                    continue
+
                 event = parse_linebased(line, format)
                 events = apply_input_exec(event)
                 for event in events:
-                    yield event, i + 1
+                    yield event, i
 
 
 class MyTests(unittest.TestCase):
