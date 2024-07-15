@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.67.1"
+__version__ = "0.68.0"
 
 INPUT_QUOTE = r"\""
 
@@ -217,48 +217,50 @@ THEMES = {
 BUILTIN_REGEXES = {
     # https://stackoverflow.com/questions/6038061/regular-expression-to-find-urls-within-a-string
     "url": [
-        r"\b(http|ftp|https):\/\/([\w-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])\b"
+        r"\b((http|ftp|https):\/\/([\w-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-]))\b"
     ],
     # https://www.regular-expressions.info/email.html
-    "email": [r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"],
+    "email": [r"\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b)"],
     "err": [
-        r"(?i)\b(error|err|panic|crit|critical|alert|fatal|emerg|failed|failure|exception)\b"
+        r"(?i)\b((error|err|panic|crit|critical|alert|fatal|emerg|failed|failure|exception))\b"
     ],
-    "path": [r"(^|(?<=[^/\w-]))(/[\w-]+)+/?"],
+    "path": [r"((^|(?<=[^/\w-]))(/[\w-]+)+/?)"],
     "ipv4": [
-        r"\b(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\b"
+        r"\b((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\b"
     ],
     "ipv6": [
         r"\b(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\b"
     ],
     "mac": [
-        r"\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\b",
-        r"\b([0-9A-Fa-f]{4}\.){2}([0-9A-Fa-f]{4})\b",
+        r"\b(([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}))\b",
+        r"\b(([0-9A-Fa-f]{4}\.){2}([0-9A-Fa-f]{4}))\b",
     ],
-    "fqdn": [r"\b(?:[a-z](?:[a-z0-9-]{0,63}[a-z0-9])?\.){2,}[a-z0-9][a-z0-9-]{0,8}"],
+    "fqdn": [
+        r"\b(((?:[a-z](?:[a-z0-9-]{0,63}[a-z0-9])?\.){2,}[a-z0-9][a-z0-9-]{0,8}))"
+    ],
     "uuid": [
-        r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+        r"\b(([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))\b"
     ],
-    "json": [r"\{[^{}]*?\}"],
+    "json": [r"((\{[^{}]*?\}))"],
     "isotime": [
-        r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b"
+        r"\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b)"
     ],
     "sql": [
-        r"\b(?i:(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|MERGE))\b"
+        r"\b((?i:(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|MERGE))\b)"
     ],
-    "gitcommit": [r"\b[0-9a-fA-F]{7,40}\b"],
-    "jwt": [r"eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*"],
-    "hexcolor": [r"#[0-9A-Fa-f]{6}\b"],
-    "version": [r"\b([vV])?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9]+)?\b"],
-    "oauth": [r"\bya29\.[0-9A-Za-z_-]+\b"],
-    "mimetype": [r"\b[\w-]+/[\w-]+(?:\+[\w-]+)?\b"],
-    "md5": [r"\b[a-fA-F0-9]{32}\b"],
-    "sha1": [r"\b[a-fA-F0-9]{40}\b"],
-    "sha256": [r"\b[a-fA-F0-9]{64}\b"],
-    "winregistry": [r"HKEY_[A-Z_]+(?:\\[A-Za-z0-9_]+)+"],
-    "function": [r"\b\w+\([^)]*\)"],
+    "gitcommit": [r"\b([0-9a-fA-F]{7,40})\b"],
+    "jwt": [r"(eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*)"],
+    "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
+    "version": [r"\b(([vV])\d+\.\d+(\.\d+)?(-[a-zA-Z0-9]+)?)\b"],
+    "oauth": [r"\b(ya29\.[0-9A-Za-z_-]+)\b"],
+    "mimetype": [r"\b([\w-]+/[\w-]+(?:\+[\w-]+)?)\b"],
+    "md5": [r"\b(([a-fA-F0-9]{32}))\b"],
+    "sha1": [r"\b(([a-fA-F0-9]{40}))\b"],
+    "sha256": [r"\b(([a-fA-F0-9]{64}))\b"],
+    "winregistry": [r"(HKEY_[A-Z_]+(?:\\[A-Za-z0-9_]+)+)"],
+    "function": [r"\b((\w+\([^)]*\)))"],
     "pid": [
-        r"\bPID[:=]?\s*\d+\b",
+        r"\bPID[:=]?\s*(\d+)\b",
         r"\[(\d+)\]",  # Often used format [12345]
     ],
 }
@@ -1291,6 +1293,8 @@ def show(event, context_type="", lineno=None):
         show_json(event)
     elif args.output_format in ("csv", "tsv", "psv"):
         show_csv(event, args.writer)
+    elif args.output_format == "extract":
+        show_extract(event)
 
 
 def escape_doublequotes_quoted(s):
@@ -1498,6 +1502,22 @@ def show_logfmt(event):
 
     line = " ".join(elems)
     print_output(line)
+
+
+def show_extract(event):
+    if args.grep_by_key:
+        for key, pattern in args.grep_by_key.items():
+            if key in event:
+                matches = pattern.findall(event.get(key), "")
+                if matches:
+                    for match in matches:
+                        print(match[0])
+    elif args.grep:
+        for pattern in args.grep:
+            matches = pattern.findall(make_greppable(event))
+            if matches:
+                for match in matches:
+                    print(match[0])
 
 
 def print_err(*args, **kwargs):
@@ -2043,7 +2063,7 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "logfmt", "jsonl", "json", "csv", "tsv", "psv"],
+        choices=["default", "logfmt", "jsonl", "json", "csv", "tsv", "psv", "extract"],
         default="default",
         help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
@@ -2238,6 +2258,15 @@ def parse_args():
         " show a marker that visually separates them.",
     )
     output_special.add_argument(
+        "--extract",
+        "-x",
+        metavar="REGEX",
+        type=builtin_regex,
+        default=[],
+        action="append",
+        help=f"extract text matching one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
+    )
+    output_special.add_argument(
         "--fuse",
         metavar="INTERVAL",
         type=timedelta_from,
@@ -2366,6 +2395,10 @@ def parse_args():
     if args.localtime and args.utc:
         print_err("Choose either localtime or UTC")
         sys.exit(1)
+
+    if args.extract:
+        args.grep_builtin = args.extract
+        args.output_format = "extract"
 
     if args.context > 0:
         args.before_context = args.context
