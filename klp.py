@@ -35,7 +35,7 @@ import math
 import random
 import string
 
-__version__ = "0.68.0"
+__version__ = "0.68.1"
 
 INPUT_QUOTE = r"\""
 
@@ -243,7 +243,7 @@ BUILTIN_REGEXES = {
     ],
     "md5": [r"\b(([a-fA-F0-9]{32}))\b"],
     "oauth": [r"\b((ya29\.[0-9A-Za-z_-]+))\b"],
-    "path": [r"((^|(?<=[^/\w-]))(/[\w-]+)+/?)"],
+    "path": [r"((^|(?<=[^./\w-]))(/[.\w-]+)+/?)"],
     "sha1": [r"\b(([a-fA-F0-9]{40}))\b"],
     "sha256": [r"\b(([a-fA-F0-9]{64}))\b"],
     "sql": [
