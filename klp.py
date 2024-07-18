@@ -14,6 +14,7 @@ import dataclasses
 import datetime as dt
 import errno
 import gzip
+import inspect
 import io
 import json
 import os
@@ -35,7 +36,7 @@ import math
 import random
 import string
 
-__version__ = "0.68.1"
+__version__ = "0.68.2"
 
 INPUT_QUOTE = r"\""
 
@@ -1833,6 +1834,57 @@ def flatten_sublists(li):
     return [item for sublist in li for item in sublist]
 
 
+def get_function_signature(func):
+    try:
+        sig = inspect.signature(func)
+        params = []
+        for name, param in sig.parameters.items():
+            if param.default is param.empty:
+                params.append(name)
+            else:
+                params.append(f"{name}={param.default!r}")
+        return f"({', '.join(params)})"
+    except ValueError:
+        return "()"
+
+
+def print_python_help():
+    exported_objects = list_exported_objects(ignore_underscore=True)
+
+    # Separate modules and functions
+    modules = [obj for obj in exported_objects if inspect.ismodule(obj)]
+    functions = [
+        obj
+        for obj in exported_objects
+        if inspect.isfunction(obj) or inspect.ismethod(obj)
+    ]
+
+    # Handle modules
+    max_module_name_length = max(len(obj.__name__) for obj in modules)
+    print("Modules:")
+    for obj in modules:
+        try:
+            doc = obj.__doc__.splitlines()[0] if obj.__doc__ else ""
+        except AttributeError:
+            doc = ""
+        print(f"  {obj.__name__.ljust(max_module_name_length + 2)} {doc}")
+
+    print("\nFunctions:")
+    # Handle functions
+    max_func_name_length = max(len(obj.__name__) for obj in functions)
+    for obj in functions:
+        try:
+            doc = obj.__doc__.splitlines()[0] if obj.__doc__ else ""
+        except AttributeError:
+            doc = ""
+
+        name = obj.__name__
+        signature = get_function_signature(obj)
+        full_name = f"{name}{signature}"
+
+        print(f"  {full_name.ljust(max_func_name_length + 30)} {doc}")
+
+
 def print_time_format_help():
     help_text = """
 Time Format Reference:
@@ -2377,14 +2429,7 @@ def parse_args():
     args = parser.parse_args()
 
     if args.help_python:
-        exported_objects = list_exported_objects(ignore_underscore=True)
-        max_name_length = max(len(obj.__name__) for obj in exported_objects)
-        for obj in list_exported_objects(ignore_underscore=True):
-            try:
-                doc = obj.__doc__.splitlines()[0]
-            except (AttributeError, KeyError):
-                doc = ""
-            print(f"{obj.__name__.ljust(max_name_length)} {doc}")
+        print_python_help()
         sys.exit(0)
 
     if args.help_time:
