@@ -1833,6 +1833,36 @@ def flatten_sublists(li):
     return [item for sublist in li for item in sublist]
 
 
+def print_time_format_help():
+    help_text = """
+Time Format Reference:
+%Y - Year with century as a decimal number (e.g., 2024)
+%y - Year without century as a zero-padded decimal number (00-99)
+%m - Month as a zero-padded decimal number (01-12)
+%b - Month as locale's abbreviated name (e.g., Jan, Feb, ..., Dec)
+%B - Month as locale's full name (e.g., January, February, ..., December)
+%d - Day of the month as a zero-padded decimal number (01-31)
+%j - Day of the year as a zero-padded decimal number (001-366)
+%H - Hour (24-hour clock) as a zero-padded decimal number (00-23)
+%I - Hour (12-hour clock) as a zero-padded decimal number (01-12)
+%p - Locale's equivalent of either AM or PM
+%M - Minute as a zero-padded decimal number (00-59)
+%S - Second as a zero-padded decimal number (00-59)
+%f - Microsecond as a decimal number, zero-padded on the left (000000-999999)
+%z - UTC offset in the form ±HHMM[SS[.ffffff]] (empty string if naive)
+%Z - Time zone name (e.g, UTC, GMT, CEST, empty string if naive)
+%w - Weekday as a decimal number, where 0 is Sunday and 6 is Saturday
+%a - Weekday as locale's abbreviated name (Sun, Mon, ..., Sat)
+%A - Weekday as locale's full name (Sunday, Monday, ..., Saturday)
+%W - Week number of the year (Monday as the first day of the week)
+%U - Week number of the year (Sunday as the first day of the week)
+
+For a complete list of format codes, refer to the Python documentation:
+https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
+    """
+    print(help_text)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -2338,6 +2368,9 @@ def parse_args():
         help="show modules and functions available for Python expressions/code (apart from builtins)",
     )
     other.add_argument(
+        "--help-time", action="store_true", help="Print time format reference"
+    )
+    other.add_argument(
         "-h", "--help", action="help", help="show this help message and exit"
     )
 
@@ -2352,6 +2385,10 @@ def parse_args():
             except (AttributeError, KeyError):
                 doc = ""
             print(f"{obj.__name__.ljust(max_name_length)} {doc}")
+        sys.exit(0)
+
+    if args.help_time:
+        print_time_format_help()
         sys.exit(0)
 
     if sys.stdin.isatty() and not args.files and not args.selftest:
