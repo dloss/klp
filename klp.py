@@ -36,7 +36,7 @@ import math
 import random
 import string
 
-__version__ = "0.68.2"
+__version__ = "0.68.3"
 
 INPUT_QUOTE = r"\""
 
@@ -1953,6 +1953,11 @@ def parse_args():
         "--jsonl-input", "-j", action="store_true", help="input format is JSON Lines"
     )
     input.add_argument(
+        "--logical-lines",
+        action="store_true",
+        help="handle indentation and backslash continuations to identify logical lines",
+    )
+    input.add_argument(
         "--input-encoding",
         default="utf-8",
         help="Text encoding of the input data. Default: utf-8",
@@ -2644,8 +2649,33 @@ def colored_mapchar(event, key):
     return val[0]
 
 
+def logical_line_gen(file):
+    logical_line = []
+    for line in file:
+        stripped = line.rstrip()
+        if logical_line and logical_line[-1].endswith("\\"):
+            # Continue the line if the previous line ended with a backslash
+            logical_line[-1] = logical_line[-1][:-1]  # Remove the backslash
+            logical_line.append(stripped)
+        elif stripped and not line[0].isspace():
+            # Start a new logical line if this line is non-empty and not indented
+            if logical_line:
+                yield "".join(logical_line)
+                logical_line = []
+            logical_line.append(stripped)
+        else:
+            # Continue the current logical line, with indentation removed
+            # XXX: Maybe don't infer with tabs or multiple spaces?
+            logical_line.append(stripped.lstrip())
+    if logical_line:
+        yield "".join(logical_line)
+
+
 def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
     """Yields events from (multiple) line-based files, which may be compressed."""
+
+    line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
+
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
@@ -2655,7 +2685,7 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
             blocks_found = 0
             started = not (args.start_after or args.start_with)
 
-            for i, line in enumerate(f, start=1):
+            for i, line in enumerate(line_gen(f), start=1):
                 if not started:
                     if args.start_after and any(
                         re.search(pattern, line) for pattern in args.start_after
@@ -3086,11 +3116,12 @@ def events_from_csvfiles_generator(
     encoding="utf-8",
     skip=None,
 ):
+    line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            yield from process_csv(f, delimiter, quoting, has_header, skip)
+            yield from process_csv(line_gen(f), delimiter, quoting, has_header, skip)
 
 
 def process_csv(file_obj, delimiter, quoting, has_header, skip):
