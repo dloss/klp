@@ -21,6 +21,7 @@ import os
 import pprint
 import re
 import shutil
+import sqlite3
 import sys
 import textwrap
 import unittest
@@ -36,7 +37,7 @@ import math
 import random
 import string
 
-__version__ = "0.68.3"
+__version__ = "0.69.0"
 
 INPUT_QUOTE = r"\""
 
@@ -1947,6 +1948,7 @@ def parse_args():
             "unix",
             "line",
             "data",
+            "sqlite",
         ],
         default="logfmt",
         help="format of the input data. Default: logfmt. csv, tsv and psv need a header line. json cannot be streamed. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
@@ -1979,6 +1981,11 @@ def parse_args():
         choices=["minimal", "all", "nonnumeric", "none"],
         default="minimal",
         help="CSV/TSV/PSV quoting used for input format. Default: minimal",
+    )
+    input.add_argument(
+        "--input-tablename",
+        metavar="TABLENAME",
+        help="SQLite table name to read data from.",
     )
     input.add_argument(
         "--input-exec",
@@ -2755,6 +2762,41 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
                     for event in events:
                         yield event, i
 
+def get_sqlite_tablenames(cursor):
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+    return tables
+
+
+def events_from_sqlitefiles_generator(filenames, tablename):
+    """Yields events from (multiple) sqlite files, which may be compressed."""
+    if not filenames:
+        filenames = ["-"]
+    
+    for filename in filenames:
+        with file_opener(filename, sqlite_mode=True) as conn:
+            cursor = conn.cursor()
+            if not tablename:
+                tablenames = get_sqlite_tablenames(cursor)[0]
+                if len(tablenames) == 1:
+                    tablename = tablenames[0]
+                else:
+                    raise ValueError("No table name specified and more than one table found:", ", ".join(tablenames))
+            if not tablename:
+                raise ValueError("No table name specified and no tables found")
+            # Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)
+            if not re.match(r'^\w+$', tablename):
+                raise ValueError("Invalid table name")
+
+            query = f"SELECT * FROM {tablename}"
+            cursor.execute(query)
+
+            # Get the column names
+            column_names = [description[0] for description in cursor.description]
+                
+            # Fetch and yield each row as a dict
+            for i, row in enumerate(cursor, start=1):
+                yield dict(zip(column_names, row)), i
 
 class MyTests(unittest.TestCase):
     def test_guess_datetime_military_ns(self):
@@ -3120,21 +3162,34 @@ def events_from_jsonfiles_generator(filenames, encoding="utf-8", skip=None):
                         yield event, lineno
 
 
+import contextlib
+import sys
+import gzip
+import zipfile
+import io
+import sqlite3
+
 @contextlib.contextmanager
-def file_opener(filename, encoding="utf-8"):
+def file_opener(filename, encoding="utf-8", sqlite_mode=False):
     if filename in ["-", None]:
         yield sys.stdin
     elif filename.lower().endswith(".gz"):
         with gzip.open(filename, "rt", encoding=encoding) as f:
             yield f
     elif filename.lower().endswith(".zip"):
+        if sqlite_mode:
+            raise(NotImplementedError("Zipped SQLite databases are not supported."))
         with zipfile.ZipFile(filename, "r") as z:
             for name in z.namelist():
                 with z.open(name) as f:
                     yield io.TextIOWrapper(f, encoding=encoding)
     else:
-        with open(filename, "r", encoding=encoding) as f:
-            yield f
+        if sqlite_mode:
+            conn = sqlite3.connect(filename)
+            yield conn
+        else:
+            with open(filename, "r", encoding=encoding) as f:
+                yield f
 
 
 def events_from_csvfiles_generator(
@@ -3254,6 +3309,10 @@ def main():
         elif args.input_format == "data":
             event_lineno_generator = events_from_datafiles_generator(
                 args.files, encoding=args.input_encoding, skip=args.skip
+            )
+        elif args.input_format == "sqlite":
+            event_lineno_generator = events_from_sqlitefiles_generator(
+                args.files, tablename=args.input_tablename
             )
         else:
             event_lineno_generator = events_from_linebased(
