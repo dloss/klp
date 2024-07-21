@@ -2673,60 +2673,87 @@ def logical_line_gen(file):
         yield "".join(logical_line)
 
 
+def extract_blocks(file_iterator, start_after=None, start_with=None, stop_before=None, stop_with=None, num_blocks=-1):
+    """
+    Extracts blocks of lines from a file iterator based on regex patterns.
+    
+    Args:
+    file_iterator: An iterator yielding lines from a file
+    start_after, start_with, stop_before, stop_with: Lists of regex patterns
+    num_blocks: Number of blocks to extract (-1 for all blocks)
+    
+    Yields:
+    Tuples of (block_lines, start_line_number, end_line_number)
+    """
+    def matches_any_pattern(line, patterns):
+        return patterns and any(re.search(pattern, line) for pattern in patterns)
+
+    blocks_found = 0
+    started = not (start_after or start_with)
+    current_block = []
+    start_line_number = None
+
+    for i, line in enumerate(file_iterator, start=1):
+        if not started:
+            if matches_any_pattern(line, start_after):
+                started = True
+                continue
+            if matches_any_pattern(line, start_with):
+                started = True
+            else:
+                continue
+
+        if matches_any_pattern(line, stop_before):
+            if current_block:
+                yield current_block, start_line_number, i - 1
+                blocks_found += 1
+                if num_blocks != -1 and blocks_found == num_blocks:
+                    return
+            started = False
+            current_block = []
+            start_line_number = None
+            continue
+
+        current_block.append(line)
+        if start_line_number is None:
+            start_line_number = i
+
+        if matches_any_pattern(line, stop_with):
+            yield current_block, start_line_number, i
+            blocks_found += 1
+            if num_blocks != -1 and blocks_found == num_blocks:
+                return
+            started = False
+            current_block = []
+            start_line_number = None
+
+    if current_block:
+        yield current_block, start_line_number, i
+        
+
 def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
     """Yields events from (multiple) line-based files, which may be compressed."""
-
     line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
-
     if not filenames:
         filenames = ["-"]
+    
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
             skip_lines(f, skip)
-
-            blocks_found = 0
-            started = not (args.start_after or args.start_with)
-
-            for i, line in enumerate(line_gen(f), start=1):
-                if not started:
-                    if args.start_after and any(
-                        re.search(pattern, line) for pattern in args.start_after
-                    ):
-                        started = True
-                        continue
-                    if args.start_with and any(
-                        re.search(pattern, line) for pattern in args.start_with
-                    ):
-                        started = True
-                    else:
-                        continue
-
-                if args.stop_before and any(
-                    re.search(pattern, line) for pattern in args.stop_before
-                ):
-                    blocks_found += 1
-                    if args.num_blocks != -1 and blocks_found == args.num_blocks:
-                        break
-                    started = False
-                    continue
-
-                if args.stop_with and any(
-                    re.search(pattern, line) for pattern in args.stop_with
-                ):
+            
+            for block, start_line, end_line in extract_blocks(
+                line_gen(f),
+                start_after=args.start_after,
+                start_with=args.start_with,
+                stop_before=args.stop_before,
+                stop_with=args.stop_with,
+                num_blocks=args.num_blocks
+            ):
+                for i, line in enumerate(block, start=start_line):
                     event = parse_linebased(line, format)
                     events = apply_input_exec(event)
                     for event in events:
                         yield event, i
-                    blocks_found += 1
-                    if args.num_blocks != -1 and blocks_found == args.num_blocks:
-                        break
-                    started = False
-                    continue
-
-                event = parse_linebased(line, format)
-                events = apply_input_exec(event)
-                for event in events:
-                    yield event, i
 
 
 class MyTests(unittest.TestCase):
