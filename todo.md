@@ -1,13 +1,10 @@
 - Input formats
-    * -f table (using split())
-    * -f sqlite, --input-table 
     * -f syslog
     * -f mbox
     * -f xml
     * formats from logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
     * Input format guessing
 - Output formats
-    * -F sqlite, --output-table
     * -F yaml  (simple)
     * -F xml
     * Allow to specify output encoding

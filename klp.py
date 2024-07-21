@@ -1290,6 +1290,8 @@ def show(event, context_type="", lineno=None):
         show_json(event)
     elif args.output_format in ("csv", "tsv", "psv"):
         show_csv(event, args.writer)
+    elif args.output_format == "sqlite":
+        write_sqlite(event, args.cursor)
     elif args.output_format == "extract":
         show_extract(event)
 
@@ -1371,6 +1373,14 @@ def show_csv(event, writer):
     for key in args.keys:
         cols.append(escape_plain(event.get(key, "")))
     writer.writerow(cols)
+
+
+def write_sqlite(event, cursor):
+    cols = []
+    for key in args.keys:
+        cols.append(escape_plain(event.get(key, "")))
+    placeholders = ", ".join(["?" for _ in args.keys])
+    cursor.execute(f"INSERT INTO data VALUES ({placeholders})", cols)
 
 
 def show_default(event, context_type="", lineno=None):
@@ -1985,7 +1995,7 @@ def parse_args():
     input.add_argument(
         "--input-tablename",
         metavar="TABLENAME",
-        help="SQLite table name to read data from.",
+        help="SQLite table name to read data from. Needed when more than 1 table exists",
     )
     input.add_argument(
         "--input-exec",
@@ -2188,7 +2198,17 @@ def parse_args():
     output.add_argument(
         "--output-format",
         "-F",
-        choices=["default", "logfmt", "jsonl", "json", "csv", "tsv", "psv", "extract"],
+        choices=[
+            "default",
+            "logfmt",
+            "jsonl",
+            "json",
+            "csv",
+            "tsv",
+            "psv",
+            "sqlite",
+            "extract",
+        ],
         default="default",
         help="format of the output data. Default: default. logfmt is plain logfmt, without colors or formatting",
     )
@@ -2204,6 +2224,12 @@ def parse_args():
         choices=["minimal", "all", "nonnumeric", "none"],
         default="minimal",
         help="quoting used for output format. Default: minimal",
+    )
+    output.add_argument(
+        "--output-tablename",
+        metavar="TABLENAME",
+        default="data",
+        help="SQLite table to write data to. Default: data",
     )
     output.add_argument(
         "--max-events",
@@ -2495,6 +2521,23 @@ def parse_args():
             delimiter=args.output_delimiter,
             quoting=args.output_quoting,
         )
+    args.cursor = None
+    if args.output_format == "sqlite":
+        if not args.output_file:
+            print_err("SQLite format needs output file")
+            sys.exit(1)
+        if not args.keys:
+            print_err(
+                "SQLite format needs explicit list of keys. Use -S to list and copy them, then rerun with -k."
+            )
+            sys.exit(1)
+        args.conn = sqlite3.connect(args.output_file.name)
+        args.cursor = args.conn.cursor()
+        # Create table based on keys
+        columns = ", ".join([f'"{key}" TEXT' for key in args.keys])
+        ensure_safe_tablename(args.output_tablename)
+        query = f"CREATE TABLE IF NOT EXISTS {args.output_tablename} ({columns})"
+        args.cursor.execute(query)
 
     args.add_ts = "_klp_ts" in args.keys
     args.add_ts_delta = "_klp_timedelta" in args.keys
@@ -2680,18 +2723,26 @@ def logical_line_gen(file):
         yield "".join(logical_line)
 
 
-def extract_blocks(file_iterator, start_after=None, start_with=None, stop_before=None, stop_with=None, num_blocks=-1):
+def extract_blocks(
+    file_iterator,
+    start_after=None,
+    start_with=None,
+    stop_before=None,
+    stop_with=None,
+    num_blocks=-1,
+):
     """
     Extracts blocks of lines from a file iterator based on regex patterns.
-    
+
     Args:
     file_iterator: An iterator yielding lines from a file
     start_after, start_with, stop_before, stop_with: Lists of regex patterns
     num_blocks: Number of blocks to extract (-1 for all blocks)
-    
+
     Yields:
     Tuples of (block_lines, start_line_number, end_line_number)
     """
+
     def matches_any_pattern(line, patterns):
         return patterns and any(re.search(pattern, line) for pattern in patterns)
 
@@ -2736,25 +2787,25 @@ def extract_blocks(file_iterator, start_after=None, start_with=None, stop_before
 
     if current_block:
         yield current_block, start_line_number, i
-        
+
 
 def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
     """Yields events from (multiple) line-based files, which may be compressed."""
     line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
     if not filenames:
         filenames = ["-"]
-    
+
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
             skip_lines(f, skip)
-            
+
             for block, start_line, end_line in extract_blocks(
                 line_gen(f),
                 start_after=args.start_after,
                 start_with=args.start_with,
                 stop_before=args.stop_before,
                 stop_with=args.stop_with,
-                num_blocks=args.num_blocks
+                num_blocks=args.num_blocks,
             ):
                 for i, line in enumerate(block, start=start_line):
                     event = parse_linebased(line, format)
@@ -2767,6 +2818,10 @@ def get_sqlite_tablenames(cursor):
     tables = cursor.fetchall()
     return tables
 
+def ensure_safe_tablename(tablename):            
+    """Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)"""
+    if not re.match(r'^\w+$', tablename):
+        raise ValueError("Invalid table name")
 
 def events_from_sqlitefiles_generator(filenames, tablename):
     """Yields events from (multiple) sqlite files, which may be compressed."""
@@ -2781,22 +2836,24 @@ def events_from_sqlitefiles_generator(filenames, tablename):
                 if len(tablenames) == 1:
                     tablename = tablenames[0]
                 else:
-                    raise ValueError("No table name specified and more than one table found:", ", ".join(tablenames))
+                    raise ValueError(
+                        "No table name specified and more than one table found:",
+                        ", ".join(tablenames),
+                    )
             if not tablename:
                 raise ValueError("No table name specified and no tables found")
-            # Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)
-            if not re.match(r'^\w+$', tablename):
-                raise ValueError("Invalid table name")
 
+            ensure_safe_tablename(tablename)
             query = f"SELECT * FROM {tablename}"
             cursor.execute(query)
 
             # Get the column names
             column_names = [description[0] for description in cursor.description]
-                
+
             # Fetch and yield each row as a dict
             for i, row in enumerate(cursor, start=1):
                 yield dict(zip(column_names, row)), i
+
 
 class MyTests(unittest.TestCase):
     def test_guess_datetime_military_ns(self):
@@ -3169,6 +3226,7 @@ import zipfile
 import io
 import sqlite3
 
+
 @contextlib.contextmanager
 def file_opener(filename, encoding="utf-8", sqlite_mode=False):
     if filename in ["-", None]:
@@ -3178,7 +3236,7 @@ def file_opener(filename, encoding="utf-8", sqlite_mode=False):
             yield f
     elif filename.lower().endswith(".zip"):
         if sqlite_mode:
-            raise(NotImplementedError("Zipped SQLite databases are not supported."))
+            raise (NotImplementedError("Zipped SQLite databases are not supported."))
         with zipfile.ZipFile(filename, "r") as z:
             for name in z.namelist():
                 with z.open(name) as f:
@@ -3213,6 +3271,7 @@ def events_from_csvfiles_generator(
 
 def process_csv(file_obj, delimiter, quoting, has_header, skip, table):
     if table:
+
         def read_whitespace_separated(file_obj):
             for line in file_obj:
                 yield re.split(r"\s+", line.strip())
@@ -3466,6 +3525,10 @@ def main():
     except KeyboardInterrupt:
         interrupted = True
         args.output_file.flush()
+
+    if args.cursor:
+        args.conn.commit()
+        args.conn.close()
 
     if args.footer is not None:
         print_output(args.footer)
