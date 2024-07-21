@@ -20,6 +20,7 @@ import json
 import os
 import pprint
 import re
+import shlex
 import shutil
 import sqlite3
 import sys
@@ -717,6 +718,51 @@ def parse_data(data):
     return {"data": str(data)}
 
 
+import shlex
+import subprocess
+
+
+def sh(command, **kwargs):
+    """
+    Execute a shell command and return its output.
+
+    This function splits the command string into a list, executes it using subprocess.run,
+    and returns the stripped stdout. It allows customization of all subprocess.run parameters.
+
+    Args:
+        command (str): The shell command to execute.
+        **kwargs: Additional keyword arguments to pass to subprocess.run.
+
+    Returns:
+        str: The stripped stdout of the command if stdout was captured.
+        subprocess.CompletedProcess: The full result object if stdout was not captured.
+
+    Raises:
+        subprocess.CalledProcessError: If the command returns a non-zero exit status and check=True.
+
+    Default behavior:
+        - Raises an exception if the command fails (check=True)
+        - Captures and returns string output (text=True)
+        - Captures both stdout and stderr (stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    Any of these defaults can be overridden by passing the corresponding keyword argument.
+    """
+    command_list = shlex.split(command)
+
+    default_kwargs = {
+        "check": True,
+        "text": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+    }
+    default_kwargs.update(kwargs)
+
+    result = subprocess.run(command_list, **default_kwargs)
+
+    # Return stripped stdout if available, otherwise return the CompletedProcess object
+    return result.stdout.strip() if hasattr(result, "stdout") else result
+
+
 # Make some modules available for use in filters and templates
 EXPORTED_GLOBALS = build_globals_dict(
     [
@@ -748,6 +794,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         parse_line,
         parse_data,
         pprint_json,
+        sh,
     ]
 )
 
@@ -2813,21 +2860,24 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
                     for event in events:
                         yield event, i
 
+
 def get_sqlite_tablenames(cursor):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
     return tables
 
-def ensure_safe_tablename(tablename):            
+
+def ensure_safe_tablename(tablename):
     """Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)"""
-    if not re.match(r'^\w+$', tablename):
+    if not re.match(r"^\w+$", tablename):
         raise ValueError("Invalid table name")
+
 
 def events_from_sqlitefiles_generator(filenames, tablename):
     """Yields events from (multiple) sqlite files, which may be compressed."""
     if not filenames:
         filenames = ["-"]
-    
+
     for filename in filenames:
         with file_opener(filename, sqlite_mode=True) as conn:
             cursor = conn.cursor()

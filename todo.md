@@ -28,6 +28,7 @@
     * Document parse_kv()
     * Document --output-file
     * Document --keymap
+    * Document sh()
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
     * Add --manual with examples
