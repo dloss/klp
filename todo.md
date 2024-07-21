@@ -1,29 +1,47 @@
-- Document --mark-gaps and --fuse
-- Document --utc and --localtime
-- Document double and triple underscore handling for --input-exec
-- Document parse_kv()
-- Document --output-file
-- Document --keymap
-- --start and --stop regexes
-- Input format guessing
-- syslog input
-- Fix grep when used both with and without keys
-- Allow to specify output encoding
-- --grepmap just showing if a line matches
-- --grep-time-context (context by timespan, not number of lines)
-- Highlighting regex matches
-- Autocompletion for bash
-- More stats: 
-- Continuously displaying the current message rate (sliding window or exponentail moving average)
-- README: Add common use cases
-- README: using complementary tools: jc, sqlite, jq, ...
-- (Simple) YAML output
-- Add --manual with examples
-- Use fast string comparison for ISO dates
-- More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
-- More input formats: like logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
-- Add TUI with textual
-- Publish on PyPI
-- Nice logo
-- Standalone executable (e.g. with Nuitka)
-- Rewrite in Rust :-)
+- Input formats
+    * -f table (using split())
+    * -f sqlite, --input-table 
+    * -f syslog
+    * -f mbox
+    * -f xml
+    * formats from logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
+    * Input format guessing
+- Output formats
+    * -F sqlite, --output-table
+    * -F yaml  (simple)
+    * -F xml
+    * Allow to specify output encoding
+- Utility functions
+    * sh()
+    * llm()
+    * render_file(template_path)
+- Stats
+    * Continuously displaying the current message rate (sliding window or exponentail moving average)
+- Other features
+    * --grepmap just showing if a line matches
+    * --gapmap showing the unit of the timegap (u,s,m,h,D,M,Y)
+    * --grep-time-context (context by timespan, not number of lines)
+    * --query SQL
+    * Highlighting regex matches
+    - Add TUI with textual
+- README and help
+    * Document --mark-gaps and --fuse
+    * Document --utc and --localtime
+    * Document double and triple underscore handling for --input-exec
+    * Document parse_kv()
+    * Document --output-file
+    * Document --keymap
+    * Add common use cases
+    * How to use complementary tools: jc, sqlite, jq, ...
+    * Add --manual with examples
+- Infrastructure
+    * Publish on PyPI
+    * Nice logo
+    * Autocompletion for bash
+    * Standalone executable (e.g. with Nuitka)
+- Bug fixes, performance, stability
+    * Fix grep when used both with and without keys
+    * Use fast string comparison for ISO dates
+    * More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
+    * Rewrite in Rust :-)
+    
