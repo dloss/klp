@@ -509,6 +509,7 @@ def parse_linebased(line, format):
         "csv": identity,
         "tsv": identity,
         "psv": identity,
+        "table": identity,
         "data": identity,
     }
 
@@ -1940,6 +1941,7 @@ def parse_args():
             "csv",
             "tsv",
             "psv",
+            "table",
             "clf",
             "combined",
             "unix",
@@ -3115,18 +3117,30 @@ def events_from_csvfiles_generator(
     has_header=True,
     encoding="utf-8",
     skip=None,
+    table=False,
 ):
     line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
     if not filenames:
         filenames = ["-"]
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
-            yield from process_csv(line_gen(f), delimiter, quoting, has_header, skip)
+            yield from process_csv(
+                line_gen(f), delimiter, quoting, has_header, skip, table
+            )
 
 
-def process_csv(file_obj, delimiter, quoting, has_header, skip):
-    reader = csv.reader(file_obj, delimiter=delimiter, quoting=quoting)
+def process_csv(file_obj, delimiter, quoting, has_header, skip, table):
+    if table:
+        def read_whitespace_separated(file_obj):
+            for line in file_obj:
+                yield re.split(r"\s+", line.strip())
+
+        reader = read_whitespace_separated(file_obj)
+    else:
+        reader = csv.reader(file_obj, delimiter=delimiter, quoting=quoting)
+
     skip_lines(reader, skip)
+
     if has_header:
         headers = next(reader)
         headers = [key for key in headers if key]
@@ -3199,6 +3213,16 @@ def main():
                 has_header=args.has_header,
                 encoding=args.input_encoding,
                 skip=args.skip,
+                table=False,
+            )
+        elif args.input_format == "table":
+            event_lineno_generator = events_from_csvfiles_generator(
+                args.files,
+                delimiter=args.input_delimiter,
+                has_header=args.has_header,
+                encoding=args.input_encoding,
+                skip=args.skip,
+                table=True,
             )
         elif args.input_format == "data":
             event_lineno_generator = events_from_datafiles_generator(
