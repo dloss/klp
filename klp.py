@@ -506,6 +506,7 @@ def parse_linebased(line, format):
         "combined": parse_combined,
         "unix": parse_unix,
         "line": parse_line,
+        "ts2lm": parse_ts2lm,
         # Non-line-based (have already been parsed)
         "json": identity,
         "csv": identity,
@@ -688,6 +689,29 @@ def parse_unix(line):
     else:
         return {}
 
+def parse_ts1m(line):
+    ts1, msg = line.split(maxsplit=1)
+    return {"timestamp": f"{ts1}", "message": msg}
+
+def parse_ts1lm(line):
+    ts1, level, msg = line.split(maxsplit=2)
+    return {"timestamp": f"{ts1}", "level": level, "message": msg}
+
+def parse_ts2m(line):
+    ts1, ts2, msg = line.split(maxsplit=2)
+    return {"timestamp": f"{ts1} {ts2}", "message": msg}
+
+def parse_ts2lm(line):
+    ts1, ts2, level, msg = line.split(maxsplit=3)
+    return {"timestamp": f"{ts1} {ts2}", "level": level, "message": msg}
+
+def parse_ts3m(line):
+    ts1, ts2, ts3, msg = line.split(maxsplit=3)
+    return {"timestamp": f"{ts1} {ts2} {ts3}", "message": msg}
+
+def parse_ts3lm(line):
+    ts1, ts2, ts3, level, msg = line.split(maxsplit=4)
+    return {"timestamp": f"{ts1} {ts2} {ts3}", "level": level, "message": msg}
 
 def parse_line(line):
     """
@@ -1907,8 +1931,14 @@ def get_function_signature(func):
         return "()"
 
 
-def print_python_help():
+def print_python_help(terminal_width=80):
     exported_objects = list_exported_objects(ignore_underscore=True)
+
+    def get_signature(obj):
+        try:
+            return str(inspect.signature(obj))
+        except ValueError:
+            return '(...)'  # fallback for built-ins without accessible signatures
 
     # Separate modules and functions
     modules = [obj for obj in exported_objects if inspect.ismodule(obj)]
@@ -1928,20 +1958,19 @@ def print_python_help():
             doc = ""
         print(f"  {obj.__name__.ljust(max_module_name_length + 2)} {doc}")
 
-    print("\nFunctions:")
-    # Handle functions
-    max_func_name_length = max(len(obj.__name__) for obj in functions)
-    for obj in functions:
-        try:
-            doc = obj.__doc__.splitlines()[0] if obj.__doc__ else ""
-        except AttributeError:
-            doc = ""
-
-        name = obj.__name__
-        signature = get_function_signature(obj)
-        full_name = f"{name}{signature}"
-
-        print(f"  {full_name.ljust(max_func_name_length + 30)} {doc}")
+    print("Functions:")
+    for obj in list_exported_objects():
+        if inspect.isfunction(obj) or inspect.isbuiltin(obj):
+            name = obj.__name__
+            signature = get_signature(obj)
+            doc = obj.__doc__.split('\n')[0] if obj.__doc__ else "No docstring"
+            
+            full_info = f" {name}{signature} - {doc}"
+            if len(full_info) > terminal_width:
+                doc_part = full_info[-(terminal_width-3):]
+                full_info = f" {name}{signature} -...{doc_part}"
+            
+            print(full_info)
 
 
 def print_time_format_help():
@@ -2003,6 +2032,12 @@ def parse_args():
             "clf",
             "combined",
             "unix",
+            "ts1m",
+            "ts1lm",
+            "ts2m",
+            "ts2lm",
+            "ts3m",
+            "ts3lm",
             "line",
             "data",
             "sqlite",
@@ -2516,7 +2551,7 @@ def parse_args():
     args = parser.parse_args()
 
     if args.help_python:
-        print_python_help()
+        print_python_help(terminal_width)
         sys.exit(0)
 
     if args.help_time:
