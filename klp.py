@@ -38,7 +38,7 @@ import math
 import random
 import string
 
-__version__ = "0.69.0"
+__version__ = "0.70.0"
 
 INPUT_QUOTE = r"\""
 
@@ -429,15 +429,19 @@ def format_datetime(val):
         >>> format_datetime("2023-10-05 14:48:00")
         '2023-10-05T14:48:00.000Z'
     """
-    if args.localtime:
-        val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
-    elif args.utc:
-        val = (
-            to_datetime(val)
-            .astimezone(dt.timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
+    try:
+        if args.localtime:
+                val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
+        elif args.utc:
+            val = (
+                to_datetime(val)
+                .astimezone(dt.timezone.utc)
+                .isoformat(timespec="milliseconds")
+                .replace("+00:00", "Z")
+            )
+    except ValueError as e:
+        if args.debug:
+            print_err(e)
     return val
 
 
@@ -506,7 +510,12 @@ def parse_linebased(line, format):
         "combined": parse_combined,
         "unix": parse_unix,
         "line": parse_line,
+        "ts1m": parse_ts1m,
+        "ts1lm": parse_ts1lm,
+        "ts2m": parse_ts2m,
         "ts2lm": parse_ts2lm,
+        "ts3m": parse_ts3m,
+        "ts3lm": parse_ts3lm,
         # Non-line-based (have already been parsed)
         "json": identity,
         "csv": identity,
@@ -1076,12 +1085,12 @@ def now_rfc3339():
 def to_datetime(timestamp):
     if timestamp is None:
         raise ValueError(
-            "No timestamp found. Cannot filter on timestamp for this log file."
+            "No timestamp found."
         )
     datetime = guess_datetime(timestamp)
     if datetime is None:
         raise ValueError(
-            f"Could not parse timestamp '{timestamp}'. Cannot filter on timestamp for this log file."
+            f"Could not parse timestamp '{timestamp}'. Use --ts-format to specify the format. See --help-time for syntax help"
         )
     return datetime
 
@@ -1687,11 +1696,14 @@ def update_stats(stats, event):
         if stats.first_timestamp == "" or ts < stats.first_timestamp:
             stats.first_timestamp = ts
             if args.timespan is not None:
-                temp = to_datetime(stats.first_timestamp) + args.timespan
-                if args.to_dt is None:
-                    args.to_dt = temp
-                else:
-                    args.to_dt = min(temp, args.to_dt)
+                try:
+                    temp = to_datetime(stats.first_timestamp) + args.timespan
+                    if args.to_dt is None:
+                        args.to_dt = temp
+                    else:
+                        args.to_dt = min(temp, args.to_dt)
+                except ValueError as e:
+                    print_err(f"Error parsing timestamp: {e}")
         stats.last_timestamp = ts
     return stats
 
