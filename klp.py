@@ -516,6 +516,10 @@ def parse_linebased(line, format):
         "ts2lm": parse_ts2lm,
         "ts3m": parse_ts3m,
         "ts3lm": parse_ts3lm,
+        "ts4m": parse_ts4m,
+        "ts4lm": parse_ts4lm,
+        "ts5m": parse_ts5m,
+        "ts5lm": parse_ts5lm,
         # Non-line-based (have already been parsed)
         "json": identity,
         "csv": identity,
@@ -721,6 +725,22 @@ def parse_ts3m(line):
 def parse_ts3lm(line):
     ts1, ts2, ts3, level, msg = line.split(maxsplit=4)
     return {"timestamp": f"{ts1} {ts2} {ts3}", "level": level, "message": msg}
+
+def parse_ts4m(line):
+    ts1, ts2, ts3, ts4, msg = line.split(maxsplit=4)
+    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "message": msg}
+
+def parse_ts4lm(line):
+    ts1, ts2, ts3, ts4, level, msg = line.split(maxsplit=5)
+    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "level": level, "message": msg}
+
+def parse_ts5m(line):
+    ts1, ts2, ts3, ts4, ts5, msg = line.split(maxsplit=5)
+    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}", "message": msg}
+
+def parse_ts5lm(line):
+    ts1, ts2, ts3, ts4, ts5, level, msg = line.split(maxsplit=6)
+    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}", "level": level, "message": msg}
 
 def parse_line(line):
     """
@@ -2044,15 +2064,19 @@ def parse_args():
             "clf",
             "combined",
             "unix",
+            "line",
+            "data",
+            "sqlite",
             "ts1m",
             "ts1lm",
             "ts2m",
             "ts2lm",
             "ts3m",
             "ts3lm",
-            "line",
-            "data",
-            "sqlite",
+            "ts4m",
+            "ts4lm",
+            "ts5m",
+            "ts5lm",
         ],
         default="logfmt",
         help="format of the input data. Default: logfmt. csv, tsv and psv need a header line. json cannot be streamed. clf is NCSA Common Log Format. combined is Extended Apache. data reads whole file",
