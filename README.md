@@ -34,6 +34,7 @@ $ install -m 755 klp.py ~/.local/bin/klp
 
 Or just run it using `python3`, without any installation.
 
+
 ## Usage
 
 klp can be used as a filter, reading from stdin:
@@ -48,9 +49,38 @@ Or you can read from a file:
 $ klp log.txt
 ```
 
+klp can directly process compressed log files:
+
+```bash
+$ klp app.log.gz
+$ klp logs.zip
+```
+
 Options can be given before or after the filename.
 
 See `klp --help` for the list of available options.
+
+### Supported input formats
+
+klp supports a wide range of input formats:
+
+- `logfmt`: Key-value pairs (**default**)
+- `jsonl`: JSON Lines (shortcut: `-j`)
+- `json`: JSON (only for complete files, not for streaming)
+- `tsv`: Tab separated values 
+- `psv`: Pipe separated values 
+- `clf`: NCSA Common Log Format
+- `combined`: Combined Log Format of Apache httpd
+- `unix`: common format of Unix server logs (timestamp, hostname, service, optional pid, message)
+- `line`: lines of text (trailing whitespace removed)
+- `sqlite`: SQLite database 
+- `data`: parse everything as one string 
+
+Use the `--input-format` or `-f` option to specify the input format. For example:
+
+```bash
+$ klp -f jsonl input.log
+```
 
 ### Basics
 
@@ -117,6 +147,11 @@ $ klp -M mylog.logfmt
 2024-02-05T20:19:15.571Z TTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTT
 ```
 
+Visualize patterns for any key:
+
+```bash
+$ klp --keymap status_code app.log
+```
 
 ### Select the keys to show
 
@@ -193,6 +228,26 @@ Use the `--new`/`-n` flag, which is equivalent to --since 0s`:
 $ kubectl logs mypod --follow | klp -n
 ```
 
+### Visualizing Time Gaps
+
+Use `--mark-gaps` to visually separate events that are far apart in time:
+
+```bash
+$ klp --mark-gaps 1h app.log
+```
+
+This will insert a visual separator between events that are more than 1 hour apart.
+
+### Condensing Events
+
+The `--fuse` option allows you to condense events that occur close together in time:
+
+```bash
+$ klp --fuse 5s app.log
+```
+
+This will show only the first and last events for each group of events that occur within 5 seconds of each other.
+
 ### Grep: searching with regexes, builtin regexes or Python expressions
 
 Use `--grep`/`-g` to limit the processing to lines that match a given regular expression.
@@ -213,6 +268,22 @@ Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`
 
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
+
+### Processing Log Blocks
+You can define start and stop conditions to process specific blocks of logs:
+
+- `--start-after REGEX`: Start processing after a line matching REGEX
+- `--start-with REGEX`: Start processing when a line matches REGEX
+- `--stop-before REGEX`: Stop processing when a line matches REGEX
+- `--stop-with REGEX`: Stop processing after a line matches REGEX
+
+For example, to process logs between two specific events:
+
+```bash
+$ klp --start-with "Session started" --stop-before "Session ended" app.log
+```
+
+Use `--num-blocks` to limit the number of start/stop blocks processed.
 
 ### Complex filtering with Python expressions
 
@@ -237,24 +308,30 @@ This is useful to avoid being flooded with lots and lots of output.
 
 Use `--skip` to avoid parsing the first lines.
 
-### Customize the output formatting
+### Custom output formatting
 
-Experiment with `--indent`, `--no-indent`, `--expand`, `--output-sep`, `--no-wrap`, `--each-key`, `--header` and `--footer` to change the formatting of the output.
+Customize your output further with these options:
 
-For more complex needs, you can use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code, such as `{ts} {level.upper()} {'#'*len(msg)}`.
-The following Python modules can be used in these expressions:
-`base64`,
-`collections`,
-`datetime`,
-`hashlib`,
-`itertools`,
-`json`,
-`math`,
-`pprint`,
-`random`,
-`re`,
-`string`,
-`textwrap`.
+- `--header`: Add text before the first event
+- `--footer`: Add text after the last event
+- `--output-event-sep`: Specify the separator between events
+- `--output-sep`: Specify the separator between fields
+
+Experiment with `--indent`, `--no-indent`, `--expand`, `--no-wrap`, and `--each-key` to change the formatting of the output.
+
+For advanced output formatting, use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code:
+
+```bash
+$ klp --output-template "{timestamp} - {level}: {message}" app.log
+$ klp --output-eval "{ts} {level.upper()} {'#'*len(msg)}" app.log
+```
+
+Several Python modules can be used in these expressions.
+Use `--help-python` to show the list.
+
+```bash
+$ klp --help-python
+```
 
 The following additional functions are available:
 
@@ -268,26 +345,22 @@ The following additional functions are available:
 * `guess_datetime()`: convert a string into a Python datetime object
 * `pprint_json()`: pretty print JSON data
 
-### Other input and output formats
+### Output formats
 
-Apart from logfmt, klp supports the following other data formats:
-
-Input formats (`--input-format`/`-f`):
-- `jsonl`: JSON Lines (shortcut: `-j`)
-- `json`: JSON (only for complete files, not for streaming)
-- `tsv`: Tab separated values (keys have to be set manually with `-k`)
-- `psv`: Pipe separated values (keys have to be set manually with `-k`)
-- `clf`: NCSA Common Log Format
-- `combined`: Combined Log Format of Apache httpd
-- `unix`: common format of Unix server logs (timestamp, hostname, service, optional pid, message)
-- `line`: lines of text (trailing whitespace removed)
-
-Output formats (`--output-format`/`-F`):
-- `default`: logfmt
+- `default`: default: Colored and formatted logfmt
+- `logfmt`: Plain logfmt
 - `jsonl`: JSON Lines (shortcut: `-J`)
 - `json`: JSON
-- `tsv`: Tab separated values (keys have to be set manually with `-k`) 
-- `psv`: Pipe separated values (keys have to be set manually with `-k`) 
+- `tsv`: Tab separated values 
+- `psv`: Pipe separated values
+- `sqlite`: SQLite database (use `-o` to specify the filename)
+
+Select an output format with `--output-format` or `-F`:
+
+```bash
+$ klp -F jsonl app.log > output.jsonl
+$ klp -F sqlite -o app.db app.log
+```
 
 The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
 

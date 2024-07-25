@@ -22,12 +22,10 @@
     * Highlighting regex matches
     - Add TUI with textual
 - README and help
-    * Document --mark-gaps and --fuse
     * Document --utc and --localtime
     * Document double and triple underscore handling for --input-exec
     * Document parse_kv()
     * Document --output-file
-    * Document --keymap
     * Document sh()
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
