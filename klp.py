@@ -431,7 +431,7 @@ def format_datetime(val):
     """
     try:
         if args.localtime:
-                val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
+            val = to_datetime(val).astimezone().isoformat(timespec="milliseconds")
         elif args.utc:
             val = (
                 to_datetime(val)
@@ -702,45 +702,60 @@ def parse_unix(line):
     else:
         return {}
 
+
 def parse_ts1m(line):
     ts1, msg = line.split(maxsplit=1)
     return {"timestamp": f"{ts1}", "message": msg}
+
 
 def parse_ts1lm(line):
     ts1, level, msg = line.split(maxsplit=2)
     return {"timestamp": f"{ts1}", "level": level, "message": msg}
 
+
 def parse_ts2m(line):
     ts1, ts2, msg = line.split(maxsplit=2)
     return {"timestamp": f"{ts1} {ts2}", "message": msg}
+
 
 def parse_ts2lm(line):
     ts1, ts2, level, msg = line.split(maxsplit=3)
     return {"timestamp": f"{ts1} {ts2}", "level": level, "message": msg}
 
+
 def parse_ts3m(line):
     ts1, ts2, ts3, msg = line.split(maxsplit=3)
     return {"timestamp": f"{ts1} {ts2} {ts3}", "message": msg}
+
 
 def parse_ts3lm(line):
     ts1, ts2, ts3, level, msg = line.split(maxsplit=4)
     return {"timestamp": f"{ts1} {ts2} {ts3}", "level": level, "message": msg}
 
+
 def parse_ts4m(line):
     ts1, ts2, ts3, ts4, msg = line.split(maxsplit=4)
     return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "message": msg}
+
 
 def parse_ts4lm(line):
     ts1, ts2, ts3, ts4, level, msg = line.split(maxsplit=5)
     return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "level": level, "message": msg}
 
+
 def parse_ts5m(line):
     ts1, ts2, ts3, ts4, ts5, msg = line.split(maxsplit=5)
     return {"timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}", "message": msg}
 
+
 def parse_ts5lm(line):
     ts1, ts2, ts3, ts4, ts5, level, msg = line.split(maxsplit=6)
-    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}", "level": level, "message": msg}
+    return {
+        "timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}",
+        "level": level,
+        "message": msg,
+    }
+
 
 def parse_line(line):
     """
@@ -1104,9 +1119,7 @@ def now_rfc3339():
 
 def to_datetime(timestamp):
     if timestamp is None:
-        raise ValueError(
-            "No timestamp found."
-        )
+        raise ValueError("No timestamp found.")
     datetime = guess_datetime(timestamp)
     if datetime is None:
         raise ValueError(
@@ -1970,7 +1983,7 @@ def print_python_help(terminal_width=80):
         try:
             return str(inspect.signature(obj))
         except ValueError:
-            return '(...)'  # fallback for built-ins without accessible signatures
+            return "(...)"  # fallback for built-ins without accessible signatures
 
     # Separate modules and functions
     modules = [obj for obj in exported_objects if inspect.ismodule(obj)]
@@ -1995,13 +2008,13 @@ def print_python_help(terminal_width=80):
         if inspect.isfunction(obj) or inspect.isbuiltin(obj):
             name = obj.__name__
             signature = get_signature(obj)
-            doc = obj.__doc__.split('\n')[0] if obj.__doc__ else "No docstring"
-            
+            doc = obj.__doc__.split("\n")[0] if obj.__doc__ else "No docstring"
+
             full_info = f" {name}{signature} - {doc}"
             if len(full_info) > terminal_width:
-                doc_part = full_info[-(terminal_width-3):]
+                doc_part = full_info[-(terminal_width - 3) :]
                 full_info = f" {name}{signature} -...{doc_part}"
-            
+
             print(full_info)
 
 
@@ -2029,7 +2042,7 @@ Time Format Reference:
 %W - Week number of the year (Monday as the first day of the week)
 %U - Week number of the year (Sunday as the first day of the week)
 
-For a complete list of format codes, refer to the Python documentation:
+For a complete list of format codes, refer to https://strftime.org or the Python docs:
 https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
     """
     print(help_text)
