@@ -38,7 +38,7 @@ import math
 import random
 import string
 
-__version__ = "0.70.1"
+__version__ = "0.70.2"
 
 INPUT_QUOTE = r"\""
 
@@ -281,7 +281,13 @@ def build_globals_dict(modules):
 
 
 def print_output(*myargs, **kwargs):
-    print(*myargs, **kwargs, file=args.output_file)
+    try:
+        print(*myargs, **kwargs, file=args.output_file)
+    except UnicodeEncodeError as e:
+        print(
+            f"Warning: Unable to encode some characters using {args.output_encoding} encoding. Skipping problematic output.",
+            file=sys.stderr,
+        )
 
 
 def extract_json(text):
@@ -2347,6 +2353,11 @@ def parse_args():
         "--jsonl-output", "-J", action="store_true", help="output in JSON Lines format"
     )
     output.add_argument(
+        "--output-encoding",
+        default="utf-8",
+        help="Text encoding for the output. Default: utf-8",
+    )
+    output.add_argument(
         "--output-delimiter",
         help="CSV/TSV/PSV output delimiter",
     )
@@ -2621,11 +2632,14 @@ def parse_args():
     args.output_quoting = quoting_type(args.output_quoting)
     if args.output_file:
         try:
-            args.output_file = open(args.output_file, "w")
+            args.output_file = open(
+                args.output_file, "w", encoding=args.output_encoding
+            )
         except FileNotFoundError:
             print("Could not open output file for writing:", repr(args.output_file))
             sys.exit(1)
     else:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding=args.output_encoding)
         args.output_file = sys.stdout
 
     if args.jsonl_input:
@@ -3654,11 +3668,20 @@ def main():
             pass
         else:
             raise
+    except UnicodeEncodeError as e:
+        print(
+            f"Error: Unable to encode output using {args.output_encoding} encoding: {e}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     except StoppedEarly:
         pass
     except KeyboardInterrupt:
         interrupted = True
         args.output_file.flush()
+    finally:
+        if args.output_file and args.output_file != sys.stdout:
+            args.output_file.close()
 
     if args.cursor:
         args.conn.commit()
