@@ -38,7 +38,7 @@ import math
 import random
 import string
 
-__version__ = "0.70.0"
+__version__ = "0.70.1"
 
 INPUT_QUOTE = r"\""
 
@@ -446,7 +446,7 @@ def format_datetime(val):
 
 
 def extract_regex(pattern, s, *groupargs):
-    """
+    r"""
     Extracts substring(s) from a given string that matches a specified regular expression pattern.
 
     Parameters:
