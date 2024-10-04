@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "klp_logviewer"
+version = "0.70.4"
+description = "Lightweight CLI viewer for structured log files and streams (logfmt, JSONL and many others)"
+authors = [{name = "Dirk Loss", email = "mail@dirk-loss.de"}]
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+
+[project.scripts]
+klp = "klp:main"
+
+[project.urls]
+Documentation = "https://github.com/dloss/klp"
+Repository = "https://github.com/dloss/klp.git"
+Issues = "https://github.com/dloss/klp/issues"
+
+[tool.setuptools]
+py-modules = ["klp"]

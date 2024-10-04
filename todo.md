@@ -31,7 +31,6 @@
     * How to use complementary tools: jc, sqlite, jq, ...
     * Add --manual with examples
 - Infrastructure
-    * Publish on PyPI
     * Nice logo
     * Autocompletion for bash
     * Standalone executable (e.g. with Nuitka)
