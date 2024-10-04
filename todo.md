@@ -7,6 +7,7 @@
 - Output formats
     * -F yaml  (simple)
     * -F xml
+    * Allow to specify output encoding
 - Utility functions
     * sh()
     * llm()
