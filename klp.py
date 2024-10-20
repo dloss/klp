@@ -15,18 +15,23 @@ import datetime as dt
 import errno
 import gzip
 import inspect
+import itertools
 import io
 import json
+import multiprocessing
 import os
 import pprint
 import re
 import shlex
 import shutil
+import signal
 import sqlite3
 import sys
 import textwrap
 import unittest
 import zipfile
+
+from functools import partial
 
 # Some modules to make available for filtering and templating
 import base64
@@ -38,7 +43,7 @@ import math
 import random
 import string
 
-__version__ = "0.70.4"
+__version__ = "0.70.5"
 
 INPUT_QUOTE = r"\""
 
@@ -282,6 +287,13 @@ def build_globals_dict(modules):
 
 def print_output(*myargs, **kwargs):
     print(*myargs, **kwargs, file=args.output_file)
+
+
+def get_default_process_count():
+    try:
+        return max(multiprocessing.cpu_count() - 1, 1)
+    except NotImplementedError:
+        return 1
 
 
 def extract_json(text):
@@ -534,6 +546,39 @@ def parse_linebased(line, format):
         raise ValueError(f"Unknown input format: {format}")
 
     return parser(line)
+
+
+def parse_chunk(chunk, input_format):
+    return [parse_linebased(line, input_format) for line in chunk]
+
+
+def init_worker():
+        # Let the main process handle CTRL-C
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+def parallel_process(file_paths, args):
+
+    def chunk_file(file_path):
+        chunk_size = 10000
+        with file_opener(file_path, encoding=args.input_encoding) as f:
+            while True:
+                chunk = list(itertools.islice(f, chunk_size))
+                if not chunk:
+                    break
+                yield chunk
+
+    parse_func = partial(parse_chunk, input_format=args.input_format)
+
+    process_count = args.parallel or get_default_process_count()
+    with multiprocessing.Pool(process_count, init_worker) as pool:
+        for file_path in file_paths:
+            chunks = chunk_file(file_path)
+            start_line = 1
+            for parsed_chunk in pool.imap(parse_func, chunks):
+                for i, event in enumerate(parsed_chunk, start=start_line):
+                    yield event, i
+                start_line += len(parsed_chunk)
 
 
 def parse_logfmt(text):
@@ -2048,6 +2093,13 @@ https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-cod
     print(help_text)
 
 
+def positive_int_or_zero(value):
+    ivalue = int(value)
+    if ivalue < 0:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid value. Use a positive integer or 0.")
+    return ivalue
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -2136,6 +2188,9 @@ def parse_args():
         action="append",
         help="execute Python code to transform event after input parsing",
     )
+    input.add_argument('--parallel', type=positive_int_or_zero, 
+        help='Enable parallel processing with specified number of processes. '
+            'Use 0 to use the number of CPUs.')
 
     selection = parser.add_argument_group("event selection options")
     selection.add_argument(
@@ -2555,6 +2610,7 @@ def parse_args():
         help="for a sequence of events that are separated by less than INTERVAL,"
         " show only the first and last.",
     )
+    
     output_special.add_argument(
         "--debug",
         action="store_true",
@@ -3508,12 +3564,15 @@ def main():
                 args.files, tablename=args.input_tablename
             )
         else:
-            event_lineno_generator = events_from_linebased(
-                args.files,
-                args.input_format,
-                encoding=args.input_encoding,
-                skip=args.skip,
-            )
+            if args.parallel is not None:
+                event_lineno_generator = parallel_process(args.files, args)
+            else:
+                event_lineno_generator = events_from_linebased(
+                    args.files,
+                    args.input_format,
+                    encoding=args.input_encoding,
+                    skip=args.skip,
+                )
         for event, lineno in event_lineno_generator:
             stats.num_lines_seen = lineno
 
