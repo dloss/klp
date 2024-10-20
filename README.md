@@ -41,6 +41,34 @@ $ install -m 755 klp.py ~/.local/bin/klp
 Or just run it using `python3`, without any installation.
 
 
+## Quick Start
+
+Here are some basic examples to get you started with klp:
+
+1. View logs with timestamp, log level, and message:
+
+```bash
+$ klp -c mylog.txt
+```
+
+2. Filter logs by log level:
+
+```bash
+$ klp -l error,warning mylog.txt
+```
+
+3. Get an overview of your log data:
+
+```bash
+$ klp -S mylog.txt
+```
+
+4. View only new log entries (useful with streaming logs):
+
+```bash
+$ tail -f mylog.txt | klp -n
+```
+
 ## Usage
 
 klp can be used as a filter, reading from stdin:
