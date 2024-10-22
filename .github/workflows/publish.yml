@@ -1,0 +1,51 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger on version tags
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Check version consistency
+        run: |
+          # Extract version from code
+          CODE_VERSION=$(python -c 'import klp; print(klp.__version__)')
+          # Extract version from git tag (remove 'v' prefix)
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+
+          echo "Code version: $CODE_VERSION"
+          echo "Tag version: $TAG_VERSION"
+
+          if [ "$CODE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Version mismatch!"
+            echo "Version in klp.py ($CODE_VERSION) does not match git tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+          echo "Version consistency check passed"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            LICENSE
+            README.md
+            klp.py
+            pyproject.toml
+            examples/mylog.logfmt
