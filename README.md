@@ -45,28 +45,22 @@ Or just run it using `python3`, without any installation.
 
 Here are some basic examples to get you started with klp:
 
-1. View logs with timestamp, log level, and message:
-
 ```bash
-$ klp -c mylog.txt
-```
+# View logs with timestamp, log level, and message:
+$ klp -c mylog.logfmt
 
-2. Filter logs by log level:
+# Specify the input format (default is logfmt):
+$ klp -f jsonl applog.jsonl
+$ klp -f csv mydata.csv
 
-```bash
-$ klp -l error,warning mylog.txt
-```
+# Filter logs by log level:
+$ klp -l error,warning mylog.logfmt
 
-3. Get an overview of your log data:
+# Get an overview of your log data:
+$ klp -S mylog.logfmt
 
-```bash
-$ klp -S mylog.txt
-```
-
-4. View only new log entries (useful with streaming logs):
-
-```bash
-$ tail -f mylog.txt | klp -n
+# View only new log entries (useful with streaming logs):
+$ tail -f mylog.logfmt | klp -n
 ```
 
 ## Usage
