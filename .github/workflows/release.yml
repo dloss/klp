@@ -29,26 +29,15 @@ jobs:
           echo "Checking klp.py..."
           KLP_VERSION=$(PYTHONPATH=. python3 -c "import klp; print(klp.__version__)")
 
-          # Get the version from pyproject.toml
-          echo "Checking pyproject.toml..."
-          TOML_VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' pyproject.toml)
-
           # Get the tag version
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
 
           echo "klp.py version: $KLP_VERSION"
-          echo "pyproject.toml version: $TOML_VERSION"
           echo "Tag version: $TAG_VERSION"
 
           if [ "$KLP_VERSION" != "$TAG_VERSION" ]; then
             echo "Error: Version mismatch!"
             echo "Version in klp.py ($KLP_VERSION) does not match git tag ($TAG_VERSION)"
-            exit 1
-          fi
-
-          if [ "$TOML_VERSION" != "$TAG_VERSION" ]; then
-            echo "Error: Version mismatch!"
-            echo "Version in pyproject.toml ($TOML_VERSION) does not match git tag ($TAG_VERSION)"
             exit 1
           fi
 

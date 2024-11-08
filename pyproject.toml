@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "klp_logviewer"
-version = "0.70.7"
+dynamic = ["version"]
 description = "Lightweight CLI viewer for structured log files and streams (logfmt, JSONL and many others)"
 authors = [{name = "Dirk Loss", email = "mail@dirk-loss.de"}]
 requires-python = ">=3.7"
@@ -25,3 +25,6 @@ Issues = "https://github.com/dloss/klp/issues"
 
 [tool.setuptools]
 py-modules = ["klp"]
+
+[tool.setuptools.dynamic]
+version = {attr = "klp.__version__"}
