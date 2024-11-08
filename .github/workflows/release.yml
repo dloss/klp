@@ -44,15 +44,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
-      # Create GitHub Release assets
-      - name: Create distribution archive
-        run: |
-          mkdir -p dist/examples
-          cp LICENSE README.md klp.py pyproject.toml dist/
-          cp examples/mylog.logfmt dist/examples/
-          cd dist && zip -r ../klp-${{ github.ref_name }}.zip *
+      # Build PyPI package first
+      - name: Build package
+        run: python -m build
 
-      # Create GitHub Release
+      # Create GitHub Release assets
+      - name: Create source archive
+        run: |
+          mkdir -p release/examples
+          cp LICENSE README.md klp.py pyproject.toml release/
+          cp examples/mylog.logfmt release/examples/
+          cd release && zip -r ../klp-${{ github.ref_name }}.zip *
+
+      # Create GitHub Release with both source and built distributions
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -62,10 +66,8 @@ jobs:
           generate_release_notes: true
           files: |
             klp-${{ github.ref_name }}.zip
+            dist/*
 
-      # Build and publish to PyPI
-      - name: Build package
-        run: python -m build
-
+      # Publish to PyPI
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
