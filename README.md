@@ -29,7 +29,7 @@ klp is designed not for large-scale log analysis, but as a lightweight, efficien
 Install using pip:
 
 ```bash
-$ pip install klp_logviewer
+$ pip install klp-logviewer
 ```
 
 Or copy `klp.py` to a folder on your PATH and make it executable:
