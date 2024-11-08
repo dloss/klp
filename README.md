@@ -262,6 +262,30 @@ Use the `--new`/`-n` flag, which is equivalent to --since 0s`:
 $ kubectl logs mypod --follow | klp -n
 ```
 
+### Timezone Control
+
+By default, klp preserves timestamps as they appear in the logs.
+Use the following options to control how timestamps are displayed:
+
+* `--localtime`/`-z`: Convert timestamps to your local timezone
+* `--utc`/`-Z`: Convert timestamps to UTC
+
+```bash
+# Show timestamps in local timezone
+$ klp --localtime -c mylog.logfmt
+2015-03-26T06:27:38.000+01:00 debug Started observing beach
+
+# Show timestamps in UTC
+$ klp --utc -c mylog.logfmt
+2015-03-26T05:27:38.000Z debug Started observing beach
+```
+
+Note that timezone conversion can slightly impact performance when processing large log files.
+Only use these options when timezone conversion is specifically needed.
+
+These options cannot be used together - choose either local time or UTC.
+They work with all input formats and can be combined with other timestamp-related features like `--since`, `--until`, and `--timespan`.
+
 ### Visualizing Time Gaps
 
 Use `--mark-gaps` to visually separate events that are far apart in time:
