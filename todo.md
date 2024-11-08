@@ -9,7 +9,6 @@
     * -F xml
     * Allow to specify output encoding
 - Utility functions
-    * sh()
     * llm()
     * render_file(template_path)
 - Stats
