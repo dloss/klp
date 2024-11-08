@@ -234,6 +234,12 @@ $ cat mylog.txt | klp -k -p timestamp,message
 2022-09-05T06:25:27.466Z poll_read: waiting on response
 ```
 
+klp can add some additional, synthetic fields to the event.
+For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
+
+* `_klp_timedelta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
+* `_klp_ts`: timestamp showing when the event was shown by klp
+
 ### Filter on log level
 
 Use `--loglevels`/`-l` to restrict the output to specific log levels.
@@ -579,15 +585,6 @@ time=2024-02-08T15:04:05Z level=info msg="Connection from 8.8.8.8" hostname="8.8
 
 Note: Use the `sh()` function very carefully, and only with trusted input.
 Untrusted input can lead to command injection vulnerabilities.
-
-
-### Synthetic fields
-
-klp can add some additional fields to the event.
-For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
-
-* `_klp_timedelta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
-* `_klp_ts`: timestamp showing when the event was shown by klp
 
 ## Complementary tools
 
