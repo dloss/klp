@@ -43,7 +43,7 @@ import math
 import random
 import string
 
-__version__ = "0.70.7"
+__version__ = "0.70.8"
 
 INPUT_QUOTE = r"\""
 
