@@ -54,7 +54,7 @@ jobs:
 
       # Create GitHub Release
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
           draft: false
@@ -62,7 +62,6 @@ jobs:
           generate_release_notes: true
           files: |
             klp-${{ github.ref_name }}.zip
-          omit_body: true
 
       # Build and publish to PyPI
       - name: Build package
