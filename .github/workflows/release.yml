@@ -25,7 +25,17 @@ jobs:
 
       - name: Check version consistency
         run: |
-          CODE_VERSION=$(python -c 'import klp; print(klp.__version__)')
+          # Make sure we're in the right directory
+          pwd
+          ls -la
+
+          # Print the relevant part of klp.py
+          echo "Content of klp.py around version:"
+          grep -A 1 -B 1 "__version__" klp.py
+
+          # Use Python to get the version (this way we handle imports correctly)
+          echo "Getting version from Python..."
+          CODE_VERSION=$(PYTHONPATH=. python3 -c "import klp; print(klp.__version__)")
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
 
           echo "Code version: $CODE_VERSION"
