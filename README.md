@@ -496,6 +496,37 @@ When using these special variables:
 * `__` merges its dictionary contents with the current event
 * `___` must be a list of dictionaries, each becoming a separate output event
 
+Several helper functions are available:
+
+* `parse_kv(text, sep=None, kvsep="=")`: Parse key-value pairs from a string and merge them into the current event
+  - `text`: Input string containing key-value pairs
+  - `sep`: Separator between different pairs (whitespace by default)
+  - `kvsep`: Separator between keys and values (defaults to "=")
+  - Commonly used with `__` to add the parsed fields to the current event
+
+```bash
+# Parse query parameters into separate fields
+$ echo 'time=2024-02-08T15:04:05Z msg="GET /search" query="user=alice&role=admin"' | \
+  klp -I '__=parse_kv(query, sep="&")'
+time="2024-02-08T15:04:05Z" msg="GET /search" query="user=alice&role=admin" user="alice" role="admin"
+
+# Parse metrics with custom separator
+$ echo 'time=2024-02-08T15:04:05Z msg="System stats" metrics="cpu:95.2 mem:87.5 disk:45.8"' | \
+  klp -I '__=parse_kv(metrics, kvsep=":")'
+time="2024-02-08T15:04:05Z" msg="System stats" metrics="cpu:95.2 mem:87.5 disk:45.8" cpu="95.2" mem="87.5" disk="45.8"
+
+# Parse semicolon-separated configuration
+$ echo 'time=2024-02-08T15:04:05Z msg="Session created" config="db=postgres;port=5432"' | \
+  klp -I '__=parse_kv(config, sep=";")'
+time="2024-02-08T15:04:05Z" msg="Session created" config="db=postgres;port=5432" db="postgres" port="5432"
+```
+
+Particularly useful for:
+- Breaking URL query strings into fields
+- Parsing metrics or stats with custom key-value separators
+- Extracting configuration parameters
+- Converting any key-value formatted substring into top-level fields
+
 ### Synthetic fields
 
 klp can add some additional fields to the event.

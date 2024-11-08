@@ -22,8 +22,6 @@
     * Highlighting regex matches
     - Add TUI with textual
 - README and help
-    * Document double and triple underscore handling for --input-exec
-    * Document parse_kv()
     * Document --output-file
     * Document sh()
     * Add common use cases
