@@ -476,6 +476,8 @@ $ klp examples/alertmanager.logfmt -I "path=(extract_path(file) or None)" -k pat
 $ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
 ```
 
+#### Underscore variables
+
 When using `--input-exec`/`-I`, there are three special underscore variables available for more complex transformations:
 
 * `_`: Contains the current event dictionary (useful for keys that aren't valid Python identifiers)
@@ -520,7 +522,9 @@ When using these special variables:
 
 Several helper functions are available:
 
-* `parse_kv(text, sep=None, kvsep="=")`: Parse key-value pairs from a string and merge them into the current event
+#### `parse_kv()`
+
+`parse_kv(text, sep=None, kvsep="=")`: Parse key-value pairs from a string and merge them into the current event
   - `text`: Input string containing key-value pairs
   - `sep`: Separator between different pairs (whitespace by default)
   - `kvsep`: Separator between keys and values (defaults to "=")
@@ -549,8 +553,9 @@ Particularly useful for:
 - Extracting configuration parameters
 - Converting any key-value formatted substring into top-level fields
 
+#### `sh()`
 
-* `sh(command, **kwargs)`: Execute a shell command and return its output
+`sh(command, **kwargs)`: Execute a shell command and return its output
   - `command`: The shell command to execute
   - Returns the command's stdout as a string (stripped of trailing whitespace)
   - Raises an exception if the command fails, so that the event is ignored (disable with `check=False`)
