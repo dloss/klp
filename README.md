@@ -109,12 +109,38 @@ klp supports a wide range of input formats:
 - `line`: lines of text (trailing whitespace removed)
 - `sqlite`: SQLite database 
 - `data`: parse everything as one string 
+- `tsNm`: timestamp (consisting of N components) and message
+- `tsNlm`: timestamp (consisting of N components), log level and message
 
 Use the `--input-format` or `-f` option to specify the input format. For example:
 
 ```bash
 $ klp -f jsonl input.log
 ```
+
+klp supports parsing simple space-separated log formats via the `tsNm` (timestamp + message) and `tsNlm` (timestamp + level + message) format specifiers,
+where N indicates how many space-separated timestamp components to expect.
+Here are some examples:
+
+```bash
+# Log format: <timestamp> <message>
+# Example:    2024-02-05T20:18:10.538Z Connection established to database
+$ klp -f ts1m server.log
+
+# Log format: <date> <time> <level> <message>
+# Example:    2024-02-05 20:18:10 INFO Starting background worker
+$ klp -f ts2lm worker.log
+
+# Log format: <date> <time> <timezone> <message>
+# Example:    2024-02-05 20:18:10 UTC Processing batch job #1234
+$ klp -f ts3m batch.log
+```
+
+Similar formats exist up to `ts5m`/`ts5lm` for logs with more timestamp components.
+The timestamp parts are joined and parsed using klp's standard timestamp parsing logic.
+
+More complicated formats can often be parsed using the `line` format and creating or transforming events using Python code (`--input-exec`).
+See the *Advanced input transformations using Python code* section below.
 
 ### Basics
 
