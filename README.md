@@ -434,11 +434,47 @@ $ klp examples/alertmanager.logfmt -I "path=(extract_path(file) or None)" -k pat
 $ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
 ```
 
-To allow key names that are not valid Python identifiers, the parsed event dict is available as an underscore:
+When using `--input-exec`/`-I`, there are three special underscore variables available for more complex transformations:
+
+* `_`: Contains the current event dictionary (useful for keys that aren't valid Python identifiers)
+* `__`: Merge the contents of this dictionary into the current event
+* `___`: Generate multiple output events from a single input event
 
 ```bash
+# Using _ to access keys with special characters
 $ klp examples/qryn.jsonl -j -I "method=_['req.method'].lower()"
+
+# Using __ to add or update fields
+$ klp app.log -I "__={'new_field': 'value', 'updated_field': msg.upper()}"
+
+# Using ___ to generate multiple events
+$ klp app.log -I "___=[{'split': word} for word in msg.split()]"
 ```
+
+The `__` approach is useful when you want to modify the event in-place or add new fields:
+
+```bash
+# Add length fields for all string values
+$ klp app.log -I "__={k+'_len': len(v) for k,v in _.items() if isinstance(v, str)}"
+```
+
+The `___` list is useful when you need to split one event into multiple events:
+
+```bash
+# Split a comma-separated list into separate events
+$ klp app.log -I "___=[{'item': item.strip()} for item in msg.split(',')]"
+
+# Create events for each key-value pair
+$ klp app.log -I "___=[{'key': k, 'value': v} for k,v in _.items()]"
+
+# Create events for headers in a Markdown file
+$ klp README.md -f line -I "___=[{'header': line, 'len': len(line) } if line.startswith('#') else None]"
+```
+
+When using these special variables:
+* `_` provides read-only access to the current event
+* `__` merges its dictionary contents with the current event
+* `___` must be a list of dictionaries, each becoming a separate output event
 
 ### Synthetic fields
 
