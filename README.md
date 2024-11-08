@@ -386,28 +386,6 @@ This is useful to avoid being flooded with lots and lots of output.
 
 Use `--skip` to avoid parsing the first lines.
 
-### Output file control
-
-Use `--output-file`/`-o` to direct klp's output to a file instead of stdout.
-
-```bash
-# Write formatted output to a file
-$ klp app.log -o processed.log
-
-# Convert to JSON for later processing
-$ klp app.log -F json -o events.json
-
-# Create a SQLite database from logs
-$ klp app.log -k time,level,msg -F sqlite -o metrics.db
-
-# Write events to file but show stats on screen
-$ klp app.log -s -F jsonl -o events.jsonl
-Events shown: 8043 (100% of 8043 lines seen)
-Time span shown: 2024-02-05T19:58:59Z to 2024-02-05T20:19:20Z
-```
-
-Note that using `--output-file` disables color output by default, unless explicitly requested with `--color`. 
-
 ### Custom output formatting
 
 Customize your output further with these options:
@@ -463,6 +441,28 @@ $ klp -F sqlite -o app.db app.log
 ```
 
 The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
+
+### Output file control
+
+Use `--output-file`/`-o` to direct klp's output to a file instead of stdout.
+
+```bash
+# Write formatted output to a file
+$ klp app.log -o processed.log
+
+# Convert to JSON for later processing
+$ klp app.log -F json -o events.json
+
+# Create a SQLite database from logs
+$ klp app.log -k time,level,msg -F sqlite -o metrics.db
+
+# Write events to file but show stats on screen
+$ klp app.log -s -F jsonl -o events.jsonl
+Events shown: 8043 (100% of 8043 lines seen)
+Time span shown: 2024-02-05T19:58:59Z to 2024-02-05T20:19:20Z
+```
+
+Note that using `--output-file` disables color output by default, unless explicitly requested with `--color`. 
 
 ### Advanced input transformations using Python code
 
