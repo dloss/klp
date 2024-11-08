@@ -240,10 +240,10 @@ BUILTIN_REGEXES = {
     "ipv6": [
         r"\b(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\b"
     ],
-    "json": [r"((\{[^{}]*?\}))"],
     "isotime": [
         r"\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b)"
     ],
+    "json": [r"((\{[^{}]*?\}))"],
     "jwt": [r"((eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*))"],
     "mac": [
         r"\b(([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}))\b",
@@ -277,11 +277,47 @@ terminal_width = shutil.get_terminal_size((80, 24)).columns
 
 
 def build_globals_dict(modules):
+    """Build a dictionary of modules and their exported functions.
+
+    Args:
+        modules (list): List of modules to include in the globals dictionary
+
+    Returns:
+        dict: Dictionary mapping names to module objects and functions
+    """
     d = {}
+
+    # Add the modules
     for module in modules:
         name = module.__name__
-        alt_name = "_" + name
-        d[name] = d[alt_name] = module
+        d[name] = module
+
+    # Add the standard functions - use their existing docstrings
+    standard_funcs = [
+        extract_json,
+        extract_regex,
+        format_datetime,
+        guess_datetime,
+        parse_kv,
+        parse_logfmt,
+        parse_jsonl,
+        parse_clf,
+        parse_combined,
+        parse_unix,
+        parse_line,
+        parse_data,
+        pprint_json,
+        sh,
+    ]
+
+    for func in standard_funcs:
+        d[func.__name__] = func
+
+    # Add regex extraction functions
+    for regex_name in BUILTIN_REGEXES:
+        func = create_extraction_function(regex_name)
+        d[func.__name__] = func
+
     return d
 
 
@@ -410,7 +446,7 @@ def guess_datetime(timestamp):
 
 def format_datetime(val):
     """
-    Formats a given datetime string into a standardized ISO 8601 format string with milliseconds precision.
+    Format a given datetime string into a standardized ISO 8601 format string with milliseconds precision.
 
     The function converts the input datetime string to either local time or UTC time based on the specified
     command-line arguments (`--localtime` or `--utc`). It then formats the datetime object into the ISO 8601
@@ -459,7 +495,7 @@ def format_datetime(val):
 
 def extract_regex(pattern, s, *groupargs):
     r"""
-    Extracts substring(s) from a given string that matches a specified regular expression pattern.
+    Extract substring(s) from a given string that matches a specified regular expression pattern.
 
     Parameters:
     pattern (str): The regular expression pattern to search for.
@@ -492,10 +528,59 @@ def extract_builtin_regex(regex_name, s):
 
 
 def create_extraction_function(regex_name):
+    """Create an extraction function for a built-in regex pattern.
+
+    Args:
+        regex_name (str): Name of the built-in regex pattern
+
+    Returns:
+        function: An extraction function that takes a string and returns the first match
+    """
+
     def extraction_function(s):
-        return extract_builtin_regex(regex_name, s)
+        """Extract the first match of a built-in regex pattern from a string.
+
+        Args:
+            s (str): String to search in
+
+        Returns:
+            str or None: First match of the pattern, or None if no match found
+        """
+        if regex_name in BUILTIN_REGEXES:
+            pattern = BUILTIN_REGEXES[regex_name][0]
+            match = re.search(pattern, s)
+            if match:
+                return match.group()
+        return None
+
+    doc = {
+        "email": "email address",
+        "err": "error value",
+        "fqdn": "fully qualified domain name (FQDN)",
+        "function": "function calls",
+        "gitcommit": "git commit hash",
+        "hexcolor": "hex color code",
+        "ipv4": "IPv4 address",
+        "ipv6": "IPv6 address",
+        "isotime": "ISO 8601 datetime string",
+        "json": "JSON string",
+        "jwt": "JSON Web Token (JWT)",
+        "mac": "MAC address",
+        "md5": "MD5 hash",
+        "path": "Unix file path",
+        "oauth": "OAuth token",
+        "sha1": "SHA-1 hash",
+        "sha256": "SHA-256 hash",
+        "sql": "SQL query",
+        "url": "URL",
+        "uuid": "UUID",
+        "version": "software version identifier",
+        "winregistry": "Windows registry key",
+    }
 
     extraction_function.__name__ = f"extract_{regex_name}"
+    pattern = doc.get(regex_name, regex_name)
+    extraction_function.__doc__ = f"""Return the first {pattern} in a given string."""
     return extraction_function
 
 
@@ -553,8 +638,8 @@ def parse_chunk(chunk, input_format):
 
 
 def init_worker():
-        # Let the main process handle CTRL-C
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    # Let the main process handle CTRL-C
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def parallel_process(file_paths, args):
@@ -583,7 +668,7 @@ def parallel_process(file_paths, args):
 
 def parse_logfmt(text):
     """
-    Parses a logfmt-formatted string into a dictionary.
+    Parse a logfmt-formatted string into a dictionary.
 
     logfmt is a log format that produces logs as a single line where key-value pairs are
     separated by spaces, and values can be unquoted or quoted.
@@ -603,7 +688,7 @@ def parse_logfmt(text):
 
 def parse_kv(text, sep=None, kvsep="="):
     """
-    Parses a string into key-value pairs based on given separators.
+    Parse a string into key-value pairs based on given separators.
 
     Args:
         text (str): The input string to parse.
@@ -634,8 +719,8 @@ def parse_kv(text, sep=None, kvsep="="):
 
 def parse_jsonl(line):
     """
-    Parses a line of JSONL (JSON Lines) and extracts the top-level strings, converting
-    non-string values to their string representations.
+    Parse a line of JSONL (JSON Lines) and extracts the top-level strings
+    converting non-string values to their string representations.
 
     The function focuses on handling top-level strings within a JSON object. Any text
     before or after the JSON object in the given line is ignored. If the JSON object
@@ -678,7 +763,7 @@ def parse_jsonl(line):
 
 def parse_clf(line):
     """
-    Parses a line in Common Log Format (CLF) and returns a dictionary of its components.
+    Parse a line in Common Log Format (CLF) and returns a dictionary of its components.
 
     Args:
         line (str): A single line string in CLF format.
@@ -804,7 +889,7 @@ def parse_ts5lm(line):
 
 def parse_line(line):
     """
-    Parses a single line of text.
+    Parse a single line of text.
 
     Strips any trailing whitespace characters and returns
     the cleaned line in a dictionary with the key 'line'.
@@ -913,9 +998,17 @@ EXPORTED_GLOBALS = build_globals_dict(
 
 
 def list_exported_objects(ignore_underscore=True):
-    funcs = EXPORTED_GLOBALS
+    """List all exported objects (modules and functions).
+
+    Args:
+        ignore_underscore (bool): Whether to ignore names starting with underscore
+
+    Returns:
+        list: List of exported objects
+    """
+    funcs = EXPORTED_GLOBALS.values()
     if ignore_underscore:
-        funcs = [f for name, f in funcs.items() if not name.startswith("_")]
+        funcs = [f for f in funcs if not getattr(f, "__name__", "").startswith("_")]
     return funcs
 
 
@@ -2022,45 +2115,42 @@ def get_function_signature(func):
 
 
 def print_python_help(terminal_width=80):
+    """Print help information about available Python modules and functions."""
     exported_objects = list_exported_objects(ignore_underscore=True)
 
-    def get_signature(obj):
-        try:
-            return str(inspect.signature(obj))
-        except ValueError:
-            return "(...)"  # fallback for built-ins without accessible signatures
+    # Default width used for module names
+    name_width = 20
 
-    # Separate modules and functions
-    modules = [obj for obj in exported_objects if inspect.ismodule(obj)]
-    functions = [
-        obj
-        for obj in exported_objects
-        if inspect.isfunction(obj) or inspect.ismethod(obj)
-    ]
+    # Separate and deduplicate modules and functions by name
+    modules = {}
+    functions = {}
 
-    # Handle modules
-    max_module_name_length = max(len(obj.__name__) for obj in modules)
+    for obj in exported_objects:
+        name = obj.__name__
+        if inspect.ismodule(obj):
+            modules[name] = obj
+        elif inspect.isfunction(obj):
+            functions[name] = obj
+
+    # Print modules
     print("Modules:")
-    for obj in modules:
-        try:
-            doc = obj.__doc__.splitlines()[0] if obj.__doc__ else ""
-        except AttributeError:
-            doc = ""
-        print(f"  {obj.__name__.ljust(max_module_name_length + 2)} {doc}")
+    for name, obj in sorted(modules.items()):
+        doc = obj.__doc__.splitlines()[0] if obj.__doc__ else "No docstring"
+        print(f" {name:<{name_width}}  {doc}")
 
-    print("Functions:")
-    for obj in list_exported_objects():
-        if inspect.isfunction(obj) or inspect.isbuiltin(obj):
-            name = obj.__name__
-            signature = get_signature(obj)
-            doc = obj.__doc__.split("\n")[0] if obj.__doc__ else "No docstring"
+    # Print functions
+    print("\nFunctions:")
+    for name, obj in sorted(functions.items()):
+        sig = str(inspect.signature(obj))
+        doc = inspect.getdoc(obj) or "No docstring"
+        first_line = doc.splitlines()[0].strip()
+        sig_text = f"{name}{sig}"
 
-            full_info = f" {name}{signature} - {doc}"
-            if len(full_info) > terminal_width:
-                doc_part = full_info[-(terminal_width - 3) :]
-                full_info = f" {name}{signature} -...{doc_part}"
-
-            print(full_info)
+        # If signature is longer than default width, print it unaligned
+        if len(sig_text) > name_width:
+            print(f" {sig_text}  {first_line}")
+        else:
+            print(f" {sig_text:<{name_width}}  {first_line}")
 
 
 def print_time_format_help():
@@ -2096,7 +2186,9 @@ https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-cod
 def positive_int_or_zero(value):
     ivalue = int(value)
     if ivalue < 0:
-        raise argparse.ArgumentTypeError(f"{value} is an invalid value. Use a positive integer or 0.")
+        raise argparse.ArgumentTypeError(
+            f"{value} is an invalid value. Use a positive integer or 0."
+        )
     return ivalue
 
 
@@ -2188,9 +2280,12 @@ def parse_args():
         action="append",
         help="execute Python code to transform event after input parsing",
     )
-    input.add_argument('--parallel', type=positive_int_or_zero, 
-        help='Enable parallel processing with specified number of processes. '
-            'Use 0 to use the number of CPUs.')
+    input.add_argument(
+        "--parallel",
+        type=positive_int_or_zero,
+        help="Enable parallel processing with specified number of processes. "
+        "Use 0 to use the number of CPUs.",
+    )
 
     selection = parser.add_argument_group("event selection options")
     selection.add_argument(
@@ -2241,7 +2336,7 @@ def parse_args():
         type=builtin_regex,
         default=[],
         action="append",
-        help=f"only process lines according to one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
+        help=f"only process lines according to one of the built-in regexes {list(sorted(BUILTIN_REGEXES))}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
     )
     grep.add_argument(
         "--grep-builtin-not",
@@ -2610,7 +2705,7 @@ def parse_args():
         help="for a sequence of events that are separated by less than INTERVAL,"
         " show only the first and last.",
     )
-    
+
     output_special.add_argument(
         "--debug",
         action="store_true",
