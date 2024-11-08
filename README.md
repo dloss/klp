@@ -549,6 +549,33 @@ Particularly useful for:
 - Extracting configuration parameters
 - Converting any key-value formatted substring into top-level fields
 
+
+* `sh(command, **kwargs)`: Execute a shell command and return its output
+  - `command`: The shell command to execute
+  - Returns the command's stdout as a string (stripped of trailing whitespace)
+  - Raises an exception if the command fails, so that the event is ignored (disable with `check=False`)
+  - Can be customized with subprocess.run keyword arguments
+
+```bash
+# Add git commit info to each event
+$ echo 'time=2024-02-08T15:04:05Z level=info msg="Deployment started"' | \
+  klp -I '__={"git_rev": sh("git rev-parse HEAD")[:7]}'
+time=2024-02-08T15:04:05Z level=info msg="Deployment started" git_rev=62efbb3
+
+# Add system load information
+$ echo 'time=2024-02-08T15:04:05Z level=info msg="Health check"' | \
+  klp -I '__={"load": sh("uptime").split("load average:")[-1].strip()}'
+time=2024-02-08T15:04:05Z level=info msg="Health check" load="13:14  up  2:30, 1 user, load averages: 2.39 1.96 1.90"
+
+# Look up hostname for IP addresses, ignore errors
+$ echo 'time=2024-02-08T15:04:05Z level=info msg="Connection from 8.8.8.8"' |   klp -I '__={"hostname": sh(f"host {msg.split()[-1]}"), check=False}' --debug
+time=2024-02-08T15:04:05Z level=info msg="Connection from 8.8.8.8" hostname="8.8.8.8.in-addr.arpa domain name pointer dns.google."
+```
+
+Note: Use the `sh()` function very carefully, and only with trusted input.
+Untrusted input can lead to command injection vulnerabilities.
+
+
 ### Synthetic fields
 
 klp can add some additional fields to the event.
