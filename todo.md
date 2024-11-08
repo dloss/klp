@@ -22,7 +22,6 @@
     * Highlighting regex matches
     - Add TUI with textual
 - README and help
-    * Document --output-file
     * Document sh()
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
