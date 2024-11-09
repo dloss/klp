@@ -347,13 +347,52 @@ If you want case-insensitive matching only for specific regexes, prepend `(?i)` 
 By default, `--grep` searches on the whole line. 
 To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
 
-klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
-Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`/`-R` for ignoring them.
-
 Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
 
+klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
+Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`/`-R` for ignoring them.
+
+Use `--extract`/`-x` to output only the matched portions of built-in patterns like URLs, IPs, or error messages.
+This is useful for extracting specific types of information from your logs.
+Make sure to use the right input format though.
+If in doubt, use `-f line` which works for all line-based formats.
+
+```bash
+# Extract email addresses
+$ klp -f line -x email mail.log
+alice@example.com
+bob@example.com
+
+# Extract all URLs from JSONL logs
+$ klp -f jsonl --extract url app.jsonl
+https://api.example.com/v1/users
+https://cdn.example.com/assets/main.css
+http://localhost:8080/health
+
+# Extract both IPs and error messages
+$ klp -x ipv4 -x err server.logfmt
+192.168.1.100
+error connecting to database
+10.0.0.55
+failed to process request
+```
+
+You can limit extraction to specific fields using the `key~pattern` syntax:
+
+```bash
+# Extract UUIDs only from message field
+$ klp -x message~uuid app.log
+
+# Extract FQDNs from specific fields
+$ klp -x details~fqdn -x message~fqdn app.log
+```
+
+Use `klp -x ?` to list all available extraction patterns.
+They are also documented as `extract_*()` functions in `klp --help-python` screen.
+
 ### Processing Log Blocks
+
 You can define start and stop conditions to process specific blocks of logs:
 
 - `--start-after REGEX`: Start processing after a line matching REGEX
