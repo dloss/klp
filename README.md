@@ -526,9 +526,9 @@ $ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(li
 When using `--input-exec`/`-I`, there are three special variables available for more complex transformations.
 Each has an equivalent short form using only underscores:
 
-* `_klp_event` or `_`: Contains the current event dictionary (useful for keys that aren't valid Python identifiers)
-* `_klp_event_add` or `__`: Merge the contents of this dictionary into the current event
-* `_klp_events` or `___`: Generate multiple output events from a single input event
+* `_klp_event` or `_`: Provides read-access to the current event dictionary. This is useful for keys that aren't valid Python identifiers.
+* `_klp_event_add` or `__`: The contents of this dictionary will be merged into the current event.
+* `_klp_events` or `___`: A list of dictionaries, where each dictionary represents an event. This lets you create multiple events from a single input event.
 
 ```bash
 # Using _ to access keys with special characters
@@ -560,11 +560,6 @@ $ klp app.log -I "_klp_events=[{'key': k, 'value': v} for k,v in _.items()]"
 # Create events for headers in a Markdown file
 $ klp README.md -f line -I "___=[{'header': line, 'len': len(line) } if line.startswith('#') else None]"
 ```
-
-When using these special variables:
-* `_` provides read-only access to the current event
-* `__` merges its dictionary contents with the current event
-* `___` must be a list of dictionaries, each becoming a separate output event
 
 Several helper functions are available:
 
