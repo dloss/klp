@@ -270,7 +270,8 @@ There are multiple ways to specify the time range that you're interested in:
 
 * absolute time: `--from ISODATETIME` and `--to ISODATETIME` 
 * relative from now: `--since INTERVAL` and `--until INTERVAL` 
-* timespan, computed from program start or first event shown: `--duration INTERVAL`, `--timespan INTERVAL`
+* timespan, computed from program start: `--duration INTERVAL`
+* timespan, computed from first event shown: , `--timespan INTERVAL`
 
 Timespans can be specified with these units (for example: `--since 1w2h3.2s`):
 
