@@ -101,7 +101,7 @@ klp supports a wide range of input formats:
 - `combined`: Combined Log Format of Apache httpd
 - `unix`: common format of Unix server logs (timestamp, hostname, service, optional pid, message)
 - `line`: lines of text (trailing whitespace removed)
-- `sqlite`: SQLite database 
+- `sqlite`: SQLite database (use `--input-tablename` if more than one table is present)
 - `data`: parse everything as one string 
 - `tsNm`: timestamp (consisting of N components) and message
 - `tsNlm`: timestamp (consisting of N components), log level and message
@@ -476,7 +476,7 @@ The following additional functions are available:
 - `json`: JSON
 - `tsv`: Tab separated values 
 - `psv`: Pipe separated values
-- `sqlite`: SQLite database (use `-o` to specify the filename)
+- `sqlite`: SQLite database (use `-o` to specify the filename, use `--output-tablename` to create a different table than `data`)
 
 Select an output format with `--output-format` or `-F`:
 
