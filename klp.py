@@ -3091,23 +3091,26 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
         filenames = ["-"]
 
     for filename in filenames:
-        with file_opener(filename, encoding=encoding) as f:
-            skip_lines(f, skip)
+        try:
+            with file_opener(filename, encoding=encoding) as f:
+                skip_lines(f, skip)
 
-            for block, start_line, end_line in extract_blocks(
-                line_gen(f),
-                start_after=args.start_after,
-                start_with=args.start_with,
-                stop_before=args.stop_before,
-                stop_with=args.stop_with,
-                num_blocks=args.num_blocks,
-            ):
-                for i, line in enumerate(block, start=start_line):
-                    event = parse_linebased(line, format)
-                    events = apply_input_exec(event)
-                    for event in events:
-                        yield event, i
-
+                for block, start_line, end_line in extract_blocks(
+                    line_gen(f),
+                    start_after=args.start_after,
+                    start_with=args.start_with,
+                    stop_before=args.stop_before,
+                    stop_with=args.stop_with,
+                    num_blocks=args.num_blocks,
+                ):
+                    for i, line in enumerate(block, start=start_line):
+                        event = parse_linebased(line, format)
+                        events = apply_input_exec(event)
+                        for event in events:
+                            yield event, i
+        except UnicodeDecodeError as e:
+            print_err(f"Wrong encoding for '{filename}': {e}. Use --input-encoding to specify the correct encoding.")
+            continue
 
 def get_sqlite_tablenames(cursor):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
