@@ -2003,21 +2003,34 @@ def input_exec(code, event):
         return {
             key: val
             for key, val in event.items()
-            if val is not None and key not in ("_", "__", "___")
+            if val is not None
+            and key
+            not in ("_", "_klp_event", "__", "_klp_event_add", "___", "_klp_events")
         }
 
     # Allow special methods on String
     local_vars = {key: EStr(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
+    local_vars["_klp_event"] = event  # more descriptive alternative
     try:
         event = exec_and_get_locals(code, local_vars)
 
         if "___" in event:  # Multiple output events
             result = [ev for ev in event["___"] if ev is not None]
+        elif (
+            "_klp_events" in event
+        ):  # Multiple output events, more descriptive alternative
+            result = [ev for ev in event["_klp_events"] if ev is not None]
         elif "__" in event:  # One output event
             merged_event = {**event, **event["__"]}
             del merged_event["__"]
+            result = [remove_underscores(merged_event)]
+        elif (
+            "_klp_event_add" in event
+        ):  # One output event, more descriptive alternative
+            merged_event = {**event, **event["_klp_event_add"]}
+            del merged_event["_klp_event_add"]
             result = [remove_underscores(merged_event)]
         else:  # No special output
             result = [remove_underscores(event)]

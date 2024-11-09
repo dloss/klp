@@ -521,40 +521,41 @@ $ klp examples/alertmanager.logfmt -I "path=(extract_path(file) or None)" -k pat
 $ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
 ```
 
-#### Underscore variables
+#### Special variables
 
-When using `--input-exec`/`-I`, there are three special underscore variables available for more complex transformations:
+When using `--input-exec`/`-I`, there are three special variables available for more complex transformations.
+Each has an equivalent short form using only underscores:
 
-* `_`: Contains the current event dictionary (useful for keys that aren't valid Python identifiers)
-* `__`: Merge the contents of this dictionary into the current event
-* `___`: Generate multiple output events from a single input event
+* `_klp_event` or `_`: Contains the current event dictionary (useful for keys that aren't valid Python identifiers)
+* `_klp_event_add` or `__`: Merge the contents of this dictionary into the current event
+* `_klp_events` or `___`: Generate multiple output events from a single input event
 
 ```bash
 # Using _ to access keys with special characters
 $ klp examples/qryn.jsonl -j -I "method=_['req.method'].lower()"
 
-# Using __ to add or update fields
-$ klp app.log -I "__={'new_field': 'value', 'updated_field': msg.upper()}"
+# Using _klp_event_add to add or update fields
+$ klp app.log -I "_klp_event_add={'new_field': 'value', 'updated_field': msg.upper()}"
 
-# Using ___ to generate multiple events
-$ klp app.log -I "___=[{'split': word} for word in msg.split()]"
+# Using _klp_events to generate multiple events
+$ klp app.log -I "_klp_events=[{'split': word} for word in msg.split()]"
 ```
 
-The `__` approach is useful when you want to modify the event in-place or add new fields:
+The `_klp_event_add` (or `__`) approach is useful when you want to modify the event in-place or add new fields:
 
 ```bash
 # Add length fields for all string values
 $ klp app.log -I "__={k+'_len': len(v) for k,v in _.items() if isinstance(v, str)}"
 ```
 
-The `___` list is useful when you need to split one event into multiple events:
+The `_klp_events` (or `___`) list is useful when you need to split one event into multiple events:
 
 ```bash
 # Split a comma-separated list into separate events
-$ klp app.log -I "___=[{'item': item.strip()} for item in msg.split(',')]"
+$ klp app.log -I "_klp_events=[{'item': item.strip()} for item in msg.split(',')]"
 
 # Create events for each key-value pair
-$ klp app.log -I "___=[{'key': k, 'value': v} for k,v in _.items()]"
+$ klp app.log -I "_klp_events=[{'key': k, 'value': v} for k,v in _.items()]"
 
 # Create events for headers in a Markdown file
 $ klp README.md -f line -I "___=[{'header': line, 'len': len(line) } if line.startswith('#') else None]"
