@@ -397,13 +397,14 @@ You can define start and stop conditions to process specific blocks of logs:
 
 - `--start-after REGEX`: Start processing after a line matching REGEX
 - `--start-with REGEX`: Start processing when a line matches REGEX
-- `--stop-before REGEX`: Stop processing when a line matches REGEX
 - `--stop-with REGEX`: Stop processing after a line matches REGEX
+- `--stop-before REGEX`: Stop processing when a line matches REGEX
 
 For example, to process logs between two specific events:
 
 ```bash
-$ klp --start-with "Session started" --stop-before "Session ended" app.log
+$ klp --start-after "Session started" --stop-before "Session ended" app.log
+$ klp --start-with "[Uu]ser \w+ logged in" --stop-with "[Uu]ser \w+ logged out" app.log
 ```
 
 Use `--num-blocks` to limit the number of start/stop blocks processed.
