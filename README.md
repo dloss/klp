@@ -481,9 +481,11 @@ klp supports multiple output formats:
 - `logfmt`: Plain logfmt
 - `jsonl`: JSON Lines (shortcut: `-J`)
 - `json`: JSON
+- `csv`: Comma separated values
 - `tsv`: Tab separated values 
 - `psv`: Pipe separated values
 - `sqlite`: SQLite database
+- `extract`: Only output the grep matches
 
 Select an output format with `--output-format` or `-F`:
 
