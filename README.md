@@ -432,7 +432,7 @@ Use `--num-blocks` to limit the number of start/stop blocks processed.
 #### Default Output
 
 By default, klp prints every event that was recognized and shows both the key and the value of each field.
-Colors are used for syntax-highlighting (use `--no-color` to turn this off or `--theme` to select different colors).
+Colors are used for syntax-highlighting (use `--no-color` or the `NOCOLOR` environment variable to turn this off or `--theme` to select different colors).
 
 
 #### Key Selection
@@ -467,6 +467,7 @@ $ klp -c mylog.txt
 2023-01-17T07:55:48.663Z DEBUG executing statement s190580 with parameters: []
 ```
 
+#### Synthetic Fields
 klp can add some additional, synthetic fields to the event.
 For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
 
