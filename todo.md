@@ -21,6 +21,8 @@
     * Highlighting regex matches
     - Add TUI with textual
 - README and help
+    * Document EStr and .cols()
+    * Document how to use -f data together with -I
     * Document --logical-lines
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
