@@ -508,13 +508,7 @@ Customize your output with:
 - `--no-wrap`: Disable line wrapping
 - `--each-key`: Print each key on a separate line
 
-For advanced formatting, use:
-- `--output-template`: Use Python f-strings
-- `--output-eval`: Use Python code
-
-```bash
-$ klp --output-template "{timestamp} - {level}: {message}" app.log
-```
+For advanced formatting, see [Custom Output Formatting using Python](#custom-output-formatting-using-python).
 
 #### Output File Control
 Use `--output-file`/`-o` to direct output to a file instead of stdout:
