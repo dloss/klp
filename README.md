@@ -511,7 +511,8 @@ Customize your output with:
 For advanced formatting, see [Custom Output Formatting using Python](#custom-output-formatting-using-python).
 
 #### Output File Control
-Use `--output-file`/`-o` to direct output to a file instead of stdout:
+Use `--output-file`/`-o` to direct output to a file instead of stdout.
+This can be used to convert the events to a different file format:
 
 ```bash
 # Write formatted output to a file
