@@ -1295,20 +1295,28 @@ def to_datetime(timestamp):
 
 
 def get_timestamp_datetime(event):
+    """Get datetime object from event timestamp, handling invalid timestamps gracefully.
+
+    Args:
+        event (dict): Event dictionary that may contain timestamp fields
+
+    Returns:
+        datetime or None: Parsed datetime object, or None if no valid timestamp found
+    """
     if args.ts_key and args.ts_key in event:
-        return to_datetime(event[args.ts_key])
-    elif "timestamp" in event:
-        return to_datetime(event["timestamp"])
-    elif "ts" in event:
-        return to_datetime(event["ts"])
-    elif "time" in event:
-        return to_datetime(event["time"])
-    elif "t" in event:
-        return to_datetime(event["t"])
-    elif "at" in event:
-        return to_datetime(event["at"])
-    else:
-        return None
+        try:
+            return to_datetime(event[args.ts_key])
+        except ValueError:
+            return None
+
+    for key in ("timestamp", "ts", "time", "t", "at"):
+        if key in event:
+            try:
+                return to_datetime(event[key])
+            except ValueError:
+                continue
+
+    return None
 
 
 def estr_or_none(val):
@@ -2988,6 +2996,15 @@ def show_skipped_marker(skipped):
 
 
 def show_gap_marker(timedelta, width):
+    """Show a visual marker for time gaps between events.
+
+    Args:
+        timedelta: Time difference to display
+        width: Terminal width for formatting
+    """
+    if timedelta is None:
+        return
+
     colors = THEMES[args.theme]["gap_marker"]
     label = f"time gap: {timedelta}"
     separator = "_" * int((terminal_width - len(label) - 3) / 2)
