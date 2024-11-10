@@ -5,7 +5,8 @@ _Kool Logfmt Parser_
 klp is a lightweight, command-line interface (CLI) tool  for analyzing and understanding structured logs in various formats.
 Designed for software developers involved in debugging and troubleshooting.
 
-Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.org), [TSV](https://en.wikipedia.org/wiki/Tab-separated_values) and some other formats.
+Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.org),
+[CSV](https://en.wikipedia.org/wiki/Comma-separated_values), [TSV](https://en.wikipedia.org/wiki/Tab-separated_values), [SQLite](https://sqlite.org) and many other formats.
 
 Single file Python script without dependencies apart from Python 3.7+ and its standard library. 
 
@@ -20,9 +21,9 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 - **Overview Stats**: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
 - **Customizable Output**: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
 - **Enhanced Readability**: Enjoy colored and pretty-printed output for easier reading.
-- **Supports JSON Lines and TSV** as alternative input/output formats (and some others)
+- **Supports custom parsers in Python** to handle non-standard file formats.
 
-klp is designed not for large-scale log analysis, but as a lightweight, efficient tool for developers. It's your companion for uncovering the mysteries in your logs, streamlining your development workflow, and accelerating troubleshooting.
+klp is designed not for large-scale log analysis, but as a lightweight and flexible tool for software developers and system administrators. 
 
 ## Installation
 
@@ -32,26 +33,20 @@ Install using pip:
 $ pip install klp-logviewer
 ```
 
-Or copy `klp.py` to a folder on your PATH and make it executable:
-
-```bash
-$ install -m 755 klp.py ~/.local/bin/klp
-```
-
-Or just run it using `python3`, without any installation.
-
+Or just download `klp.py` and run it using `python3`, without any installation.
 
 ## Quick Start
 
 Here are some basic examples to get you started with klp:
 
 ```bash
-# View logs with timestamp, log level, and message:
+# View logs in logfmt format, showing the timestamp, log level, and message:
 $ klp -c mylog.logfmt
 
 # Specify the input format (default is logfmt):
 $ klp -f jsonl applog.jsonl
 $ klp -f csv mydata.csv
+$ klp -f line text.txt
 
 # Filter logs by log level:
 $ klp -l error,warning mylog.logfmt
@@ -95,16 +90,17 @@ klp supports a wide range of input formats:
 - `logfmt`: Key-value pairs (**default**)
 - `jsonl`: JSON Lines (shortcut: `-j`)
 - `json`: JSON (only for complete files, not for streaming)
+- `csv`: Comma-separated values 
 - `tsv`: Tab separated values 
 - `psv`: Pipe separated values 
+- `line`: lines of text (trailing whitespace removed)
+- `tsNm`: logs containing a timestamp (with N components) and a message. See below for examples. 
+- `tsNlm`: logs containing a timestamp (with N components), a log level and a message
+- `unix`: Common format of Unix server logs (timestamp, hostname, service, optional pid, message)
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
-- `unix`: common format of Unix server logs (timestamp, hostname, service, optional pid, message)
-- `line`: lines of text (trailing whitespace removed)
 - `sqlite`: SQLite database (use `--input-tablename` if more than one table is present)
-- `data`: parse everything as one string 
-- `tsNm`: timestamp (consisting of N components) and message
-- `tsNlm`: timestamp (consisting of N components), log level and message
+- `data`: Parse everything as one string 
 
 Use the `--input-format` or `-f` option to specify the input format. For example:
 
@@ -112,8 +108,9 @@ Use the `--input-format` or `-f` option to specify the input format. For example
 $ klp -f jsonl input.log
 ```
 
-klp supports parsing simple space-separated log formats via the `tsNm` (timestamp + message) and `tsNlm` (timestamp + level + message) format specifiers,
-where N indicates how many space-separated timestamp components to expect.
+The `tsNm` formats allows parsing logs that consist of a timestamp, and a message. 
+`N` indicates how many whitespace-separated components the timestamp consists of.
+Use `tsNlm` for logs that contain a log level between the timestamp and the message.
 Here are some examples:
 
 ```bash
@@ -136,7 +133,42 @@ The timestamp parts are joined and parsed using klp's standard timestamp parsing
 More complicated formats can often be parsed using the `line` format and creating or transforming events using Python code (`--input-exec`).
 See the *Advanced input transformations using Python code* section below.
 
-### Basics
+#### Input Options
+
+klp provides several options to control how input data is read and parsed:
+
+- `--input-encoding`: Specify the text encoding of the input data (default: utf-8)
+  ```bash
+  # Read a file with Latin-1 encoding
+  $ klp --input-encoding latin1 legacy.logfmt
+  
+  # Process Windows-1252 encoded logs
+  $ klp -f line --input-encoding cp1252 windows.log
+  ```
+
+- `--no-header`: For CSV, TSV, or PSV formats, indicates that the file has no header row.
+  This will auto-generate numbered column keys.
+  ```bash
+  # Process a headerless CSV file (columns will be named col0, col1, etc.)
+  $ klp -f csv --no-header data.csv
+  ```
+
+- `--input-delimiter`: Specify the delimiter for CSV, TSV, or PSV formats
+  ```bash
+  # Process a file with semicolon-separated values
+  $ klp -f csv --input-delimiter ";" european.csv
+  
+  # Read a custom-delimited file
+  $ klp -f csv --input-delimiter ":" custom.log
+  ```
+
+- `--skip`: Avoid parsing the first N lines (e.g. to skip comments or old data).
+  ```bash
+  # Skip the first 5 lines of a CSV file
+  $ klp -f csv --skip 5 data.csv
+  ```
+
+### Input Processing and Event Creation
 
 klp parses each line of the input file (or stdin stream) into an *event*.
 If a line cannot be parsed, it is ignored silently.
@@ -151,7 +183,6 @@ by looking for the following keys:
 * Message keys: `message`, `msg`
 
 klp has special features to select events by timestamp or log level (see below).
-
 
 ### Default output
 
@@ -431,8 +462,6 @@ This can be be combined with other filters, such as `--grep` and grep context li
 
 Use `--max-events`/`-m` to limit the output to the given number of events.
 This is useful to avoid being flooded with lots and lots of output.
-
-Use `--skip` to avoid parsing the first lines.
 
 ### Custom output formatting
 
