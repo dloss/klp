@@ -1144,16 +1144,31 @@ def format_ts_delta(timedelta):
 
 
 def add_ts_delta(event, last_ts_datetime):
-    ts_datetime = get_timestamp_datetime(event)
-    if last_ts_datetime is None:
-        delta = ts_datetime
-    else:
-        delta = ts_datetime - last_ts_datetime
-    last_ts_datetime = ts_datetime
-    # Add to start of event dict so that delta is displayed first
-    new_event = {"_klp_timedelta": format_ts_delta(delta)}
-    new_event.update(event)
-    return new_event, last_ts_datetime
+    """Add timestamp delta to event"""
+    try:
+        ts_datetime = get_timestamp_datetime(event)
+        if ts_datetime is None:
+            return event, last_ts_datetime
+
+        if last_ts_datetime is None:
+            delta = ts_datetime
+        else:
+            try:
+                delta = ts_datetime - last_ts_datetime
+            except (TypeError, ValueError):
+                return event, last_ts_datetime
+
+        last_ts_datetime = ts_datetime
+
+        # Add to start of event dict so delta is displayed first
+        new_event = {"_klp_timedelta": format_ts_delta(delta)}
+        new_event.update(event)
+        return new_event, last_ts_datetime
+
+    except Exception as e:
+        if args.debug:
+            print_err(f"Error calculating timestamp delta: {e}")
+        return event, last_ts_datetime
 
 
 def datetime_from(text):
@@ -1561,26 +1576,39 @@ class EStr(str):
 
 
 def show(event, context_type="", lineno=None):
-    event = reorder(event)
-    if args.output_format == "default":
-        if args.output_template:
-            show_by_template(event, args.output_template)
-        elif args.output_eval:
-            show_by_eval_template(event, args.output_eval)
-        else:
-            show_default(event, context_type, lineno)
-    elif args.output_format == "logfmt":
-        show_logfmt(event)
-    elif args.output_format == "jsonl":
-        show_jsonl(event)
-    elif args.output_format == "json":
-        show_json(event)
-    elif args.output_format in ("csv", "tsv", "psv"):
-        show_csv(event, args.writer)
-    elif args.output_format == "sqlite":
-        write_sqlite(event, args.cursor)
-    elif args.output_format == "extract":
-        show_extract(event)
+    """Show event with improved error handling."""
+    if not isinstance(event, dict):
+        if args.debug:
+            print_err(f"Invalid event type: {type(event)}")
+        return
+
+    try:
+        event = reorder(event)
+        if not event:  # Skip empty events
+            return
+
+        if args.output_format == "default":
+            if args.output_template:
+                show_by_template(event, args.output_template)
+            elif args.output_eval:
+                show_by_eval_template(event, args.output_eval)
+            else:
+                show_default(event, context_type, lineno)
+        elif args.output_format == "logfmt":
+            show_logfmt(event)
+        elif args.output_format == "jsonl":
+            show_jsonl(event)
+        elif args.output_format == "json":
+            show_json(event)
+        elif args.output_format in ("csv", "tsv", "psv"):
+            show_csv(event, args.writer)
+        elif args.output_format == "sqlite":
+            write_sqlite(event, args.cursor)
+        elif args.output_format == "extract":
+            show_extract(event)
+    except Exception as e:
+        if args.debug:
+            print_err(f"Error showing event: {e}")
 
 
 def escape_doublequotes_quoted(s):
@@ -1663,11 +1691,29 @@ def show_csv(event, writer):
 
 
 def write_sqlite(event, cursor):
-    cols = []
-    for key in args.keys:
-        cols.append(escape_plain(event.get(key, "")))
-    placeholders = ", ".join(["?" for _ in args.keys])
-    cursor.execute(f"INSERT INTO data VALUES ({placeholders})", cols)
+    """Write event to SQLite with proper table name handling.
+
+    Args:
+        event (dict): Event dictionary to write
+        cursor: SQLite cursor
+    """
+    if not cursor:
+        return
+
+    try:
+        cols = []
+        for key in args.keys:
+            cols.append(escape_plain(event.get(key, "")))
+
+        placeholders = ", ".join(["?" for _ in args.keys])
+        # Use the table name from args
+        query = f"INSERT INTO {args.output_tablename} VALUES ({placeholders})"
+        cursor.execute(query, cols)
+    except sqlite3.Error as e:
+        print_err(f"SQLite error: {e}")
+    except Exception as e:
+        if args.debug:
+            print_err(f"Error writing to SQLite: {e}")
 
 
 def show_default(event, context_type="", lineno=None):
@@ -1916,16 +1962,17 @@ def update_stats(stats, event):
 
 
 def get_timestamp_str_or_none(event):
+    """Get timestamp string from event, handling missing/invalid keys."""
+    if not isinstance(event, dict):
+        return None
+
     if args.ts_key:
-        return event.get(args.ts_key, None)
-    else:
-        return (
-            event.get("timestamp", None)
-            or event.get("ts", None)
-            or event.get("time", None)
-            or event.get("at", None)
-            or event.get("t", None)
-        )
+        return event.get(args.ts_key)
+
+    for key in ("timestamp", "ts", "time", "at", "t"):
+        value = event.get(key)
+        if value is not None:
+            return value
 
 
 def get_log_level(event):
@@ -2239,6 +2286,32 @@ def positive_int_or_zero(value):
             f"{value} is an invalid value. Use a positive integer or 0."
         )
     return ivalue
+
+
+def validate_tablename(tablename):
+    """Validate SQLite table name for argparse.
+
+    Args:
+        tablename (str): The table name to validate
+
+    Returns:
+        str: The validated table name
+
+    Raises:
+        argparse.ArgumentTypeError: If table name is invalid
+    """
+    try:
+        if not tablename:
+            raise ValueError("Table name cannot be empty")
+        if not isinstance(tablename, str):
+            raise ValueError(f"Table name must be string, got {type(tablename)}")
+        if not re.match(r"^\w+$", tablename):
+            raise ValueError(
+                f"Table name '{tablename}' can only contain letters, numbers, and underscores"
+            )
+        return tablename
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e))
 
 
 def parse_args():
@@ -2559,7 +2632,8 @@ def parse_args():
         "--output-tablename",
         metavar="TABLENAME",
         default="data",
-        help="SQLite table to write data to. Default: data",
+        type=validate_tablename,
+        help="SQLite table to write data to. Only letters, numbers, and underscores allowed. Default: data",
     )
     output.add_argument(
         "--max-events",
@@ -3084,7 +3158,12 @@ def extract_blocks(
     """
 
     def matches_any_pattern(line, patterns):
-        return patterns and any(re.search(pattern, line) for pattern in patterns)
+        if not patterns:
+            return False
+        try:
+            return any(re.search(pattern, line) for pattern in patterns)
+        except (re.error, TypeError):
+            return False
 
     blocks_found = 0
     started = not (start_after or start_with)
@@ -3092,6 +3171,9 @@ def extract_blocks(
     start_line_number = None
 
     for i, line in enumerate(file_iterator, start=1):
+        if not isinstance(line, str):
+            continue
+
         if not started:
             if matches_any_pattern(line, start_after):
                 started = True
@@ -3168,8 +3250,14 @@ def get_sqlite_tablenames(cursor):
 
 def ensure_safe_tablename(tablename):
     """Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)"""
+    if not tablename:
+        raise ValueError("Table name cannot be empty")
+    if not isinstance(tablename, str):
+        raise ValueError(f"Table name must be string, got {type(tablename)}")
     if not re.match(r"^\w+$", tablename):
-        raise ValueError("Invalid table name")
+        raise ValueError(
+            f"Invalid table name '{tablename}'. Use only letters, numbers, and underscores."
+        )
 
 
 def events_from_sqlitefiles_generator(filenames, tablename):
