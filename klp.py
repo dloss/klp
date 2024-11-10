@@ -3099,6 +3099,8 @@ def colored_levelchar(event):
 
 def colored_mapchar(event, key):
     val = event.get(key, ".")
+    if not val:
+        return ""
     color = None
     if val == ".":
         color = THEMES[args.theme]["quotes"] if args.color else None
