@@ -832,58 +832,87 @@ def parse_unix(line):
         return {}
 
 
+def _parse_log_line(line, ts_parts, has_level=False):
+    """Generic parser for log lines with configurable timestamp parts and optional level.
+    Returns empty dict for any lines that don't match the expected format exactly.
+
+    Args:
+        line (str): Input line to parse
+        ts_parts (int): Number of parts that make up the timestamp (1-5)
+        has_level (bool): Whether the line includes a level field after timestamp
+    """
+    line = line.strip()
+    if not line:
+        return {}
+
+    # Calculate expected parts for a complete line
+    total_parts = ts_parts + (2 if has_level else 1)  # +1 or +2 for level/message
+
+    try:
+        parts = line.split(maxsplit=total_parts - 1)
+        if len(parts) != total_parts:
+            return {}
+
+        ts = " ".join(parts[:ts_parts])
+        if has_level:
+            return {
+                "timestamp": ts,
+                "level": parts[ts_parts],
+                "message": parts[ts_parts + 1],
+            }
+        return {"timestamp": ts, "message": parts[ts_parts]}
+    except Exception:
+        return {}
+
+
 def parse_ts1m(line):
-    ts1, msg = line.split(maxsplit=1)
-    return {"timestamp": f"{ts1}", "message": msg}
+    """Parse: <timestamp> <message>"""
+    return _parse_log_line(line, ts_parts=1, has_level=False)
 
 
 def parse_ts1lm(line):
-    ts1, level, msg = line.split(maxsplit=2)
-    return {"timestamp": f"{ts1}", "level": level, "message": msg}
+    """Parse: <timestamp> <level> <message>"""
+    return _parse_log_line(line, ts_parts=1, has_level=True)
 
 
 def parse_ts2m(line):
-    ts1, ts2, msg = line.split(maxsplit=2)
-    return {"timestamp": f"{ts1} {ts2}", "message": msg}
+    """Parse: <timestamp1> <timestamp2> <message>"""
+    return _parse_log_line(line, ts_parts=2, has_level=False)
 
 
 def parse_ts2lm(line):
-    ts1, ts2, level, msg = line.split(maxsplit=3)
-    return {"timestamp": f"{ts1} {ts2}", "level": level, "message": msg}
+    """Parse: <timestamp1> <timestamp2> <level> <message>"""
+    return _parse_log_line(line, ts_parts=2, has_level=True)
 
 
 def parse_ts3m(line):
-    ts1, ts2, ts3, msg = line.split(maxsplit=3)
-    return {"timestamp": f"{ts1} {ts2} {ts3}", "message": msg}
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <message>"""
+    return _parse_log_line(line, ts_parts=3, has_level=False)
 
 
 def parse_ts3lm(line):
-    ts1, ts2, ts3, level, msg = line.split(maxsplit=4)
-    return {"timestamp": f"{ts1} {ts2} {ts3}", "level": level, "message": msg}
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <level> <message>"""
+    return _parse_log_line(line, ts_parts=3, has_level=True)
 
 
 def parse_ts4m(line):
-    ts1, ts2, ts3, ts4, msg = line.split(maxsplit=4)
-    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "message": msg}
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <timestamp4> <message>"""
+    return _parse_log_line(line, ts_parts=4, has_level=False)
 
 
 def parse_ts4lm(line):
-    ts1, ts2, ts3, ts4, level, msg = line.split(maxsplit=5)
-    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4}", "level": level, "message": msg}
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <timestamp4> <level> <message>"""
+    return _parse_log_line(line, ts_parts=4, has_level=True)
 
 
 def parse_ts5m(line):
-    ts1, ts2, ts3, ts4, ts5, msg = line.split(maxsplit=5)
-    return {"timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}", "message": msg}
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <timestamp4> <timestamp5> <message>"""
+    return _parse_log_line(line, ts_parts=5, has_level=False)
 
 
 def parse_ts5lm(line):
-    ts1, ts2, ts3, ts4, ts5, level, msg = line.split(maxsplit=6)
-    return {
-        "timestamp": f"{ts1} {ts2} {ts3} {ts4} {ts5}",
-        "level": level,
-        "message": msg,
-    }
+    """Parse: <timestamp1> <timestamp2> <timestamp3> <timestamp4> <timestamp5> <level> <message>"""
+    return _parse_log_line(line, ts_parts=5, has_level=True)
 
 
 def parse_line(line):
@@ -3108,8 +3137,11 @@ def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
                         for event in events:
                             yield event, i
         except UnicodeDecodeError as e:
-            print_err(f"Wrong encoding for '{filename}': {e}. Use --input-encoding to specify the correct encoding.")
+            print_err(
+                f"Wrong encoding for '{filename}': {e}. Use --input-encoding to specify the correct encoding."
+            )
             continue
+
 
 def get_sqlite_tablenames(cursor):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
