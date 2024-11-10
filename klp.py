@@ -230,7 +230,7 @@ BUILTIN_REGEXES = {
     "fqdn": [
         r"\b(((?:[a-z](?:[a-z0-9-]{0,63}[a-z0-9])?\.){2,}[a-z0-9][a-z0-9-]{0,8}))"
     ],
-    "function": [r"\b((\w+\([^)]*\)))"],
+    "function": [r"\b(([\w\.]+\([^)]*\)))"],
     "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
     "ipv4": [
@@ -642,7 +642,6 @@ def init_worker():
 
 
 def parallel_process(file_paths, args):
-
     def chunk_file(file_path):
         chunk_size = 10000
         with file_opener(file_path, encoding=args.input_encoding) as f:
