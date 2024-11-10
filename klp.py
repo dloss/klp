@@ -38,7 +38,6 @@ import base64
 import collections
 import datetime
 import hashlib
-import itertools
 import math
 import random
 import string
