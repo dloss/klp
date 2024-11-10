@@ -499,8 +499,10 @@ Customize your output with:
 
 - `--header`: Add text before the first event
 - `--footer`: Add text after the last event
-- `--output-event-sep`: Specify the separator between events
 - `--output-sep`: Specify the separator between fields
+- `--output-event-sep`: Specify the separator between events (default: newline)
+- `--output-delimiter`: CSV/TSV/PSV output delimiter
+- `--output-quoting`: CSV/TSV/PSV output quoting (`minimal`,`all`,`nonnumeric`,`none`)
 - `--indent`, `--no-indent`: Control indentation
 - `--expand`: Expand newlines
 - `--no-wrap`: Disable line wrapping
