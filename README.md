@@ -29,7 +29,7 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 - [Advanced Usage](#advanced-usage)
   - [Complex Filtering with Python Expressions](#complex-filtering-with-python-expressions)
   - [Advanced Input Transformations Using Python Code](#advanced-input-transformations-using-python-code)
-  - [Python Expressions in Output](#python-expressions-in-output)
+  - [Custom Output Formatting using Python](#custom-output-formatting-using-python)
 - [Additional Resources](#additional-resources)
   - [Complementary Tools](#complementary-tools)
   - [Alternative Tools](#alternative-tools)
