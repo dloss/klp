@@ -3130,9 +3130,10 @@ def logical_line_gen(file):
                 logical_line = []
             logical_line.append(stripped)
         else:
-            # Continue the current logical line, with indentation removed
+            # Continue the current logical line, with indentation removed,
+            # but add a single space character to avoid joining words
             # XXX: Maybe don't infer with tabs or multiple spaces?
-            logical_line.append(stripped.lstrip())
+            logical_line.append(" " + stripped.lstrip())
     if logical_line:
         yield "".join(logical_line)
 
