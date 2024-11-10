@@ -2,7 +2,7 @@
 
 _Kool Logfmt Parser_
 
-klp is a lightweight, command-line interface (CLI) tool  for analyzing and understanding structured logs in various formats.
+klp is a lightweight, command-line interface (CLI) tool for analyzing and understanding structured logs in various formats.
 Designed for software developers involved in debugging and troubleshooting.
 
 Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.org),
@@ -11,6 +11,28 @@ Supports [logfmt](https://brandur.org/logfmt), [JSON Lines](https://jsonlines.or
 Single file Python script without dependencies apart from Python 3.7+ and its standard library. 
 
 ![](demo/basic.png)
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+  - [Basic Usage](#basic-usage)
+- [Core Features](#core-features)
+  - [Input Handling](#input-handling)
+  - [Event Creation](#event-creation)
+  - [Overview and Statistics](#overview-and-statistics)
+  - [Time Management](#time-management)
+  - [Search and Filter](#search-and-filter)
+  - [Output Control](#output-control)
+- [Advanced Usage](#advanced-usage)
+  - [Complex Filtering with Python Expressions](#complex-filtering-with-python-expressions)
+  - [Advanced Input Transformations Using Python Code](#advanced-input-transformations-using-python-code)
+  - [Python Expressions in Output](#python-expressions-in-output)
+- [Additional Resources](#additional-resources)
+  - [Complementary Tools](#complementary-tools)
+  - [Alternative Tools](#alternative-tools)
 
 ## Key Features
 
@@ -23,9 +45,9 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 - **Enhanced Readability**: Enjoy colored and pretty-printed output for easier reading.
 - **Supports custom parsers in Python** to handle non-standard file formats.
 
-klp is designed not for large-scale log analysis, but as a lightweight and flexible tool for software developers and system administrators. 
+## Getting Started
 
-## Installation
+### Installation
 
 Install using pip:
 
@@ -35,18 +57,24 @@ $ pip install klp-logviewer
 
 Or just download `klp.py` and run it using `python3`, without any installation.
 
-## Quick Start
+### Quick Start
 
 Here are some basic examples to get you started with klp:
 
 ```bash
-# View logs in logfmt format, showing the timestamp, log level, and message:
-$ klp -c mylog.logfmt
+# View logs in logfmt format
+$ klp mylog.logfmt
 
-# Specify the input format (default is logfmt):
+# Specify other input formats:
 $ klp -f jsonl applog.jsonl
 $ klp -f csv mydata.csv
 $ klp -f line text.txt
+
+# Only show specific keys
+$ klp -k timestamp,level,message mylog.logfmt
+
+# Don't print the keys, only the values
+$ klp -p mylog.logfmt
 
 # Filter logs by log level:
 $ klp -l error,warning mylog.logfmt
@@ -58,7 +86,7 @@ $ klp -S mylog.logfmt
 $ tail -f mylog.logfmt | klp -n
 ```
 
-## Usage
+### Basic Usage
 
 klp can be used as a filter, reading from stdin:
 
@@ -80,10 +108,55 @@ $ klp logs.zip
 ```
 
 Options can be given before or after the filename.
-
 See `klp --help` for the list of available options.
 
-### Supported input formats
+
+#### Basic Filtering
+
+**Filter by Log Level:**
+Use `--loglevels`/`-l` to restrict the output to specific log levels:
+
+```bash
+$ cat mylog.txt | klp -l warning,error,fatal
+```
+
+Exclude log levels with `--not-loglevel`/`-L`:
+```bash
+$ cat mylog.txt | klp -L trace,debug
+```
+
+**Filter by Time:**
+klp tries to parse timestamps automatically. 
+The following keys are treated as possibly holding timestamps: `timestamp`, `ts`, `time`, `at`.
+
+```bash
+# Show events from the last hour
+$ klp --since 1h app.log
+
+# Show events from both a start and end time
+$ klp --from "2024-02-05T20:18:10Z" --to "2024-02-05T20:19:20Z" app.log
+```
+
+**Filter by Regex:**
+
+Use `--grep`/`-g` for simple text search with regular expressions:
+
+```bash
+# Search for specific text
+$ klp -g "error" app.log
+
+# Case-insensitive search
+$ klp -g "error" -i app.log
+
+# Search in specific fields
+$ klp -g "message~error" app.log
+```
+
+## Core Features
+
+### Input Handling
+
+#### Supported input formats
 
 klp supports a wide range of input formats:
 
@@ -131,7 +204,8 @@ Similar formats exist up to `ts5m`/`ts5lm` for logs with more timestamp componen
 The timestamp parts are joined and parsed using klp's standard timestamp parsing logic.
 
 More complicated formats can often be parsed using the `line` format and creating or transforming events using Python code (`--input-exec`).
-See the *Advanced input transformations using Python code* section below.
+See the [Advanced input transformations using Python code](#advanced-input-transformations-using-python-code) section below.
+
 
 #### Input Options
 
@@ -168,7 +242,7 @@ klp provides several options to control how input data is read and parsed:
   $ klp -f csv --skip 5 data.csv
   ```
 
-### Input Processing and Event Creation
+### Event Creation
 
 klp parses each line of the input file (or stdin stream) into an *event*.
 If a line cannot be parsed, it is ignored silently.
@@ -184,28 +258,10 @@ by looking for the following keys:
 
 klp has special features to select events by timestamp or log level (see below).
 
-### Default output
 
-By default, klp prints every event that was recognized and shows both the key and the value of each field.
-Colors are used for syntax-highlighting (use `--no-color` to turn this off or `--theme` to select different colors).
+### Overview and Statistics
 
-### Common output format: timestamp, log level, message
-
-Often the time stamp, log level and message are the most important fields.
-Use `--common`/`-c` to print them, without showing the names of the keys (only the values):
-
-```bash
-$ klp -c mylog.txt
-2023-01-17T07:55:48.233Z DEBUG preparing query s190578: select * from applications
-2023-01-17T07:55:48.234Z DEBUG executing statement s190578 with parameters: []
-2023-01-17T07:55:48.656Z DEBUG preparing query s190579: select * from oauthproviderconfig where id = 0
-2023-01-17T07:55:48.657Z DEBUG executing statement s190579 with parameters: []
-2023-01-17T07:55:48.662Z DEBUG preparing query s190580: select * from oauthproviderconfig where id = 0
-2023-01-17T07:55:48.663Z DEBUG executing statement s190580 with parameters: []
-```
-
-### Get an overview of the log data
-
+#### Stats View
 Use `--stats-only`/`-S` to get some basic statistics about number of events in the log file,
 the timespan, the names of the keys and the log levels:
 
@@ -219,6 +275,7 @@ Log levels seen: DEBUG,TRACE,INFO (keys: log_level)
 
 Or use `--stats`/`-s` to print those stats (to stderr), in addition to regular output.
 
+#### Level Map
 Use `--levelmap`/`-M` to print only the first character of the log level of each event.
 The timestamp is for the first event shown in that line:
 
@@ -226,68 +283,18 @@ The timestamp is for the first event shown in that line:
 $ klp -M mylog.logfmt
 2024-02-05T20:18:10.538Z TTTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTTTDIT
 2024-02-05T20:18:30.546Z ITTTTTTTTTTTTTTTDDTTITITTTTTTTTTTTTTTITITTTTTTTTTTTTTTTTITITTTTTTTTTTTTTTTTITITT
-2024-02-05T20:18:34.098Z TTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTT
-2024-02-05T20:18:45.555Z TTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTITITTT
-2024-02-05T20:19:02.666Z TTTTDTTTTTTTTTITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTTDT
-2024-02-05T20:19:15.571Z TTDITITTTTTTTTTTTTTTTDTTTDITITTTTTTTTTTTTTTT
 ```
 
+#### Key Map
 Visualize patterns for any key:
 
 ```bash
 $ klp --keymap status_code app.log
 ```
 
-### Select the keys to show
+### Time Management
 
-To select the fields yourself, use `--keys`/`-k` and a comma-separated list of keys to print:
-
-```bash
-$ klp -k timestamp,message mylog.txt
-timestamp="2022-09-05T06:25:27.465Z" message="poll_read: waiting on response"
-timestamp="2022-09-05T06:25:27.465Z" message="polled new request"
-timestamp="2022-09-05T06:25:27.465Z" message="poll_write: waiting on request"
-timestamp="2022-09-05T06:25:27.465Z" message="poll_flush: flushed"
-timestamp="2022-09-05T06:25:27.466Z" message="poll_read: waiting on response"
-```
-
-Or specify the fields you want to exclude, using `--keys-not`/`-K`.
-In this case, all the other fields will be printed.
-
-Use `--plain`/`-p` to leave out the keys and only print the values:
-
-```bash
-$ cat mylog.txt | klp -k -p timestamp,message
-2022-09-05T06:25:27.465Z poll_read: waiting on response
-2022-09-05T06:25:27.465Z polled new request
-2022-09-05T06:25:27.465Z poll_write: waiting on request
-2022-09-05T06:25:27.465Z poll_flush: flushed
-2022-09-05T06:25:27.466Z poll_read: waiting on response
-```
-
-klp can add some additional, synthetic fields to the event.
-For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
-
-* `_klp_timedelta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
-* `_klp_ts`: timestamp showing when the event was shown by klp
-
-### Filter on log level
-
-Use `--loglevels`/`-l` to restrict the output to specific log levels.
-You can give a comma-separated list of levels.
-
-```bash
-$ cat mylog.txt | klp -l warning,error,fatal
-```
-
-Exclude log levels with `--not-loglevel`/`-L`.
-This is useful to suppress trace and debug output:
-
-```bash
-$ cat mylog.txt | klp -L trace,debug
-```
-
-### Filter on time
+#### Time Filtering
 
 klp tries to parse timestamps automatically.
 The following keys are treated as possibly holding timestamps: `timestamp`, `ts`, `time`, `at`.
@@ -314,15 +321,7 @@ Timespans can be specified with these units (for example: `--since 1w2h3.2s`):
 - `ms` = milliseconds
 - `us` = microseconds
 
-Sometimes you want to skip old events and only want to see new events, e.g. when using `tail -f` or the `--follow` option of `kubectl`.
-Use the `--new`/`-n` flag, which is equivalent to --since 0s`:
-
-```bash
-$ kubectl logs mypod --follow | klp -n
-```
-
-### Timezone Control
-
+#### Timezone Control
 By default, klp preserves timestamps as they appear in the logs.
 Use the following options to control how timestamps are displayed:
 
@@ -345,18 +344,15 @@ Only use these options when timezone conversion is specifically needed.
 These options cannot be used together - choose either local time or UTC.
 They work with all input formats and can be combined with other timestamp-related features like `--since`, `--until`, and `--timespan`.
 
-### Visualizing Time Gaps
 
+#### Time Gaps
 Use `--mark-gaps` to visually separate events that are far apart in time:
 
 ```bash
 $ klp --mark-gaps 1h app.log
 ```
 
-This will insert a visual separator between events that are more than 1 hour apart.
-
-### Condensing Events
-
+#### Event Condensing
 The `--fuse` option allows you to condense events that occur close together in time:
 
 ```bash
@@ -365,75 +361,63 @@ $ klp --fuse 5s app.log
 
 This will show only the first and last events for each group of events that occur within 5 seconds of each other.
 
-### Grep: searching with regexes, builtin regexes or Python expressions
 
+### Search and Filter
+
+#### Grep Capabilities
 Use `--grep`/`-g` to limit the processing to lines that match a given regular expression.
 When this flag is given multiple times, any of those regexes matching 
 will allow the line to be processed (logical OR).
-If you need a logical AND, use an appropriate regex or pipe the output to another instance of klp.
+
+```bash
+# Search with multiple patterns (OR)
+$ klp -g "error" -g "warning" app.log
+
+# Search in specific fields
+$ klp -g "message~error" app.log
+```
+
 To specify lines that should NOT be processed, use `--grep-not`/`-G`/`-v`.
 
 Search is case-sensitive by default. 
 Use `--ignore-case`/`-i` for case-insensitive matches.
-If you want case-insensitive matching only for specific regexes, prepend `(?i)` to them.
 
-By default, `--grep` searches on the whole line. 
-To limit the search to a specific key, prepend that key and a tilde to the regex (`key~REGEX`).
+#### Context Lines
+Like with the original UNIX grep, klp can print context lines:
+- `-B N`: Show N lines before match
+- `-A N`: Show N lines after match
+- `-C N`: Show N lines before and after match
 
-Like with with the original UNIX grep, klp can print context lines (`-B`, `-A`, `-C`).
 Events before the matching line are visually marked with `/`, lines after with `\`.
 
+#### Built-in Patterns
 klp has several builtin regexes to match URLs, email addresses, common errors, path names, FQDN's or IPv4 addresses.
 Use `--grep-builtin`/`-r` to use them for matching lines or `--grep-builtin-not`/`-R` for ignoring them.
 
-Use `--extract`/`-x` to output only the matched portions of built-in patterns like URLs, IPs, or error messages.
-This is useful for extracting specific types of information from your logs.
-Make sure to use the right input format though.
-If in doubt, use `-f line` which works for all line-based formats.
+Use `--extract`/`-x` to output only the matched portions:
 
 ```bash
 # Extract email addresses
 $ klp -f line -x email mail.log
-alice@example.com
-bob@example.com
 
 # Extract all URLs from JSONL logs
 $ klp -f jsonl --extract url app.jsonl
-https://api.example.com/v1/users
-https://cdn.example.com/assets/main.css
-http://localhost:8080/health
 
 # Extract both IPs and error messages
 $ klp -x ipv4 -x err server.logfmt
-192.168.1.100
-error connecting to database
-10.0.0.55
-failed to process request
-```
-
-You can limit extraction to specific fields using the `key~pattern` syntax:
-
-```bash
-# Extract UUIDs only from message field
-$ klp -x message~uuid app.log
-
-# Extract FQDNs from specific fields
-$ klp -x details~fqdn -x message~fqdn app.log
 ```
 
 Use `klp -x ?` to list all available extraction patterns.
 They are also documented as `extract_*()` functions in `klp --help-python` screen.
 
-### Processing Log Blocks
 
+### Select Blocks of Lines
 You can define start and stop conditions to process specific blocks of logs:
 
 - `--start-after REGEX`: Start processing after a line matching REGEX
 - `--start-with REGEX`: Start processing when a line matches REGEX
 - `--stop-with REGEX`: Stop processing after a line matches REGEX
 - `--stop-before REGEX`: Stop processing when a line matches REGEX
-
-For example, to process logs between two specific events:
 
 ```bash
 $ klp --start-after "Session started" --stop-before "Session ended" app.log
@@ -442,7 +426,110 @@ $ klp --start-with "[Uu]ser \w+ logged in" --stop-with "[Uu]ser \w+ logged out" 
 
 Use `--num-blocks` to limit the number of start/stop blocks processed.
 
-### Complex filtering with Python expressions
+
+### Output Control
+
+#### Default Output
+
+By default, klp prints every event that was recognized and shows both the key and the value of each field.
+Colors are used for syntax-highlighting (use `--no-color` to turn this off or `--theme` to select different colors).
+
+
+#### Key Selection
+To select specific fields, use `--keys`/`-k` and a comma-separated list of keys:
+
+```bash
+$ klp -k timestamp,message mylog.txt
+timestamp="2022-09-05T06:25:27.465Z" message="poll_read: waiting on response"
+```
+
+Or specify fields to exclude using `--keys-not`/`-K`.
+
+Use `--plain`/`-p` to leave out the keys and only print the values:
+
+```bash
+$ cat mylog.txt | klp -k -p timestamp,message
+2022-09-05T06:25:27.465Z poll_read: waiting on response
+```
+
+#### Common Output Format
+
+Often the time stamp, log level and message are the most important fields.
+Use `--common`/`-c` to print them, without showing the names of the keys (only the values):
+
+```bash
+$ klp -c mylog.txt
+2023-01-17T07:55:48.233Z DEBUG preparing query s190578: select * from applications
+2023-01-17T07:55:48.234Z DEBUG executing statement s190578 with parameters: []
+2023-01-17T07:55:48.656Z DEBUG preparing query s190579: select * from oauthproviderconfig where id = 0
+2023-01-17T07:55:48.657Z DEBUG executing statement s190579 with parameters: []
+2023-01-17T07:55:48.662Z DEBUG preparing query s190580: select * from oauthproviderconfig where id = 0
+2023-01-17T07:55:48.663Z DEBUG executing statement s190580 with parameters: []
+```
+
+klp can add some additional, synthetic fields to the event.
+For performance reasons this is only done if you explicitly list these keys using `--keys`/`-k`.
+
+* `_klp_timedelta`: time span between this event and the event before (hours:minutes:seconds.microseconds)
+* `_klp_ts`: timestamp showing when the event was shown by klp
+
+#### Output Formats
+klp supports multiple output formats:
+
+- `default`: Colored and formatted logfmt
+- `logfmt`: Plain logfmt
+- `jsonl`: JSON Lines (shortcut: `-J`)
+- `json`: JSON
+- `tsv`: Tab separated values 
+- `psv`: Pipe separated values
+- `sqlite`: SQLite database
+
+Select an output format with `--output-format` or `-F`:
+
+```bash
+$ klp -F jsonl app.log > output.jsonl
+$ klp -F sqlite -o app.db app.log
+```
+
+#### Custom Formatting
+Customize your output with:
+
+- `--header`: Add text before the first event
+- `--footer`: Add text after the last event
+- `--output-event-sep`: Specify the separator between events
+- `--output-sep`: Specify the separator between fields
+- `--indent`, `--no-indent`: Control indentation
+- `--expand`: Expand newlines
+- `--no-wrap`: Disable line wrapping
+- `--each-key`: Print each key on a separate line
+
+For advanced formatting, use:
+- `--output-template`: Use Python f-strings
+- `--output-eval`: Use Python code
+
+```bash
+$ klp --output-template "{timestamp} - {level}: {message}" app.log
+```
+
+#### Output File Control
+Use `--output-file`/`-o` to direct output to a file instead of stdout:
+
+```bash
+# Write formatted output to a file
+$ klp app.log -o processed.log
+
+# Convert to JSON for later processing
+$ klp app.log -F json -o events.json
+
+# Write events to file but show stats on screen
+$ klp app.log -s -F jsonl -o events.jsonl
+```
+
+Note: Using `--output-file` disables color output by default, unless explicitly requested with `--color`.
+
+## Advanced Usage
+
+### Complex Filtering with Python Expressions
 
 Use `--where EXPR` to only process lines where the given Python expression is True.
 All fields of the event are available by their key name.
@@ -456,104 +543,14 @@ The whole event dict can be accessed as the underscore `_`.
 By default, errors are ignored, because some keys might not be available in all lines. 
 Use `--debug` to print exceptions.
 
-This can be be combined with other filters, such as `--grep` and grep context lines.
+This can be combined with other filters, such as `--grep` and grep context lines.
 
-### Limit the output
-
-Use `--max-events`/`-m` to limit the output to the given number of events.
-This is useful to avoid being flooded with lots and lots of output.
-
-### Custom output formatting
-
-Customize your output further with these options:
-
-- `--header`: Add text before the first event
-- `--footer`: Add text after the last event
-- `--output-event-sep`: Specify the separator between events
-- `--output-sep`: Specify the separator between fields
-
-Experiment with `--indent`, `--no-indent`, `--expand`, `--no-wrap`, and `--each-key` to change the formatting of the output.
-
-For advanced output formatting, use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code:
-
-```bash
-$ klp --output-template "{timestamp} - {level}: {message}" app.log
-$ klp --output-eval "{ts} {level.upper()} {'#'*len(msg)}" app.log
-```
-
-Several Python modules can be used in these expressions.
-Use `--help-python` to show the list.
-
-```bash
-$ klp --help-python
-```
-
-The following additional functions are available:
-
-* `extract_json()`: return the first JSON object or array in a given string as a string
-* `extract_email()`: return the first email address in a given string
-* `extract_fqdn()`: return the first FQDN in a given string
-* `extract_ipv4()`: return the first IPv4 address in a given string
-* `extract_regex()`: return first part of the string matching a regex
-* `extract_url()`: return the first URL in a given string
-* `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
-* `guess_datetime()`: convert a string into a Python datetime object
-* `pprint_json()`: pretty print JSON data
-
-### Output formats
-
-- `default`: default: Colored and formatted logfmt
-- `logfmt`: Plain logfmt
-- `jsonl`: JSON Lines (shortcut: `-J`)
-- `json`: JSON
-- `tsv`: Tab separated values 
-- `psv`: Pipe separated values
-- `sqlite`: SQLite database (use `-o` to specify the filename, use `--output-tablename` to create a different table than `data`)
-
-Select an output format with `--output-format` or `-F`:
-
-```bash
-$ klp -F jsonl app.log > output.jsonl
-$ klp -F sqlite -o app.db app.log
-```
-
-The JSONL and TSV output formats are useful for further processing with tools like `jq` or `awk`.
-
-### Output file control
-
-Use `--output-file`/`-o` to direct klp's output to a file instead of stdout.
-
-```bash
-# Write formatted output to a file
-$ klp app.log -o processed.log
-
-# Convert to JSON for later processing
-$ klp app.log -F json -o events.json
-
-# Create a SQLite database from logs
-$ klp app.log -k time,level,msg -F sqlite -o metrics.db
-
-# Write events to file but show stats on screen
-$ klp app.log -s -F jsonl -o events.jsonl
-Events shown: 8043 (100% of 8043 lines seen)
-Time span shown: 2024-02-05T19:58:59Z to 2024-02-05T20:19:20Z
-```
-
-Note that using `--output-file` disables color output by default, unless explicitly requested with `--color`. 
-
-### Advanced input transformations using Python code
+### Advanced Input Transformations Using Python Code
 
 Use `--input-exec`/`-I` to specify Python code that transforms the event after it has been parsed.
 This allows you to introduce new fields based on existing ones, or even develop an ad-hoc parser for an unknown format.
-All functions available for output formatting (see above) are available here as well:
 
-```bash
-$ klp examples/mylog.logfmt -I "msg_len=len(msg); del msg"
-$ klp examples/alertmanager.logfmt -I "path=(extract_path(file) or None)" -k path
-$ klp -f line BGL_2k.log -I "ts=guess_datetime(line.split()[4]); msg=' '.join(line.split()[5:])" -c
-```
-
-#### Special variables
+#### Special Variables
 
 When using `--input-exec`/`-I`, there are three special variables available for more complex transformations.
 Each has an equivalent short form using only underscores:
@@ -573,29 +570,9 @@ $ klp app.log -I "_klp_event_add={'new_field': 'value', 'updated_field': msg.upp
 $ klp app.log -I "_klp_events=[{'split': word} for word in msg.split()]"
 ```
 
-The `_klp_event_add` (or `__`) approach is useful when you want to modify the event in-place or add new fields:
+#### Helper Functions
 
-```bash
-# Add length fields for all string values
-$ klp app.log -I "__={k+'_len': len(v) for k,v in _.items() if isinstance(v, str)}"
-```
-
-The `_klp_events` (or `___`) list is useful when you need to split one event into multiple events:
-
-```bash
-# Split a comma-separated list into separate events
-$ klp app.log -I "_klp_events=[{'item': item.strip()} for item in msg.split(',')]"
-
-# Create events for each key-value pair
-$ klp app.log -I "_klp_events=[{'key': k, 'value': v} for k,v in _.items()]"
-
-# Create events for headers in a Markdown file
-$ klp README.md -f line -I "___=[{'header': line, 'len': len(line) } if line.startswith('#') else None]"
-```
-
-Several helper functions are available:
-
-#### `parse_kv()`
+##### `parse_kv()`
 
 `parse_kv(text, sep=None, kvsep="=")`: Parse key-value pairs from a string and merge them into the current event
   - `text`: Input string containing key-value pairs
@@ -613,25 +590,14 @@ time="2024-02-08T15:04:05Z" msg="GET /search" query="user=alice&role=admin" user
 $ echo 'time=2024-02-08T15:04:05Z msg="System stats" metrics="cpu:95.2 mem:87.5 disk:45.8"' | \
   klp -I '__=parse_kv(metrics, kvsep=":")'
 time="2024-02-08T15:04:05Z" msg="System stats" metrics="cpu:95.2 mem:87.5 disk:45.8" cpu="95.2" mem="87.5" disk="45.8"
-
-# Parse semicolon-separated configuration
-$ echo 'time=2024-02-08T15:04:05Z msg="Session created" config="db=postgres;port=5432"' | \
-  klp -I '__=parse_kv(config, sep=";")'
-time="2024-02-08T15:04:05Z" msg="Session created" config="db=postgres;port=5432" db="postgres" port="5432"
 ```
 
-Particularly useful for:
-- Breaking URL query strings into fields
-- Parsing metrics or stats with custom key-value separators
-- Extracting configuration parameters
-- Converting any key-value formatted substring into top-level fields
-
-#### `sh()`
+##### `sh()`
 
 `sh(command, **kwargs)`: Execute a shell command and return its output
   - `command`: The shell command to execute
   - Returns the command's stdout as a string (stripped of trailing whitespace)
-  - Raises an exception if the command fails, so that the event is ignored (disable with `check=False`)
+  - Raises an exception if the command fails (disable with `check=False`)
   - Can be customized with subprocess.run keyword arguments
 
 ```bash
@@ -643,86 +609,107 @@ time=2024-02-08T15:04:05Z level=info msg="Deployment started" git_rev=62efbb3
 # Add system load information
 $ echo 'time=2024-02-08T15:04:05Z level=info msg="Health check"' | \
   klp -I '__={"load": sh("uptime").split("load average:")[-1].strip()}'
-time=2024-02-08T15:04:05Z level=info msg="Health check" load="13:14  up  2:30, 1 user, load averages: 2.39 1.96 1.90"
-
-# Look up hostname for IP addresses, ignore errors
-$ echo 'time=2024-02-08T15:04:05Z level=info msg="Connection from 8.8.8.8"' |   klp -I '__={"hostname": sh(f"host {msg.split()[-1]}"), check=False}' --debug
-time=2024-02-08T15:04:05Z level=info msg="Connection from 8.8.8.8" hostname="8.8.8.8.in-addr.arpa domain name pointer dns.google."
 ```
 
-Note: Use the `sh()` function very carefully, and only with trusted input.
-Untrusted input can lead to command injection vulnerabilities.
+Note: Use the `sh()` function carefully, and only with trusted input to avoid command injection vulnerabilities.
 
-## Complementary tools
+### Custom Output Formatting using Python
 
-These tools aren't specialized on log files, but useful to post-process or view klp`s output, particularly the JSONL or TSV formats:
+For advanced output formatting, use `--output-template` (with Python f-strings) or `--output-eval` which allows Python code:
 
-- [jq](https://jqlang.github.io/jq/): a lightweight and flexible command-line JSON processor
+```bash
+$ klp --output-template "{format_datetime(timestamp)} - {extract_ipv4(message) or 'no IP'}" app.log
+$ klp --output-eval "f'{ts} {pprint_json(data)}'" app.log
+```
+
+Several Python modules can be used in output expressions.
+Use `--help-python` to show the list of available modules and functions.
+
+The following additional functions are available:
+
+* `extract_json()`: return the first JSON object or array in a given string as a string
+* `extract_email()`: return the first email address in a given string
+* `extract_fqdn()`: return the first FQDN in a given string
+* `extract_ipv4()`: return the first IPv4 address in a given string
+* `extract_regex()`: return first part of the string matching a regex
+* `extract_url()`: return the first URL in a given string
+* `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
+* `guess_datetime()`: convert a string into a Python datetime object
+* `pprint_json()`: pretty print JSON data
+
+
+## Additional Resources
+
+### Complementary Tools
+
+These tools aren't specialized for log files but are useful to post-process or view klp's output, particularly the JSONL or TSV formats:
+
+#### General Purpose Data Processing
+- [jq](https://jqlang.github.io/jq/): A lightweight and flexible command-line JSON processor
 - [jaq](https://github.com/01mf02/jaq): A jq clone focussed on correctness, speed, and simplicity
-- [yq](https://github.com/mikefarah/yq): yq is a portable command-line YAML, JSON, XML, CSV, TOML and properties processor
-- [Miller](https://github.com/johnkerl/miller): like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
-- [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
+- [yq](https://github.com/mikefarah/yq): A portable command-line YAML, JSON, XML, CSV, TOML and properties processor
+- [Miller](https://github.com/johnkerl/miller): Like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [dasel](https://github.com/TomWright/dasel): Select, put and delete data from JSON, TOML, YAML, XML and CSV files with a single tool. Supports conversion between formats
+
+#### CSV Processing
+- [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
+- [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
+
+#### Format Conversion and Viewing
 - [jc](https://github.com/kellyjonbrazil/jc): CLI tool and python library that converts the output of popular command-line tools, file-types, and common strings to JSON, YAML, or Dictionaries
 - [jtbl](https://github.com/kellyjonbrazil/jtbl): CLI tool to convert JSON and JSON Lines to terminal, CSV, HTTP, and markdown tables
 - [ov](https://github.com/noborus/ov): Feature-rich terminal-based text viewer. It is a so-called terminal pager.
-- [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
-- [Benthos](https://github.com/benthosdev/benthos.git): high performance and resilient stream processor, able to connect various sources and sinks in a range of brokering patterns and perform hydration, enrichments, transformations and filters on payloads
+- [Benthos](https://github.com/benthosdev/benthos.git): High performance and resilient stream processor, able to connect various sources and sinks
 
+#### Processing TSV Output
 The TSV format can be processed by spreadsheet software and common Unix tools:
 
-- [cut](https://man7.org/linux/man-pages/man1/cut.1.html): uses tab separator by default
+- [cut](https://man7.org/linux/man-pages/man1/cut.1.html): Uses tab separator by default
 - [AWK](https://man7.org/linux/man-pages/man1/awk.1p.html): `-F$'\t'`
 - [sort](https://man7.org/linux/man-pages/man1/sort.1.html): `-t$'\t'`
 - [column](https://man7.org/linux/man-pages/man1/column.1.html): `-s$'\t' -N timestamp,log_level,message -J` (can convert to JSON)
 - [Vim](https://www.vim.org): `:set list    :set listchars=tab:>-`
-- [Pandas](https://pandas.pydata.org):  `pd.read_table()`
+- [Pandas](https://pandas.pydata.org): `pd.read_table()`
 - [SQLite](https://www.sqlite.org):
-
 ```sql
 sqlite> .mode tabs
 sqlite> .import data.tsv data
 sqlite> select date(timestamp) as day, count(*) from data group by day;
 ```
 
-## Alternatives
+### Alternative Tools
 
-If you don't like klp, maybe try one of these other tools:
+If klp doesn't meet your needs, here are some alternatives:
 
 #### Logfmt CLI/TUI
-
-- [hutils](https://github.com/brandur/hutils): the original logfmt tools (Ruby)
-- [lfq](https://github.com/mattcontinisio/lfq): command-line logfmt processor (Go). Quite similar to klp. Faster, but fewer features
+- [hutils](https://github.com/brandur/hutils): The original logfmt tools (Ruby)
+- [lfq](https://github.com/mattcontinisio/lfq): Command-line logfmt processor (Go). Quite similar to klp. Faster, but fewer features
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line (Rust). Flexible query syntax
 - [pq](https://github.com/iximiuz/pq): Parse and Query log files as time series
-- [Kelpie](https://github.com/Yord/klp): small, fast, and magical command-line data processor similar to pxi, jq, mlr, and awk
-- [lnav](https://github.com/tstack/lnav): very advanced log file viewer. Files-only (no streaming), lots of formats
+- [Kelpie](https://github.com/Yord/klp): Small, fast, and magical command-line data processor similar to pxi, jq, mlr, and awk
+- [lnav](https://github.com/tstack/lnav): Very advanced log file viewer. Files-only (no streaming), lots of formats
 
 #### JSON CLI/TUI
-
-- [fblog](https://github.com/brocode/fblog): small command-line JSON Log viewer (Rust). Lua filters.
-- [json-log-viewer](https://github.com/gistia/json-log-viewer): powerful terminal based viewer for JSON logs using ncurses (JavaScript). TUI
+- [fblog](https://github.com/brocode/fblog): Small command-line JSON Log viewer (Rust). Lua filters.
+- [json-log-viewer](https://github.com/gistia/json-log-viewer): Powerful terminal based viewer for JSON logs using ncurses (JavaScript). TUI
 - [Toolong](https://github.com/Textualize/toolong): A terminal application to view, tail, merge, and search log files, plus JSONL (Python). TUI
-- [sumoshell](https://github.com/SumoLogic/sumoshell): collection of utilities to improve analyzing log files (Go). Successor is angle-grinder.
+- [sumoshell](https://github.com/SumoLogic/sumoshell): Collection of utilities to improve analyzing log files (Go). Successor is angle-grinder.
 - [l'oGGo](https://github.com/aurc/loggo): A powerful terminal app for structured log streaming (Go). TUI
 - [hl](https://github.com/pamburus/hl): A log viewer that translates JSON logs into human-readable representation (Rust)
 - [logdissect](https://github.com/dogoncouch/logdissect.git): CLI utility and Python module for analyzing log files and other data (Python). Multiple input formats
 
-#### Unstructured logs CLI/TUI
-
+#### Unstructured Logs CLI/TUI
 - [tailspin](https://github.com/bensadeh/tailspin): A log file highlighter (Rust)
-- [GoAccess](https://goaccess.io): real-time web log analyzer and interactive viewer that runs in a terminal in *nix systems or through your browser
+- [GoAccess](https://goaccess.io): Real-time web log analyzer and interactive viewer that runs in a terminal in *nix systems or through your browser
 
 #### Web UI
-
-- [Klogg](https://github.com/variar/klogg): multi-platform GUI application that helps browse and search through long and complex log files
-- [frontail](https://github.com/mthenw/frontail/): streaming logs to the browser
+- [Klogg](https://github.com/variar/klogg): Multi-platform GUI application that helps browse and search through long and complex log files
+- [frontail](https://github.com/mthenw/frontail/): Streaming logs to the browser
 - [LogScreen](https://github.com/soorajshankar/logScreen): Loglines can be messy, read it better on a browser, `command | npx logscreen`
 - [Logdy](https://logdy.dev): Web based real-time log viewer. Stream ANY content to a web UI with autogenerated filters. Parse any format with TypeScript
 
-#### Large scale
-
-- [OpenObserve](https://github.com/openobserve/openobserve): cloud-native observability platform built specifically for logs, metrics, traces, analytics, RUM, designed to work at petabyte scale
+#### Large Scale Solutions
+- [OpenObserve](https://github.com/openobserve/openobserve): Cloud-native observability platform built specifically for logs, metrics, traces, analytics, RUM, designed to work at petabyte scale
 - [Graylog](https://github.com/Graylog2/graylog2-server): Free and open log management
-- [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): horizontally-scalable, highly-available, multi-tenant log aggregation system
+- [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): Horizontally-scalable, highly-available, multi-tenant log aggregation system
