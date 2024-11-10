@@ -592,6 +592,17 @@ $ echo 'time=2024-02-08T15:04:05Z msg="System stats" metrics="cpu:95.2 mem:87.5 
 time="2024-02-08T15:04:05Z" msg="System stats" metrics="cpu:95.2 mem:87.5 disk:45.8" cpu="95.2" mem="87.5" disk="45.8"
 ```
 
+##### `parse_jsonl()`
+
+`parse_jsonl(line)`: Returns a dictionary with key-value pairs representing the fields in the first JSON object found.
+- `line`: A string that includes JSON somewhere in it.
+
+```bash
+# Example log line with JSON content
+$ echo 'time=2024-02-08T15:04:05Z level=info msg="User details" data={"user_id": "12345", "action": "login"}' |   klp -f line -I '__=parse_jsonl(line)'
+line="time=2024-02-08T15:04:05Z level=info msg=\"User details\" data={\"user_id\": \"12345\", \"action\": \"login\"}" user_id=12345 action=login
+```
+
 ##### `sh()`
 
 `sh(command, **kwargs)`: Execute a shell command and return its output
