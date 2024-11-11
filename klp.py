@@ -684,6 +684,149 @@ def parse_logfmt(text):
     }
 
 
+def split_startswith(s, pattern):
+    r"""
+    Split a string into parts where each part starts with text matching the specified regex pattern.
+    First part contains text before first match only if it's non-empty. Each subsequent part extends
+    from its starting pattern until the start of the next pattern.
+
+    Args:
+        s (str): Input string that may contain newlines
+        pattern (str): Regular expression pattern that should match the start of each part
+
+    Returns:
+        List[str]: List of string parts, including:
+                  - Text before first match (if non-empty)
+                  - Parts starting with pattern match extending until next match
+                  - Final part from last match to end of string
+                  If pattern matches empty string, returns [s].
+                  If pattern doesn't match anywhere, returns [s].
+
+    Examples:
+        >>> split_startswith("A.\nB.\nC.\n", r"\.\n")
+        ['A', '.\nB', '.\nC', '.\n']
+
+        >>> split_startswith("axbxcx", "x")
+        ['a', 'xb', 'xc', 'x']
+
+        >>> split_startswith("x", "x")
+        ['x']
+
+        >>> split_startswith("xx", "x")
+        ['x', 'x']
+
+        >>> split_startswith("aaaa", "aa")
+        ['aa', 'aa']
+
+        >>> split_startswith("abc", ".*")
+        ['abc']
+
+        >>> split_startswith("", r"\.\n")
+        ['']
+    """
+    # Handle empty pattern or patterns that could match empty string
+    if not pattern or re.match(pattern, ""):
+        return [s]
+
+    # If string is empty, return list with empty string
+    if not s:
+        return [""]
+
+    # Find all starting positions of the pattern
+    matches = list(re.finditer(pattern, s))
+
+    # If no matches found, return the entire string
+    if not matches:
+        return [s]
+
+    result = []
+
+    # Add the part before first match only if it's non-empty
+    if matches[0].start() > 0:
+        result.append(s[: matches[0].start()])
+
+    # Process each match
+    for i, match in enumerate(matches):
+        start = match.start()
+        # If this is the last match, go to the end of string
+        if i == len(matches) - 1:
+            result.append(s[start:])
+        else:
+            # Otherwise, go until the start of the next match
+            next_start = matches[i + 1].start()
+            result.append(s[start:next_start])
+
+    return result
+
+
+def split_endswith(s, pattern):
+    r"""
+    Split a string into parts where each part ends with text matching the specified regex pattern.
+    Uses greedy (non-overlapping) matching and preserves the pattern in the output.
+
+    Args:
+        s (str): Input string that may contain newlines
+        pattern (str): Regular expression pattern that should match the end of each part
+
+    Returns:
+        List[str]: List of string parts, where each part ends with text matching the pattern.
+                  If pattern matches empty string, returns [s].
+                  If pattern doesn't match anywhere, returns [s].
+                  Includes any remaining text after the last match.
+
+    Examples:
+        >>> split_endswith("A.\nB.\nC.\n", r"\.\n")
+        ['A.\n', 'B.\n', 'C.\n']
+
+        >>> split_endswith("A.\nB.\nC", r"\.\n")
+        ['A.\n', 'B.\n', 'C']
+
+        >>> split_endswith("aaaa", "aa")
+        ['aa', 'aa']
+
+        >>> split_endswith("x", "x")
+        ['x']
+
+        >>> split_endswith("axbxcx", "x")
+        ['ax', 'bx', 'cx']
+
+        >>> split_endswith("abc", ".*")
+        ['abc']
+
+        >>> split_endswith("", r"\.\n")
+        ['']
+    """
+    # Handle empty pattern or patterns that could match empty string
+    if not pattern or re.match(pattern, ""):
+        return [s]
+
+    # If string is empty, return list with empty string
+    if not s:
+        return [""]
+
+    # Add end anchor to ensure we match at the end of each part
+    regex = f".*?({pattern})"
+    matches = list(re.finditer(regex, s, re.DOTALL))
+
+    # If no matches found, return the entire string
+    if not matches:
+        return [s]
+
+    # Build result from matches
+    result = []
+    last_end = 0
+
+    for match in matches:
+        result.append(s[last_end : match.end()])
+        last_end = match.end()
+
+    # Add remaining text if any
+    if last_end < len(s):
+        result.append(s[last_end:])
+
+    return result
+
+
 def parse_kv(text, sep=None, kvsep="="):
     """
     Parse a string into key-value pairs based on given separators.
@@ -1010,6 +1153,8 @@ EXPORTED_GLOBALS = build_globals_dict(
     + [
         format_datetime,
         guess_datetime,
+        split_startswith,
+        split_endswith,
         parse_kv,
         parse_logfmt,
         parse_jsonl,
@@ -1545,6 +1690,12 @@ class EStr(str):
 
     def guess_datetime(self):
         return guess_datetime(self)
+
+    def split_startswith(self, pattern):
+        return split_startswith(self, pattern)
+
+    def split_endswith(self, pattern):
+        return split_endswith(self, pattern)
 
     def parse_kv(self, sep=None, kvsep="="):
         return parse_kv(self, sep, kvsep)
