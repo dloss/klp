@@ -547,8 +547,23 @@ This can be combined with other filters, such as `--grep` and grep context lines
 
 ### Advanced Input Transformations Using Python Code
 
-Use `--input-exec`/`-I` to specify Python code that transforms the event after it has been parsed.
-This allows you to introduce new fields based on existing ones, or even develop an ad-hoc parser for an unknown format.
+Use `--input-exec`/`-I` to transform events using Python code. The code is executed for each event, with all event fields available as Python variables. New fields can be created by assigning to variables, and any field can be modified or deleted.
+
+Here's a simple example that adds some derived fields:
+
+```bash
+# Create uppercase message, extract status code, and add severity level
+$ klp app.log -I 'msg_upper = message.upper(); status = int(response[:3]); severity = "error" if status >= 500 else  "info"'
+
+# Multiple transformations can be chained using additional -I options
+$ klp app.log -I 'msg_upper = message.upper()' -I 'word_count = len(message.split())'
+
+# Process line-based log, extract fields, and clean up
+$ klp app.log -f line -I 'ts,level,msg = line.split(maxsplit=2); del line' -I 'level = level.strip("[]")'
+```
+
+This shows how to use Python code to transform events, create new fields through assignment, chain multiple transformations, and remove intermediate fields that are no longer needed. 
+Each transformation has access to fields created by previous ones.
 
 #### Special Variables
 
@@ -570,7 +585,57 @@ $ klp app.log -I "_klp_event_add={'new_field': 'value', 'updated_field': msg.upp
 $ klp app.log -I "_klp_events=[{'split': word} for word in msg.split()]"
 ```
 
+#### Text Column Processing with `cols()`
+
+When using `--input-exec`/`-I`, any string value in your event (whether from the original parsed event or created during processing) can be split into columns using the `cols()` method.
+This is especially useful for processing fixed-format logs or extracting information from complex field values.
+
+Background info: This method is available, because the variables for the event keys are not simple strings but an enhanced string type with additional methods, `.cols()` being one of them.
+
+```python
+cols(column_spec, sep=None, outsep=" ")
+```
+
+- `column_spec`: One or more column selectors (see below)
+- `sep`: Optional separator between input columns (defaults to whitespace)
+- `outsep`: String used to join columns within each selector (defaults to space)
+
+Column selectors can be:
+- Single index: `"0"` or `0` (first column)
+- Multiple indices: `"0,2"` (first and third columns, joined)
+- Slice: `"1:3"` (second and third columns, joined)
+- Negative indices: `"-2"` (second-to-last column)
+- Mix of these: `"-2,2,4:"` (combines columns in each argument)
+
+Multiple arguments return a list instead of a string.
+So with Python's tuple unpacking, you can create multiple new keys from just one `cols()` call:
+
+```bash
+# Split log line into timestamp, level, and message (rest of the line)
+$ klp app.log -f line -I 'ts,level,msg=line.cols("0,1", "2", "3:")'
+
+# Extract information from a complex message field
+$ klp myapp.logfmt -I 'user,action=message.cols("1,2", "3:", sep="|")'
+```
+
+Example inputs/outputs to explain the column spec syntax: 
+
+```python
+line = "alpha beta gamma delta epsilon"
+line.cols(0)          # Returns "alpha"
+line.cols("0,2")      # Returns "alpha gamma"
+line.cols(0, 2)       # Returns ["alpha", "gamma"]
+line.cols("1:3")      # Returns "beta gamma"
+line.cols(1, "-2,2,4:", 3)  # Returns ["beta", "delta gamma epsilon", "delta"]
+```
+
+This method can be called on any string field in your event. 
+Out-of-range indices are silently ignored, returning an empty string for invalid selections.
+
 #### Helper Functions
+
+When using `--input-exec`, you have access to a variety of helper functions designed for common log processing tasks. The full list of available functions and modules can be viewed using `klp --help-python`.
+Here are some that need more explanation:
 
 ##### `parse_kv()`
 
