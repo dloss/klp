@@ -361,18 +361,38 @@ They work with all input formats and can be combined with other timestamp-relate
 Use `--mark-gaps` to visually separate events that are far apart in time:
 
 ```bash
-$ klp --mark-gaps 1h app.log
+$ klp prometheus.logfmt -c --mark-gaps 1h
+2024-02-05T11:00:02.081Z info Deleting obsolete block
+_______________________________ time gap: 1:59:59.984000 ________________________________
+2024-02-05T13:00:02.065Z info write block
+2024-02-05T13:00:02.075Z info Head GC completed
+2024-02-05T13:00:02.076Z info Creating checkpoint
+2024-02-05T13:00:02.235Z info WAL checkpoint complete
+_______________________________ time gap: 1:59:59.666000 ________________________________
+2024-02-05T15:00:01.901Z info write block
+2024-02-05T15:00:01.905Z info Head GC completed
+_______________________________ time gap: 1:59:59.984000 ________________________________
+2024-02-05T17:00:01.889Z info write block
+2024-02-05T17:00:01.893Z info Head GC completed
 ```
 
 #### Event Condensing
-The `--fuse` option allows you to condense events that occur close together in time:
+The `--fuse` option allows you to condense events that occur close together in time.
 
 ```bash
-$ klp --fuse 5s app.log
+$ klp -c --fuse 1h prometheus.logfmt
+1 2024-02-05T15:00:01.901Z info write block
+3 2024-02-05T15:00:01.905Z info Head GC completed
+_______________________________ time gap: 1:59:59.984000 ________________________________
+1 2024-02-05T17:00:01.889Z info write block
+9 2024-02-05T17:00:02.111Z info Deleting obsolete block
+_______________________________ time gap: 1:59:59.782000 ________________________________
+1 2024-02-05T19:00:01.893Z info write block
+3 2024-02-05T19:00:01.897Z info Head GC completed
 ```
 
-This will show only the first and last events for each group of events that occur within 5 seconds of each other.
-
+This shows only the first and last events for each group of events that occur within 1 hour of each other.
+From the event number in the first column you can see how many events were left out.
 
 ### Search and Filter
 
