@@ -36,14 +36,26 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 
 ## Key Features
 
-- **Focus on the Essentials**: Instantly view the crucial fields: timestamp, log level, and message.
-- **Selective Key Display**: Choose to include or exclude specific keys in your output.
-- **Powerful Filtering**: Filter logs by log level or specific time ranges, e.g. to focus on new events. Employ Python expressions to specify complex filters.
-- **Advanced Grep Capabilities**: Search whole lines or specific keys. Show context lines to see what happened right before or after an interesting event. Use built-in regexes for URLs, IPs, file paths or common errors.
-- **Overview Stats**: Get a bird's eye view of your logs with a statistics page summarizing event count, keys, log levels, and time span. Or with a map of log levels.
-- **Customizable Output**: Expand newlines, print each key on a separate line, or specify your own output templates, using Python [f-strings](https://realpython.com/python-f-strings/) or expressions
-- **Enhanced Readability**: Enjoy colored and pretty-printed output for easier reading.
-- **Supports custom parsers in Python** to handle non-standard file formats.
+## Key Features
+
+- **Focus on Essentials**: 
+Instantly highlight key fields: timestamp, log level, and message.
+- **Advanced Time Analysis**:
+Track time gaps in logs, fuse bursts of events, and filter by complex time ranges.
+- **Smart Filtering**:
+Filter by log level, time spans, or using Python expressions. 
+- **Pattern Search**:
+Grep in specific fields and show context lines. 
+Use a wide range of built-in patterns to search or extract URLs, IPs, paths, email addresses, errors, and more. 
+- **Visual Insights**:
+Get statistics about the number of events and the occuring log levels, visually mark time gaps between events and see a succinct map of log level patterns.
+- **Enhanced Readability**:
+Color-coding, per-key display, expandable newlines and custom output templates using Python expressions. 
+- **Format Conversion**:
+Convert between common formats like logfmt, JSON, JSONL, CSV, TSV and SQLite.
+- **Powerful Log Transformation**:  
+Transform unstructured logs into structured data using Python code and convenient helper methods.
+Create simple ad-hoc parsers for your own custom formats, add proper field names and save the result in any of the supported output formats.
 
 ## Getting Started
 
