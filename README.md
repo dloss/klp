@@ -1,6 +1,6 @@
 # klp
 
-_Kool Logfmt Parser_
+_Kool Log Parser_
 
 klp is a lightweight, command-line interface (CLI) tool for analyzing and understanding structured logs in various formats.
 Designed for software developers involved in debugging and troubleshooting.
