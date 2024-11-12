@@ -561,8 +561,6 @@ This can be combined with other filters, such as `--grep` and grep context lines
 
 Use `--input-exec`/`-I` to transform events using Python code. The code is executed for each event, with all event fields available as Python variables. New fields can be created by assigning to variables, and any field can be modified or deleted.
 
-Here's a simple example that adds some derived fields:
-
 ```bash
 # Create uppercase message, extract status code, and add severity level
 $ klp app.log -I 'msg_upper = message.upper(); status = int(response[:3]); severity = "error" if status >= 500 else  "info"'
@@ -602,7 +600,7 @@ $ klp app.log -I "_klp_events=[{'split': word} for word in msg.split()]"
 When using `--input-exec`/`-I`, any string value in your event (whether from the original parsed event or created during processing) can be split into columns using the `cols()` method.
 This is especially useful for processing fixed-format logs or extracting information from complex field values.
 
-Background info: This method is available, because the variables for the event keys are not simple strings but an enhanced string type with additional methods, `.cols()` being one of them.
+Background: This method is available because the event key variables are an enhanced string type, which includes additional methods, such as `.cols()`.
 
 ```python
 cols(column_spec, sep=None, outsep=" ")
