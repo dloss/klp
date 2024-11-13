@@ -36,8 +36,6 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
 
 ## Key Features
 
-## Key Features
-
 - **Focus on Essentials**: 
 Instantly highlight key fields: timestamp, log level, and message.
 - **Advanced Time Analysis**:
