@@ -2554,6 +2554,12 @@ def parse_args():
         help="execute Python code to transform event after input parsing",
     )
     input.add_argument(
+        "--max-block-lines",
+        type=positive_int,
+        default=10000,
+        help="Maximum lines to buffer in a block before forcing yield (default: 10000)",
+    )
+    input.add_argument(
         "--parallel",
         type=positive_int_or_zero,
         help="Enable parallel processing with specified number of processes. "
@@ -3301,6 +3307,8 @@ def extract_blocks(
 ):
     """
     Extracts blocks of lines from a file iterator based on regex patterns.
+    For streaming input with no patterns specified, yields lines immediately without buffering.
+    For pattern-based streaming, limits block size to prevent unbounded memory growth.
 
     Args:
     file_iterator: An iterator yielding lines from a file
@@ -3309,7 +3317,13 @@ def extract_blocks(
 
     Yields:
     Tuples of (block_lines, start_line_number, end_line_number)
+    Each yielded line or block maintains its original line numbering from the input.
+    For streaming input with no patterns, yields single-line blocks immediately.
+    For pattern-based extraction, yields complete blocks once their boundaries are detected
     """
+
+    # Maximum lines to accumulate before forcing a yield when no stop pattern seen
+    MAX_BLOCK_LINES = 10000
 
     def matches_any_pattern(line, patterns):
         if not patterns:
@@ -3318,6 +3332,13 @@ def extract_blocks(
             return any(re.search(pattern, line) for pattern in patterns)
         except (re.error, TypeError):
             return False
+
+    if not any([start_after, start_with, stop_before, stop_with]):
+        for i, line in enumerate(file_iterator, start=1):
+            if not isinstance(line, str):
+                continue
+            yield [line], i, i
+        return
 
     blocks_found = 0
     started = not (start_after or start_with)
@@ -3351,6 +3372,13 @@ def extract_blocks(
         current_block.append(line)
         if start_line_number is None:
             start_line_number = i
+
+        # Force yield if block exceeds max size
+        if len(current_block) >= MAX_BLOCK_LINES:
+            yield current_block, start_line_number, i
+            current_block = []
+            start_line_number = None
+            continue
 
         if matches_any_pattern(line, stop_with):
             yield current_block, start_line_number, i
