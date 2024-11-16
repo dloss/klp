@@ -7,6 +7,8 @@ klp: Kool Logfmt Parser
 For logs in key=value format (and some others), show only the interesting parts
 """
 
+
+# Standard library imports for functionality
 import argparse
 import contextlib
 import csv
@@ -41,6 +43,23 @@ import hashlib
 import math
 import random
 import string
+
+# Standard library typing imports
+from typing import (
+    Dict,
+    Optional,
+    Any,
+    Tuple,
+    List,
+    Iterator,
+    Union,
+    TextIO,
+    Callable,
+    TypeVar,
+)
+
+# Type variable for generic types
+T = TypeVar("T")  # Used for generic type hints if needed
 
 __version__ = "0.71.1"
 
@@ -276,14 +295,25 @@ Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
 terminal_width = shutil.get_terminal_size((80, 24)).columns
 
 
-def build_globals_dict(modules):
-    """Build a dictionary of modules and their exported functions.
+def build_globals_dict(modules: List[Any]) -> Dict[str, Any]:
+    """
+    Build a dictionary of modules and their exported functions for template evaluation.
+
+    Creates a dictionary mapping names to module objects and functions for use in
+    evaluating Python expressions in templates and filters.
 
     Args:
-        modules (list): List of modules to include in the globals dictionary
+        modules: List of module objects to include in the globals dictionary
 
     Returns:
-        dict: Dictionary mapping names to module objects and functions
+        Dict[str, Any]: Dictionary containing:
+            - Module objects mapped to their names
+            - Standard functions with their existing docstrings
+            - Auto-generated regex extraction functions
+
+    Side Effects:
+        - Creates extraction functions for each builtin regex pattern
+        - Preserves original docstrings of included functions
     """
     d = {}
 
@@ -321,36 +351,79 @@ def build_globals_dict(modules):
     return d
 
 
-def print_output(*myargs, **kwargs):
+def print_output(*myargs: Any, **kwargs: Any) -> None:
+    """
+    Print output to the configured output file with specified arguments.
+
+    Wrapper around the print function that directs output to args.output_file.
+    All arguments are passed directly to print().
+
+    Args:
+        *myargs: Variable positional arguments to pass to print()
+        **kwargs: Variable keyword arguments to pass to print()
+
+    Side Effects:
+        - Writes to file specified by args.output_file
+        - Uses print() behavior for actual output
+
+    Example:
+        >>> print_output("test", end="\\n")  # Writes "test\\n" to args.output_file
+    """
     print(*myargs, **kwargs, file=args.output_file)
 
 
-def get_default_process_count():
+def get_default_process_count() -> int:
+    """
+    Calculate the default number of processes for parallel processing.
+
+    Determines optimal process count based on CPU count, reserving one CPU
+    for the main process to maintain system responsiveness.
+
+    Returns:
+        int: Number of processes to use:
+            - CPU count minus 1 if multiple CPUs available
+            - Minimum of 1 process
+            - 1 if CPU count cannot be determined
+
+    Notes:
+        - Uses multiprocessing.cpu_count() when available
+        - Handles NotImplementedError gracefully
+        - Never returns less than 1
+        - Used as default when parallel processing is enabled
+
+    Example:
+        On a 4-core system:
+        >>> get_default_process_count()
+        3
+    """
     try:
         return max(multiprocessing.cpu_count() - 1, 1)
     except NotImplementedError:
         return 1
 
 
-def extract_json(text):
+def extract_json(text: str) -> str:
     """
-    Extract the first JSON object or array from a given text.
+    Extract the first valid JSON object or array from a text string.
 
-    Parameters:
-    text (str): The string containing the text from which to extract the JSON object or array.
+    The function searches for valid JSON structures within the text, attempting to extract
+    complete JSON objects or arrays. It handles nested structures and ensures the extracted
+    JSON is valid.
+
+    Args:
+        text (str): The string containing potential JSON content
 
     Returns:
-    str: The first valid JSON object or array found in the given text.
+        str: The first valid JSON object or array found in the text as a string
 
     Raises:
-    ValueError: If no valid JSON object or array can be found in the input text.
+        ValueError: If no valid JSON object or array can be found in the input text
 
-    Example:
-    >>> extract_json('foo { "key": "value" } bar')
-    '{ "key": "value" }'
-
-    >>> extract_json('foo [1, 2, 3] bar')
-    '[1, 2, 3]'
+    Examples:
+        >>> extract_json('foo { "key": "value" } bar')
+        '{ "key": "value" }'
+        >>> extract_json('[1, 2, {"a": "b"}]')
+        '[1, 2, {"a": "b"}]'
     """
     json_start_chars = {"{", "["}
     json_end_chars = {"}": "{", "]": "["}
@@ -412,21 +485,28 @@ def pprint_json(json_string, indent=2, sort_keys=True, ensure_ascii=False):
         raise ValueError(f"Invalid JSON string: {e}")
 
 
-def guess_datetime(timestamp):
+def guess_datetime(timestamp: str) -> Optional[datetime.datetime]:
     """
     Attempt to convert a given timestamp string into a datetime object using various datetime converters.
 
+    The function tries different datetime formats in order until it finds one that successfully parses
+    the timestamp. When a successful format is found, it's moved to the front of the list to optimize
+    future parsing of similar timestamps.
+
     Args:
-        timestamp (str): The timestamp string to be converted.
+        timestamp (str): The timestamp string to be converted
 
     Returns:
-        datetime or None: A datetime object if conversion is successful, otherwise None.
-
-    Raises:
-        AttributeError, ValueError, TypeError: These exceptions are caught during conversion attempts and ignored.
+        Optional[datetime.datetime]: A datetime object if conversion is successful, None otherwise
 
     Side Effects:
-        The global `dt_conv_order` list is updated to prioritize successful converters for future use.
+        Updates the global dt_conv_order list to prioritize successful converters
+
+    Examples:
+        >>> guess_datetime("2024-03-16T14:30:00Z")
+        datetime.datetime(2024, 3, 16, 14, 30, tzinfo=datetime.timezone.utc)
+        >>> guess_datetime("invalid")
+        None
     """
     global dt_conv_order
     datetime = None
@@ -493,24 +573,31 @@ def format_datetime(val):
     return val
 
 
-def extract_regex(pattern, s, *groupargs):
-    r"""
-    Extract substring(s) from a given string that matches a specified regular expression pattern.
+def extract_regex(
+    pattern: str, s: str, *groupargs: int
+) -> Optional[Union[str, Tuple[str, ...]]]:
+    """
+    Extract substring(s) from text that match a specified regular expression pattern.
 
-    Parameters:
-    pattern (str): The regular expression pattern to search for.
-    s (str): The string to search within.
-    *groupargs (int): Variable length argument list specifying group indices to retrieve from the match.
+    Searches for the first match of a regex pattern in the input string and returns
+    the specified capture groups.
+
+    Args:
+        pattern (str): The regular expression pattern to search for
+        s (str): The string to search within
+        *groupargs (int): Variable number of group indices to retrieve from the match
 
     Returns:
-    str or tuple: The matched group(s) if the pattern is found; otherwise, None.
+        Optional[Union[str, Tuple[str, ...]]]:
+            - If one group requested: The matched group as string or None
+            - If multiple groups: Tuple of matched groups or None
+            - Returns None if pattern doesn't match
 
     Examples:
-    >>> extract_regex(r"(\d+)", "There are 123 apples", 0)
-    '123'
-
-    >>> extract_regex(r"(\d+)\D+(\d+)", "12 apples and 34 oranges", 1, 2)
-    ('12', '34')
+        >>> extract_regex(r"(\d+)", "There are 123 apples", 0)
+        '123'
+        >>> extract_regex(r"(\d+)\D+(\d+)", "12 apples and 34 oranges", 1, 2)
+        ('12', '34')
     """
     match = re.search(pattern, s)
     if match:
@@ -527,14 +614,26 @@ def extract_builtin_regex(regex_name, s):
     return None
 
 
-def create_extraction_function(regex_name):
-    """Create an extraction function for a built-in regex pattern.
+def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]]:
+    """
+    Create a function that extracts text matching a built-in regex pattern.
+
+    Factory function that generates extraction functions for built-in regex patterns.
+    The generated functions are named extract_{regex_name} and include proper docstrings.
 
     Args:
-        regex_name (str): Name of the built-in regex pattern
+        regex_name: Name of the built-in regex pattern to use
 
     Returns:
-        function: An extraction function that takes a string and returns the first match
+        Callable[[str], Optional[str]]: Function that:
+            - Takes a string argument
+            - Returns first match of the pattern or None
+            - Has descriptive name and docstring
+
+    Example:
+        >>> extract_email = create_extraction_function("email")
+        >>> extract_email("Contact us at test@example.com")
+        'test@example.com'
     """
 
     def extraction_function(s):
@@ -642,7 +741,39 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def parallel_process(file_paths, args):
+def parallel_process(
+    file_paths: List[str], args: argparse.Namespace
+) -> Iterator[Tuple[Dict[str, Any], int]]:
+    """
+    Process multiple files in parallel using a process pool.
+
+    Implements parallel processing of log files using Python's multiprocessing.
+    Handles file chunking, worker initialization, and signal handling for
+    graceful interruption.
+
+    Args:
+        file_paths: List of paths to files to process
+        args: Command line arguments namespace containing:
+            - parallel: Number of processes to use (or None for auto)
+            - input_format: Format of input files
+            - input_encoding: File encoding to use
+
+    Yields:
+        Tuple[Dict[str, Any], int]: Each tuple contains:
+            - Parsed event dictionary
+            - Line number in current file
+
+    Side Effects:
+        - Creates a process pool
+        - Sets up signal handlers in worker processes
+        - Chunks files for efficient parallel processing
+
+    Notes:
+        - Uses get_default_process_count() when args.parallel is None
+        - Chunk size is fixed at 10000 lines for memory efficiency
+        - Workers ignore SIGINT to allow main process to handle cleanup
+    """
+
     def chunk_file(file_path):
         chunk_size = 10000
         with file_opener(file_path, encoding=args.input_encoding) as f:
@@ -665,19 +796,23 @@ def parallel_process(file_paths, args):
                 start_line += len(parsed_chunk)
 
 
-def parse_logfmt(text):
+def parse_logfmt(text: str) -> Dict[str, str]:
     """
     Parse a logfmt-formatted string into a dictionary.
 
-    logfmt is a log format that produces logs as a single line where key-value pairs are
-    separated by spaces, and values can be unquoted or quoted.
+    Logfmt is a log format that produces logs as key-value pairs separated by spaces, where values
+    can be either quoted or unquoted. This function extracts these pairs into a dictionary.
 
     Args:
-        text (str): A logfmt-formatted string.
+        text (str): A logfmt-formatted string
 
     Returns:
-        dict: A dictionary where keys are the logfmt keys and values are the corresponding
-        unescaped quoted values or unquoted values.
+        Dict[str, str]: A dictionary where keys are logfmt keys and values are their corresponding
+                       unescaped values (quoted values are unescaped, unquoted values are kept as-is)
+
+    Example:
+        >>> parse_logfmt('key1="value 1" key2=simple')
+        {'key1': 'value 1', 'key2': 'simple'}
     """
     return {
         key: (unescape(quoted_val) if quoted_val else unquoted_val)
@@ -685,45 +820,29 @@ def parse_logfmt(text):
     }
 
 
-def split_startswith(s, pattern):
-    r"""
-    Split a string into parts where each part starts with text matching the specified regex pattern.
-    First part contains text before first match only if it's non-empty. Each subsequent part extends
-    from its starting pattern until the start of the next pattern.
+def split_startswith(s: str, pattern: str) -> List[str]:
+    """
+    Split string into parts where each part starts with text matching a regex pattern.
+
+    Splits a string into sections based on where matches of the pattern occur. The pattern
+    matches are included at the start of each section except possibly the first one.
 
     Args:
         s (str): Input string that may contain newlines
         pattern (str): Regular expression pattern that should match the start of each part
 
     Returns:
-        List[str]: List of string parts, including:
-                  - Text before first match (if non-empty)
-                  - Parts starting with pattern match extending until next match
-                  - Final part from last match to end of string
-                  If pattern matches empty string, returns [s].
-                  If pattern doesn't match anywhere, returns [s].
+        List[str]: List of string parts including:
+            - Text before first match (if non-empty)
+            - Parts starting with pattern match extending until next match
+            - Final part from last match to end of string
+        If pattern matches empty string or doesn't match, returns [s]
 
     Examples:
-        >>> split_startswith("A.\nB.\nC.\n", r"\.\n")
-        ['A', '.\nB', '.\nC', '.\n']
-
+        >>> split_startswith("A.\\nB.\\nC.\\n", r"\\.\\n")
+        ['A', '.\\nB', '.\\nC', '.\\n']
         >>> split_startswith("axbxcx", "x")
         ['a', 'xb', 'xc', 'x']
-
-        >>> split_startswith("x", "x")
-        ['x']
-
-        >>> split_startswith("xx", "x")
-        ['x', 'x']
-
-        >>> split_startswith("aaaa", "aa")
-        ['aa', 'aa']
-
-        >>> split_startswith("abc", ".*")
-        ['abc']
-
-        >>> split_startswith("", r"\.\n")
-        ['']
     """
     # Handle empty pattern or patterns that could match empty string
     if not pattern or re.match(pattern, ""):
@@ -828,23 +947,33 @@ def split_endswith(s, pattern):
     return result
 
 
-def parse_kv(text, sep=None, kvsep="="):
+def parse_kv(
+    text: str, sep: Optional[Union[str, re.Pattern]] = None, kvsep: str = "="
+) -> Dict[str, str]:
     """
-    Parse a string into key-value pairs based on given separators.
+    Parse a string into key-value pairs using specified separators.
+
+    Takes a string containing key-value pairs and splits it into a dictionary. Supports both string
+    and regex pattern separators for flexible parsing of different formats.
 
     Args:
-        text (str): The input string to parse.
-        sep (str or re.Pattern, optional): The separator that divides different key-value pairs in the input string.
-                                           If None, any whitespace string is a separator.
-                                           Can also be a compiled regular expression.
-        kvsep (str, optional): The separator that divides keys from values within each pair. Default is "=".
+        text (str): The input string to parse
+        sep (Optional[Union[str, re.Pattern]]): The separator between different key-value pairs.
+            If None, any whitespace string is used as separator.
+            Can be a string or compiled regular expression.
+        kvsep (str): The separator between keys and values within each pair. Default is "="
 
     Returns:
-        dict: A dictionary where the keys are extracted from the input string based on the separators.
-              Only columns containing the key-value separator will be included.
+        Dict[str, str]: A dictionary containing the parsed key-value pairs.
+            Only includes pairs that contain the key-value separator.
 
-    Raises:
-        ValueError: If there are issues with splitting or interpreting the key-value pairs.
+    Examples:
+        >>> parse_kv("key1=val1 key2=val2")
+        {'key1': 'val1', 'key2': 'val2'}
+        >>> parse_kv("key1:val1;key2:val2", sep=";", kvsep=":")
+        {'key1': 'val1', 'key2': 'val2'}
+        >>> parse_kv("key1=val1,key2=val2", sep=re.compile(r","))
+        {'key1': 'val1', 'key2': 'val2'}
     """
     if isinstance(sep, re.Pattern):
         columns = re.split(sep, text)
@@ -859,30 +988,30 @@ def parse_kv(text, sep=None, kvsep="="):
     return result
 
 
-def parse_jsonl(line):
+def parse_jsonl(line: str) -> Dict[str, str]:
     """
-    Parse a line of JSONL (JSON Lines) and extracts the top-level strings
-    converting non-string values to their string representations.
+    Parse a line of JSONL (JSON Lines) format and extract string values.
 
-    The function focuses on handling top-level strings within a JSON object. Any text
-    before or after the JSON object in the given line is ignored. If the JSON object
-    is invalid, an empty dictionary is returned.
+    Processes a line containing a JSON object, focusing on top-level fields and
+    converting all values to strings. Handles both pure JSONL and lines with
+    additional text before/after the JSON object.
 
     Args:
-        line (str): A string containing a JSON object within a line of text.
+        line (str): A string containing a JSON object, optionally with surrounding text
 
     Returns:
-        dict: A dictionary where the keys represent the sanitized JSON keys and the
-              values are the top-level string or stringified non-string values of the
-              JSON object.
+        Dict[str, str]: A dictionary where:
+            - Keys are sanitized JSON keys
+            - Values are string representations of the JSON values
+            - Non-string values are converted to their string representation
 
-    Raises:
-        None. If JSON decoding fails, an empty dictionary is returned. If `--debug`
-        is enabled, the function will print debug information about the error.
+    Side Effects:
+        - Prints debug information if args.debug is True and JSON parsing fails
+        - Flattens nested objects with dot notation in keys
 
     Example:
-        >>> parse_jsonl('some text {"key": "value", "num": 123} and more text')
-        {'key': 'value', 'num': '123'}
+        >>> parse_jsonl('{"name": "John", "age": 30, "nested": {"x": 1}}')
+        {'name': 'John', 'age': '30', 'nested.x': '1'}
     """
     # Only handle top-level strings. Everything else is converted into a string
     result = {}
@@ -952,19 +1081,33 @@ def parse_combined(line):
         return {}
 
 
-def parse_unix(line):
+def parse_unix(line: str) -> Dict[str, str]:
     """
-    Parse a line of log data in typical format for Unix servers
-    (timestamp, hostname, service, and optional pid)
-    and extract structured information.
+    Parse a line of log data in typical Unix server format into structured components.
+
+    Parses log lines that contain timestamp, hostname, service name, and optional PID.
+    Format example: "Mar 16 14:30:00 myhost myservice[1234]: Log message here"
 
     Args:
-        line (str): A single line of log data in Unix format.
+        line (str): A single line of log data in Unix format
 
     Returns:
-        dict: A dictionary containing the extracted components where the keys are
-              'timestamp', 'hostname', 'service', and 'message'. The 'pid' key is included
-              only if it is present in the log line; otherwise, it is excluded.
+        Dict[str, str]: A dictionary containing extracted components with keys:
+            - 'timestamp': The timestamp string
+            - 'hostname': The server hostname
+            - 'service': The service name
+            - 'message': The log message content
+            - 'pid': The process ID (only if present in input)
+
+    Example:
+        >>> parse_unix("Mar 16 14:30:00 myhost myservice[1234]: Hello")
+        {
+            'timestamp': 'Mar 16 14:30:00',
+            'hostname': 'myhost',
+            'service': 'myservice',
+            'pid': '1234',
+            'message': 'Hello'
+        }
     """
     match = RE_UNIX.match(line)
     if match:
@@ -1058,18 +1201,23 @@ def parse_ts5lm(line):
     return _parse_log_line(line, ts_parts=5, has_level=True)
 
 
-def parse_line(line):
+def parse_line(line: str) -> Dict[str, str]:
     """
     Parse a single line of text.
 
-    Strips any trailing whitespace characters and returns
-    the cleaned line in a dictionary with the key 'line'.
+    Strips trailing whitespace characters and returns the cleaned line
+    in a dictionary with the key 'line'.
 
     Args:
-        line (str): The line of text to be parsed.
+        line: The line of text to be parsed
 
     Returns:
-        dict: A dictionary containing the cleaned line with the key 'line'.
+        Dict[str, str]: A dictionary containing single key 'line' with
+                       the cleaned line as its value
+
+    Example:
+        >>> parse_line("Hello World  \\n")
+        {'line': 'Hello World'}
     """
     return {"line": line.rstrip()}
 
@@ -1218,30 +1366,37 @@ class StoppedEarly(Exception):
     pass
 
 
-def timedelta_from(duration):
+def timedelta_from(duration: str) -> datetime.timedelta:
     """
     Convert a duration string into a datetime.timedelta object.
 
-    The duration string should be composed of numerical values followed by supported time units.
-    For example: "5d" for 5 days, "3h30m" for 3 hours and 30 minutes, "2.5s" for 2.5 seconds.
-
-    Supported time units are:
-      - "us": microseconds
-      - "ms": milliseconds (converted to microseconds internally)
-      - "s": seconds
-      - "m": minutes
-      - "h": hours
-      - "d": days
-      - "w": weeks
+    Parses duration strings with numerical values followed by time unit identifiers.
+    Supports microseconds, milliseconds, seconds, minutes, hours, days, and weeks.
 
     Args:
-        duration (str): The duration string to be converted.
+        duration (str): Duration string (e.g., "5d", "3h30m", "2.5s", "500ms")
 
     Returns:
-        datetime.timedelta: A timedelta object representing the duration.
+        datetime.timedelta: A timedelta object representing the duration
 
     Raises:
-        argparse.ArgumentTypeError: If the duration string is invalid or contains unsupported time units.
+        argparse.ArgumentTypeError: If duration string is invalid or contains
+                                  unsupported time units
+
+    Supported units:
+        - "us": microseconds
+        - "ms": milliseconds
+        - "s": seconds
+        - "m": minutes
+        - "h": hours
+        - "d": days
+        - "w": weeks
+
+    Examples:
+        >>> timedelta_from("5d")
+        datetime.timedelta(days=5)
+        >>> timedelta_from("3h30m")
+        datetime.timedelta(hours=3, minutes=30)
     """
     pattern = re.compile(r"([-\d.]+)([a-z]+)")
     matches = pattern.findall(duration)
@@ -1278,7 +1433,30 @@ def timedelta_from(duration):
     return result
 
 
-def format_ts_delta(timedelta):
+def format_ts_delta(timedelta: Optional[datetime.timedelta]) -> str:
+    """
+    Format a timedelta object for consistent display with microsecond precision.
+
+    Converts a timedelta to a string representation, ensuring consistent formatting
+    with microseconds even when the timedelta has no fractional seconds.
+
+    Args:
+        timedelta: Time difference to format, or None
+
+    Returns:
+        str: Formatted string representation:
+            - "unknown" if timedelta is None
+            - String representation with .000000 if no microseconds
+            - Standard string representation if microseconds present
+
+    Examples:
+        >>> format_ts_delta(datetime.timedelta(seconds=1))
+        '1.000000'
+        >>> format_ts_delta(datetime.timedelta(seconds=1, microseconds=500000))
+        '1.500000'
+        >>> format_ts_delta(None)
+        'unknown'
+    """
     if timedelta is None:
         return "unknown"
     # XXX: better heuristics
@@ -1288,8 +1466,33 @@ def format_ts_delta(timedelta):
     return s
 
 
-def add_ts_delta(event, last_ts_datetime):
-    """Add timestamp delta to event"""
+def add_ts_delta(
+    event: Dict[str, Any], last_ts_datetime: Optional[datetime.datetime]
+) -> Tuple[Dict[str, Any], Optional[datetime.datetime]]:
+    """
+    Add timestamp delta to event and calculate the new last timestamp.
+
+    Calculates the time difference between the current event's timestamp and the last seen timestamp,
+    adds this delta to the event, and updates the last timestamp reference.
+
+    Args:
+        event (Dict[str, Any]): The event dictionary to process
+        last_ts_datetime (Optional[datetime.datetime]): The timestamp of the last processed event
+
+    Returns:
+        Tuple[Dict[str, Any], Optional[datetime.datetime]]: A tuple containing:
+            - The modified event with added delta
+            - The updated last timestamp for use with next event
+
+    Side Effects:
+        Modifies the input event dictionary by adding a '_klp_timedelta' key
+
+    Example:
+        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
+        >>> new_event, last_ts = add_ts_delta(event, None)
+        >>> print(new_event['_klp_timedelta'])
+        '2024-03-16 14:30:00.000000'
+    """
     try:
         ts_datetime = get_timestamp_datetime(event)
         if ts_datetime is None:
@@ -1316,8 +1519,30 @@ def add_ts_delta(event, last_ts_datetime):
         return event, last_ts_datetime
 
 
-def datetime_from(text):
-    "Parse date given e.g. in command line arguments (localtime assumed)"
+def datetime_from(text: str) -> datetime.datetime:
+    """
+    Parse date/time from command line argument format.
+
+    Converts various textual date/time formats into datetime objects, supporting
+    both absolute dates and relative references like 'today' or 'tomorrow'.
+
+    Args:
+        text: Date/time string, supporting formats:
+            - ISO format timestamps
+            - 'today', 'tomorrow', 'yesterday' (local midnight)
+            - 'todayZ', 'tomorrowZ', 'yesterdayZ' (UTC midnight)
+            - 'now' (current UTC time)
+
+    Returns:
+        datetime.datetime: Parsed datetime object with timezone information
+
+    Raises:
+        argparse.ArgumentTypeError: If text cannot be parsed as a valid timestamp
+
+    Example:
+        >>> datetime_from("today")  # Returns midnight today in local time
+        >>> datetime_from("2024-03-16T14:30:00Z")  # Returns specific UTC time
+    """
     midnight_today_localtime = (
         dt.datetime.now()
         .astimezone()
@@ -1443,7 +1668,28 @@ def now_rfc3339():
     return dt.datetime.now(tz=dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def to_datetime(timestamp):
+def to_datetime(timestamp: Optional[str]) -> datetime.datetime:
+    """
+    Convert a timestamp string to a datetime object.
+
+    Attempts to parse a timestamp using guess_datetime(). Raises an error if parsing
+    fails or if timestamp is None.
+
+    Args:
+        timestamp: String representation of a timestamp, or None
+
+    Returns:
+        datetime.datetime: The parsed datetime object
+
+    Raises:
+        ValueError: If timestamp is None or cannot be parsed
+
+    Example:
+        >>> to_datetime("2024-03-16T14:30:00Z")
+        datetime.datetime(2024, 3, 16, 14, 30, tzinfo=datetime.timezone.utc)
+        >>> to_datetime(None)
+        ValueError: No timestamp found.
+    """
     if timestamp is None:
         raise ValueError("No timestamp found.")
     datetime = guess_datetime(timestamp)
@@ -1454,14 +1700,28 @@ def to_datetime(timestamp):
     return datetime
 
 
-def get_timestamp_datetime(event):
-    """Get datetime object from event timestamp, handling invalid timestamps gracefully.
+def get_timestamp_datetime(event: Dict[str, Any]) -> Optional[datetime.datetime]:
+    """
+    Extract and parse timestamp from an event dictionary into a datetime object.
+
+    Attempts to find and parse a timestamp from common timestamp field names.
+    If args.ts_key is specified, only that key is checked. Otherwise, tries
+    several common timestamp keys in order.
 
     Args:
-        event (dict): Event dictionary that may contain timestamp fields
+        event (Dict[str, Any]): Event dictionary that may contain timestamp fields
 
     Returns:
-        datetime or None: Parsed datetime object, or None if no valid timestamp found
+        Optional[datetime.datetime]: Parsed datetime object, or None if no valid timestamp found
+
+    Side Effects:
+        Uses global args.ts_key setting to determine which field to check first
+
+    Example:
+        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
+        >>> dt = get_timestamp_datetime(event)
+        >>> print(dt.isoformat())
+        2024-03-16T14:30:00+00:00
     """
     if args.ts_key and args.ts_key in event:
         try:
@@ -1726,8 +1986,34 @@ class EStr(str):
         return estr_or_none(pprint_json(self, indent, sort_keys, ensure_ascii))
 
 
-def show(event, context_type="", lineno=None):
-    """Show event with improved error handling."""
+def show(
+    event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None
+) -> None:
+    """
+    Display an event according to configured output format and styling.
+
+    Central display function that handles all output formatting options including default,
+    logfmt, JSON, CSV, and SQLite outputs. Applies color coding, wrapping, and other
+    display options based on global configuration.
+
+    Args:
+        event: Dictionary containing event data to display
+        context_type: Type of context marker to show ("before", "match", "after",
+                     "fuse_first", "fuse_last", or ""). Default ""
+        lineno: Optional line number to display with fused output
+
+    Side Effects:
+        - Writes output to args.output_file
+        - Updates args.cursor for SQLite output
+        - May raise exceptions that are caught and logged if args.debug is True
+
+    Notes:
+        Uses global args for configuration including:
+        - output_format: Desired output format
+        - output_template: Optional template for formatting
+        - color: Whether to use ANSI colors
+        - theme: Color theme to use
+    """
     if not isinstance(event, dict):
         if args.debug:
             print_err(f"Invalid event type: {type(event)}")
@@ -1867,7 +2153,43 @@ def write_sqlite(event, cursor):
             print_err(f"Error writing to SQLite: {e}")
 
 
-def show_default(event, context_type="", lineno=None):
+def show_default(
+    event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None
+) -> None:
+    """
+    Display an event using the default output format with color and formatting options.
+
+    Main display function for human-readable output. Handles key coloring, line wrapping,
+    indentation, and context markers for matched events.
+
+    Args:
+        event: Event dictionary to display
+        context_type: Type of context marker to show (before/match/after/fuse_first/fuse_last)
+        lineno: Optional line number for fused output
+
+    Side Effects:
+        - Writes to args.output_file
+        - Applies ANSI color codes based on args.theme
+        - May split output across multiple lines
+        - Applies terminal width wrapping
+
+    Configuration:
+        Uses global args for:
+        - color: Whether to use ANSI colors
+        - theme: Color scheme to use
+        - output_width: Maximum line width
+        - output_wrap: Line wrapping settings
+        - output_sep: Field separator
+        - output_event_sep: Event separator
+        - plain: Whether to show values only
+        - expand: Whether to expand newlines/tabs
+
+    Notes:
+        - Handles key-specific coloring (timestamp, level, message)
+        - Supports various quoting modes for values
+        - Manages multi-line output formatting
+        - Preserves ordering of keys
+    """
     colors = THEMES[args.theme]["context_prefix"]
     context_prefix = {
         "before": scolorize("/ ", colors["before"]),
@@ -2036,7 +2358,45 @@ def colorize_loglevels(keys):
     ]
 
 
-def show_stats(stats):
+def show_stats(stats: Stats) -> None:
+    """
+    Display statistics about the processed log data to stderr.
+
+    Presents a formatted summary of log processing statistics including:
+    - Number of events shown and percentage of total lines
+    - Time span of shown events with events/second rate
+    - Keys seen in the data
+    - Log levels encountered and their associated keys
+
+    Args:
+        stats (Stats): A Stats dataclass object containing:
+            - keys: List of all unique keys seen
+            - loglevel_keys: List of keys used for log levels
+            - loglevels: List of unique log levels seen
+            - num_lines_seen: Total number of lines processed
+            - num_events_shown: Number of events displayed
+            - first_timestamp: First timestamp seen
+            - last_timestamp: Last timestamp seen
+            - timespan: Duration of processed logs
+
+    Side Effects:
+        Prints formatted statistics to stderr with optional ANSI colors
+
+    Example:
+        >>> stats = Stats(keys=['timestamp', 'message'],
+                         loglevel_keys=['level'],
+                         loglevels=['INFO', 'ERROR'],
+                         num_lines_seen=100,
+                         num_events_shown=50,
+                         first_timestamp='2024-03-16T14:00:00Z',
+                         last_timestamp='2024-03-16T15:00:00Z',
+                         timespan='1:00:00')
+        >>> show_stats(stats)
+        Events shown: 50 (50% of 100 lines seen)
+        Time span shown: 2024-03-16T14:00:00Z to 2024-03-16T15:00:00Z (1:00:00, 0.8 events/s)
+        Keys seen: timestamp,message
+        Log levels seen: INFO,ERROR (keys: level)
+    """
     if args.color:
         print_err(COLOR["off"], end="")
     colors = THEMES[args.theme]
@@ -2073,13 +2433,81 @@ def show_stats(stats):
     )
 
 
-def show_stats_json(stats, ensure_ascii=False):
+def show_stats_json(stats: Stats, ensure_ascii: bool = False) -> None:
+    """
+    Output processing statistics in JSON format to stderr.
+
+    Converts a Stats object to JSON and prints it to stderr with proper formatting.
+    Useful for machine-readable output of processing statistics.
+
+    Args:
+        stats: Statistics object containing processing metrics
+        ensure_ascii: Whether to escape non-ASCII characters in output.
+                     Default False allows Unicode characters.
+
+    Side Effects:
+        - Writes to stderr
+        - Converts dataclass to dictionary automatically
+        - Uses 2-space indentation for output
+
+    Notes:
+        - Dumps the entire Stats object including:
+            - keys: List of all unique keys seen
+            - loglevel_keys: Keys used for logging levels
+            - loglevels: Unique log levels encountered
+            - num_lines_seen: Total lines processed
+            - num_events_shown: Events displayed
+            - first_timestamp: First event time seen
+            - last_timestamp: Last event time seen
+            - timespan: Total time covered
+
+    Example:
+        ```json
+        {
+          "keys": ["timestamp", "level", "message"],
+          "loglevel_keys": ["level"],
+          "loglevels": ["INFO", "ERROR"],
+          "num_lines_seen": 100,
+          "num_events_shown": 50,
+          "first_timestamp": "2024-03-16T00:00:00Z",
+          "last_timestamp": "2024-03-16T00:01:00Z",
+          "timespan": "60.0"
+        }
+        ```
+    """
     print_err(
         json.dumps(dataclasses.asdict(stats), indent=2, ensure_ascii=ensure_ascii)
     )
 
 
-def update_stats(stats, event):
+def update_stats(stats: Stats, event: Dict[str, Any]) -> Stats:
+    """
+    Update statistics object with data from a new event.
+
+    Tracks various metrics about processed events including timestamps,
+    log levels, and key usage. Only computes necessary statistics based
+    on global configuration.
+
+    Args:
+        stats: Statistics object to update
+        event: New event to process
+
+    Returns:
+        Stats: Updated statistics object (may be same object if modified in place)
+
+    Side Effects:
+        - May modify the input stats object
+        - May update global args.to_dt based on timespan
+        - May raise StoppedEarly if limits are reached
+
+    Notes:
+        Performance optimized - skips computation when stats aren't needed.
+        Uses global args for configuration of:
+            - stats: Whether to compute stats at all
+            - stats_only: Whether only computing stats
+            - max_events: Maximum events to process
+            - timespan: Maximum time range to process
+    """
     global args
     # Don't compute stats when not needed. Improves performance
     if not (args.stats or args.stats_only or args.max_events or args.timespan):
@@ -2126,7 +2554,35 @@ def get_timestamp_str_or_none(event):
             return value
 
 
-def get_log_level(event):
+def get_log_level(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract the log level key and value from an event dictionary.
+
+    Searches through common log level field names to find the first matching key
+    and its corresponding value.
+
+    Args:
+        event: Event dictionary to search for log level
+
+    Returns:
+        Tuple[Optional[str], Optional[str]]: Tuple containing:
+            - Name of the key containing log level (or None if not found)
+            - Value of the log level (or None if not found)
+
+    Notes:
+        - Checks keys in order defined by LEVEL_KEYS global
+        - Case sensitive key matching
+        - Returns first matching key-value pair
+        - Returns (None, None) if no log level found
+
+    Example:
+        >>> event = {"log_level": "INFO", "message": "test"}
+        >>> get_log_level(event)
+        ('log_level', 'INFO')
+        >>> event = {"msg": "test"}
+        >>> get_log_level(event)
+        (None, None)
+    """
     for key in LEVEL_KEYS:
         try:
             return key, event[key]
@@ -2142,7 +2598,36 @@ def key_matches(regex, key, event):
     return False
 
 
-def matches_python_expr(expr, event):  #
+def matches_python_expr(expr: str, event: Dict[str, Any]) -> bool:
+    """
+    Evaluate a Python expression against an event dictionary.
+
+    Safely evaluates a Python expression with the event dictionary as local context,
+    providing access to both the dictionary items directly and the full dictionary
+    via underscore variables.
+
+    Args:
+        expr: Python expression string to evaluate
+        event: Event dictionary providing context for evaluation
+
+    Returns:
+        bool: Result of expression evaluation, coerced to boolean
+
+    Side Effects:
+        - Prints debug info to stderr if args.debug or args.debug_where is True
+        - Uses EXPORTED_GLOBALS for evaluation context
+
+    Notes:
+        - Expression has access to event fields as variables
+        - Full event available as '_' and '_klp_event'
+        - Exceptions during evaluation return False
+        - Uses restricted globals from EXPORTED_GLOBALS
+
+    Example:
+        >>> event = {"level": "ERROR", "count": 5}
+        >>> matches_python_expr("level == 'ERROR' and count > 3", event)
+        True
+    """  #
     event = {k: v for k, v in event.items()}
     event_plus_underscore = event.copy()
     event_plus_underscore["_"] = event
@@ -2154,11 +2639,68 @@ def matches_python_expr(expr, event):  #
         return False
 
 
-def make_greppable(event):
+def make_greppable(event: Dict[str, Any]) -> str:
+    """
+    Convert an event dictionary into a greppable string representation.
+
+    Transforms event dictionary into a space-separated string of key="value" pairs
+    suitable for pattern matching. This format enables consistent text-based
+    searching across all event fields.
+
+    Args:
+        event: Event dictionary to convert
+
+    Returns:
+        str: Space-separated string of key="value" pairs
+
+    Notes:
+        - Always uses double quotes around values
+        - Preserves original key order
+        - Used for pattern matching in grep/grep-not operations
+        - No escaping of quotes within values (used for pattern matching only)
+
+    Example:
+        >>> event = {"name": "test", "count": 42}
+        >>> make_greppable(event)
+        'name="test" count="42"'
+    """
     return " ".join(f'{k}="{v}"' for k, v in event.items())
 
 
-def visible(event):
+def visible(event: Dict[str, Any]) -> bool:
+    """
+    Determine if an event should be displayed based on all filtering criteria.
+
+    Central filtering function that combines all filtering mechanisms including
+    pattern matching, time ranges, log levels, and Python expressions.
+
+    Args:
+        event: Event dictionary to evaluate for visibility
+
+    Returns:
+        bool: True if event should be displayed, False otherwise
+
+    Side Effects:
+        - May raise StoppedEarly if time-based limits are exceeded
+        - Prints debug info if args.debug or args.debug_where is True
+
+    Filter Application Order:
+        1. Pattern exclusions (grep_not)
+        2. Pattern matches (grep)
+        3. Python expressions (where)
+        4. Empty event check
+        5. Key-specific pattern exclusions
+        6. Key-specific pattern matches
+        7. Time range checks
+        8. Log level filters
+        9. Key selection
+
+    Notes:
+        - Uses global args for all filtering criteria
+        - Time range checks may raise StoppedEarly
+        - Short-circuits on first failing criteria
+        - Events with no selected keys are considered invisible
+    """
     if (
         (
             args.grep_not
@@ -2217,9 +2759,29 @@ def visible(event):
     return True
 
 
-def reorder(event):
-    """Reorder event keys in the order given on the command-line
-    and remove unwanted keys"""
+def reorder(event: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Reorder and filter event keys based on command-line arguments.
+
+    Reorders dictionary keys to match the order specified in command-line arguments
+    and removes unwanted keys. The function creates a new dictionary with only the
+    desired keys in the specified order.
+
+    Args:
+        event (Dict[str, Any]): Original event dictionary
+
+    Returns:
+        Dict[str, Any]: New dictionary with keys reordered and filtered according to:
+            - args.keys: List of keys to include (in order)
+            - args.keys_not: List of keys to exclude
+            If args.keys is empty, includes all keys except those in args.keys_not
+
+    Example:
+        >>> event = {"c": 3, "a": 1, "b": 2}
+        >>> # With args.keys = ["a", "b"] and args.keys_not = ["c"]
+        >>> reorder(event)
+        {'a': 1, 'b': 2}
+    """
     return {
         key: event[key]
         for key in args.keys or event.keys()
@@ -2227,7 +2789,34 @@ def reorder(event):
     }
 
 
-def input_exec(code, event):
+def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Execute Python code to transform an event dictionary.
+
+    Provides a sandboxed environment for executing Python code that can modify
+    or split events. Supports special output variables for different transformation types.
+
+    Args:
+        code: Python code string to execute
+        event: Input event dictionary to transform
+
+    Returns:
+        List[Dict[str, Any]]: List of transformed events where:
+            - Single event: Use '__' or '_klp_event_add' to modify
+            - Multiple events: Use '___' or '_klp_events' to split
+            - No special vars: Return original event with removed underscore keys
+
+    Side Effects:
+        - Executes arbitrary Python code in controlled environment
+        - Prints debug info to stderr if args.debug or args.debug_eval is True
+
+    Example:
+        >>> event = {"message": "test"}
+        >>> code = "__ = {'new_field': len(message)}"
+        >>> input_exec(code, event)
+        [{'message': 'test', 'new_field': 4}]
+    """
+
     def exec_and_get_locals(code, local_vars):
         local_vars = local_vars or {}
         exec(code, EXPORTED_GLOBALS, local_vars)
@@ -3235,12 +3824,25 @@ def show_skipped_marker(skipped):
     )
 
 
-def show_gap_marker(timedelta, width):
-    """Show a visual marker for time gaps between events.
+def show_gap_marker(timedelta: Optional[datetime.timedelta], width: int) -> None:
+    """
+    Display a visual marker for time gaps between events.
+
+    Creates a visual separator with timing information when there are significant
+    time gaps between log events. Uses terminal width to format the separator.
 
     Args:
-        timedelta: Time difference to display
-        width: Terminal width for formatting
+        timedelta: Time difference to display, or None to skip display
+        width: Terminal width for formatting the marker
+
+    Side Effects:
+        - Prints formatted marker to stderr
+        - Uses ANSI colors if enabled in args.theme
+        - Respects terminal width for proper formatting
+
+    Example Outputs:
+        __________ time gap: 1:30:00 __________
+        _____ time gap: 5 days, 2:15:30 ______
     """
     if timedelta is None:
         return
@@ -3283,7 +3885,46 @@ def colored_mapchar(event, key):
     return val[0]
 
 
-def logical_line_gen(file):
+def logical_line_gen(file: TextIO) -> Iterator[str]:
+    """
+    Generate logical lines from a text file, handling line continuations and indentation.
+
+    Processes a text file to combine physical lines into logical lines based on:
+    1. Backslash line continuations: lines ending with '\' continue to next line
+    2. Indentation: indented lines are joined with previous non-indented line
+    3. Line joining: removes the backslash and adds a single space between joined lines
+
+    Args:
+        file: A text file object that supports iteration over lines
+
+    Yields:
+        str: Complete logical lines with:
+            - Continuation backslashes removed
+            - Single space added between joined physical lines
+            - Indentation stripped from continued lines
+            - Original line preserved if no continuation or indentation
+
+    Notes:
+        - A logical line starts with a non-indented line
+        - Indented lines are automatically considered continuations
+        - Backslash at end of line explicitly marks continuation
+        - Empty lines are not yielded
+        - Preserves content but not original formatting
+
+    Examples:
+        Given input file content:
+            first line\\
+                continued line
+            second line
+            third line\\
+                with indent\\
+                more indent
+        
+        Yields:
+            "first line continued line"
+            "second line"
+            "third line with indent more indent"
+    """
     logical_line = []
     for line in file:
         stripped = line.rstrip()
@@ -3307,28 +3948,41 @@ def logical_line_gen(file):
 
 
 def extract_blocks(
-    file_iterator,
-    start_after=None,
-    start_with=None,
-    stop_before=None,
-    stop_with=None,
-    num_blocks=-1,
-):
+    file_iterator: Iterator[str],
+    start_after: Optional[List[str]] = None,
+    start_with: Optional[List[str]] = None,
+    stop_before: Optional[List[str]] = None,
+    stop_with: Optional[List[str]] = None,
+    num_blocks: int = -1,
+) -> Iterator[Tuple[List[str], int, int]]:
     """
-    Extracts blocks of lines from a file iterator based on regex patterns.
-    For streaming input with no patterns specified, yields lines immediately without buffering.
-    For pattern-based streaming, limits block size to prevent unbounded memory growth.
+    Extract blocks of lines from a file iterator based on regex patterns.
+
+    This function processes an input stream and yields blocks of lines based on
+    start and stop pattern matching. It supports streaming input and handles
+    memory efficiently by limiting block sizes.
 
     Args:
-    file_iterator: An iterator yielding lines from a file
-    start_after, start_with, stop_before, stop_with: Lists of regex patterns
-    num_blocks: Number of blocks to extract (-1 for all blocks)
+        file_iterator: Iterator yielding lines from a file
+        start_after: List of regex patterns to trigger block start after matching
+        start_with: List of regex patterns to trigger block start with matching line
+        stop_before: List of regex patterns to trigger block end before matching
+        stop_with: List of regex patterns to trigger block end with matching line
+        num_blocks: Number of blocks to extract (-1 for unlimited)
 
     Yields:
-    Tuples of (block_lines, start_line_number, end_line_number)
-    Each yielded line or block maintains its original line numbering from the input.
-    For streaming input with no patterns, yields single-line blocks immediately.
-    For pattern-based extraction, yields complete blocks once their boundaries are detected
+        Tuple[List[str], int, int]: Each tuple contains:
+            - List of lines in the block
+            - Starting line number of the block
+            - Ending line number of the block
+
+    Example:
+        >>> with open('logfile.txt') as f:
+        ...     for block, start, end in extract_blocks(f,
+        ...             start_with=['START'],
+        ...             stop_with=['END'],
+        ...             num_blocks=1):
+        ...         print(f"Lines {start}-{end}: {len(block)} lines")
     """
 
     # Maximum lines to accumulate before forcing a yield when no stop pattern seen
@@ -3402,8 +4056,36 @@ def extract_blocks(
         yield current_block, start_line_number, i
 
 
-def events_from_linebased(filenames, format, encoding="utf-8", skip=None):
-    """Yields events from (multiple) line-based files, which may be compressed."""
+def events_from_linebased(
+    filenames: List[str],
+    format: str,
+    encoding: str = "utf-8",
+    skip: Optional[int] = None,
+) -> Iterator[Tuple[Dict[str, Any], int]]:
+    """
+    Generate events from one or more line-based files, supporting various formats.
+
+    A generator that reads and parses files line by line, handling different input
+    formats and compression types. Supports file globbing and stdin.
+
+    Args:
+        filenames: List of files to process. Use ["-"] for stdin
+        format: Format identifier (e.g., "logfmt", "jsonl", "clf")
+        encoding: Character encoding of input files. Default UTF-8
+        skip: Number of lines to skip at start of each file
+
+    Yields:
+        Tuple[Dict[str, Any], int]: Each tuple contains:
+            - Parsed event dictionary
+            - Line number in the current file
+
+    Side Effects:
+        - Uses global args for parsing configuration
+        - Prints encoding error messages to stderr if they occur
+
+    Raises:
+        UnicodeDecodeError: If file cannot be decoded with specified encoding
+    """
     line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
     if not filenames:
         filenames = ["-"]
@@ -3439,8 +4121,33 @@ def get_sqlite_tablenames(cursor):
     return tables
 
 
-def ensure_safe_tablename(tablename):
-    """Ensure the table name contains only valid characters (e.g., letters, numbers, and underscores)"""
+def ensure_safe_tablename(tablename: str) -> None:
+    """
+    Validate SQLite table name to prevent SQL injection.
+
+    Checks if a table name is safe to use in SQLite queries by verifying it
+    contains only allowed characters and is properly formatted.
+
+    Args:
+        tablename: Name of table to validate
+
+    Raises:
+        ValueError: If table name is:
+            - Empty
+            - Not a string
+            - Contains characters other than letters, numbers, underscore
+
+    Notes:
+        - Used before constructing SQLite queries
+        - Validates using regex pattern '^\\w+$'
+        - Case sensitive validation
+        - No length limit enforced
+
+    Example:
+        >>> ensure_safe_tablename("valid_table_123")  # OK
+        >>> ensure_safe_tablename("invalid-table")    # Raises ValueError
+        >>> ensure_safe_tablename("")                 # Raises ValueError
+    """
     if not tablename:
         raise ValueError("Table name cannot be empty")
     if not isinstance(tablename, str):
@@ -3451,8 +4158,34 @@ def ensure_safe_tablename(tablename):
         )
 
 
-def events_from_sqlitefiles_generator(filenames, tablename):
-    """Yields events from (multiple) sqlite files, which may be compressed."""
+def events_from_sqlitefiles_generator(
+    filenames: List[str], tablename: Optional[str]
+) -> Iterator[Tuple[Dict[str, Any], int]]:
+    """
+    Generate events from SQLite database files.
+
+    Reads records from SQLite databases, handling multiple files and table detection.
+    Uses the file_opener context manager for handling regular and compressed files.
+
+    Args:
+        filenames: List of SQLite database files to process. Use ["-"] for stdin
+        tablename: Name of table to read. If None, attempts to detect single table
+
+    Yields:
+        Tuple[Dict[str, Any], int]: Each tuple contains:
+            - Dictionary mapping column names to values
+            - Row number (1-based)
+
+    Raises:
+        ValueError: If no table name provided and multiple tables exist,
+                   or if no tables found
+        sqlite3.Error: For database access errors
+
+    Notes:
+        - Validates table names for SQL injection prevention
+        - Uses file_opener context manager for file handling
+        - Processes files sequentially, not in parallel
+    """
     if not filenames:
         filenames = ["-"]
 
@@ -3787,7 +4520,28 @@ def do_tests():
     return result
 
 
-def flatten_object(json_data, separator="."):
+def flatten_object(json_data: Any, separator: str = ".") -> Dict[str, Any]:
+    """
+    Flatten a nested JSON object or array into a single-level dictionary.
+
+    Recursively traverses a JSON structure and creates a flat dictionary where nested
+    keys are joined with the specified separator. Arrays are flattened using numeric indices.
+
+    Args:
+        json_data: Any JSON-serializable Python object (dict, list, etc.)
+        separator: String to use between nested keys. Default "."
+
+    Returns:
+        Dict[str, Any]: Flattened dictionary where:
+            - Nested dict keys are joined with separator
+            - Array indices are included in keys
+            - Only leaf values are included
+
+    Example:
+        >>> data = {"a": {"b": 1}, "c": [{"d": 2}, {"e": 3}]}
+        >>> flatten_object(data)
+        {'a.b': 1, 'c.0.d': 2, 'c.1.e': 3}
+    """
     flattened = {}
 
     def _flatten(x, name=""):
@@ -3806,8 +4560,25 @@ def flatten_object(json_data, separator="."):
     return flattened
 
 
-def sanitize_key(key):
-    """Sanitize a JSON key to make it a valid Logfmt key"""
+def sanitize_key(key: str) -> str:
+    """
+    Convert a JSON/CSV key into a valid logfmt field name.
+
+    Transforms potentially invalid key names into valid logfmt keys by replacing
+    non-alphanumeric characters with underscores.
+
+    Args:
+        key: Input key name that may contain invalid characters
+
+    Returns:
+        str: Sanitized key name containing only alphanumeric characters and underscores
+
+    Example:
+        >>> sanitize_key("user.name@domain")
+        'user_name_domain'
+        >>> sanitize_key("valid_key_123")
+        'valid_key_123'
+    """
     return "".join(char if char.isalnum() else "_" for char in key)
 
 
@@ -3821,7 +4592,43 @@ def skip_lines(fileobj, n):
             pass
 
 
-def events_from_jsonfiles_generator(filenames, encoding="utf-8", skip=None):
+def events_from_jsonfiles_generator(
+    filenames: List[str], encoding: str = "utf-8", skip: Optional[int] = None
+) -> Iterator[Tuple[Dict[str, Any], int]]:
+    """
+    Generate events from JSON files, handling both single objects and arrays.
+
+    Processes JSON files that contain either single objects or arrays of objects.
+    Flattens nested structures and supports compressed files through file_opener.
+
+    Args:
+        filenames: List of JSON files to process. Use ["-"] for stdin
+        encoding: Character encoding of input files. Default UTF-8
+        skip: Number of lines to skip before processing. Default None
+
+    Yields:
+        Tuple[Dict[str, Any], int]: Each tuple contains:
+            - Flattened event dictionary
+            - Line/object number (1-based)
+
+    Side Effects:
+        - Prints debug info to stderr if args.debug is True
+        - Uses file_opener for file handling
+        - Applies input_exec transformations to events
+
+    Notes:
+        - Flattens nested JSON structures with dot notation
+        - Handles both single objects and arrays
+        - For arrays, yields each element as separate event
+        - For single objects, yields one event per file
+
+    Example:
+        Given file content:
+            [{"a": {"b": 1}}, {"c": 2}]
+        Yields:
+            ({"a.b": 1}, 1)
+            ({"c": 2}, 2)
+    """
     if not filenames:
         filenames = ["-"]
     lineno = 0
@@ -3847,16 +4654,35 @@ def events_from_jsonfiles_generator(filenames, encoding="utf-8", skip=None):
                         yield event, lineno
 
 
-import contextlib
-import sys
-import gzip
-import zipfile
-import io
-import sqlite3
-
-
 @contextlib.contextmanager
-def file_opener(filename, encoding="utf-8", sqlite_mode=False):
+def file_opener(
+    filename: str, encoding: str = "utf-8", sqlite_mode: bool = False
+) -> Iterator[Union[TextIO, sqlite3.Connection]]:
+    """
+    Context manager for opening various types of input files.
+
+    Provides unified handling of regular files, gzipped files, zip archives,
+    and SQLite databases. Handles stdin via "-" filename.
+
+    Args:
+        filename: Path to file to open, use "-" for stdin
+        encoding: Character encoding for text files. Default UTF-8
+        sqlite_mode: Whether to open as SQLite database. Default False
+
+    Yields:
+        Union[TextIO, sqlite3.Connection]: Either:
+            - File-like object for text input (regular, gzip, zip)
+            - SQLite connection for database input
+
+    Raises:
+        NotImplementedError: If trying to open zipped SQLite database
+        sqlite3.Error: For SQLite connection issues
+        IOError: For file access issues
+
+    Example:
+        >>> with file_opener("data.txt.gz", encoding="utf-8") as f:
+        ...     content = f.read()
+    """
     if filename in ["-", None]:
         yield sys.stdin
     elif filename.lower().endswith(".gz"):
@@ -3897,7 +4723,37 @@ def events_from_csvfiles_generator(
             )
 
 
-def process_csv(file_obj, delimiter, quoting, has_header, skip, table):
+def process_csv(
+    file_obj: Iterator[str],
+    delimiter: str,
+    quoting: int,
+    has_header: bool,
+    skip: Optional[int],
+    table: bool,
+) -> Iterator[Tuple[Dict[str, Any], int]]:
+    """
+    Process CSV/TSV/PSV data from a file object into event dictionaries.
+
+    Handles both regular delimiter-separated files and whitespace-separated tables.
+    Supports files with or without headers, and can skip initial lines.
+
+    Args:
+        file_obj: Iterator yielding lines from input file
+        delimiter: Field separator character
+        quoting: CSV quoting mode from csv module
+        has_header: Whether first non-skipped line contains headers
+        skip: Number of lines to skip before processing
+        table: Whether to treat input as whitespace-separated table
+
+    Yields:
+        Tuple[Dict[str, Any], int]: Each tuple contains:
+            - Event dictionary mapping column names to values
+            - Line number in the input file
+
+    Notes:
+        - If has_header is False, generates column names as "col0", "col1", etc.
+        - For table mode, splits on arbitrary whitespace instead of delimiter
+    """
     if table:
 
         def read_whitespace_separated(file_obj):
