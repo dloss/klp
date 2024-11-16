@@ -3006,6 +3006,11 @@ def parse_args():
 
     other = parser.add_argument_group("other options")
     other.add_argument(
+        "--ignore-mtime",
+        action="store_true",
+        help="process files in command-line order instead of by modification time",
+    )
+    other.add_argument(
         "--selftest",
         action="store_true",
         help="run tests",
@@ -3041,6 +3046,10 @@ def parse_args():
     if sys.stdin.isatty() and not args.files and not args.selftest:
         parser.print_usage()
         sys.exit(0)
+
+    # Sort files by mtime unless ignored
+    if args.files and not args.ignore_mtime:
+        args.files = sort_files_by_mtime(args.files)
 
     args.color = (
         args.color
@@ -3928,6 +3937,36 @@ def events_from_datafiles_generator(filenames, encoding="utf-8", skip=None):
             events = apply_input_exec({"data": data})
             for event in events:
                 yield event, numlines
+
+
+def get_file_mtime(file_path):
+    """Get modification time of a file, handling special cases.
+
+    Args:
+        file_path (str): Path to the file
+
+    Returns:
+        float: Modification time as Unix timestamp, or float('inf') for stdin/non-existent
+    """
+    if file_path in ["-", None]:
+        return float("inf")  # Put stdin last
+    try:
+        return os.path.getmtime(file_path)
+    except (OSError, IOError):
+        print(f"Warning: Could not get mtime for {file_path}", file=sys.stderr)
+        return float("inf")  # Files with errors go last
+
+
+def sort_files_by_mtime(filenames):
+    """Sort files by modification time with older files first.
+
+    Args:
+        filenames (list): List of file paths
+
+    Returns:
+        list: Sorted list of file paths
+    """
+    return sorted(filenames, key=get_file_mtime)
 
 
 def main():
