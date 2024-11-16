@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Get the git repository root directory
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ $? -ne 0 ]; then
+    echo "Error: Not in a git repository"
+    exit 1
+fi
+
 # Check if a version number was provided
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <new_version>"
@@ -15,11 +22,14 @@ if ! [[ $NEW_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-# Check if klp.py exists
-if [ ! -f "klp.py" ]; then
-    echo "Error: klp.py not found in current directory"
+# Check if klp.py exists in the repository root
+if [ ! -f "$GIT_ROOT/klp.py" ]; then
+    echo "Error: klp.py not found in repository root"
     exit 1
 fi
+
+# Change to repository root for all operations
+cd "$GIT_ROOT" || exit 1
 
 # Update version in klp.py
 if ! sed -i.bak "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" klp.py; then
