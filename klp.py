@@ -76,12 +76,11 @@ RE_WHITESPACE = re.compile(r"\s")
 RE_EOL_OR_TAB = re.compile(r"\\n|\\t|\\r")
 RE_EXTRACT_KEY = re.compile(r"^(\w+)~(.*)")
 RE_CLF = re.compile(
-    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+)'
+    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+|-)'
 )
 RE_COMBINED = re.compile(
-    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+) "(?P<referrer>[^"]*)" "(?P<agent>[^"]*)"'
+    r'(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+|-) "(?P<referrer>[^"]*)" "(?P<agent>[^"]*)"'
 )
-
 RE_UNIX = re.compile(
     r"(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+"
     r"(?P<hostname>\S+)\s+"
