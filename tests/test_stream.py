@@ -1,6 +1,5 @@
 import os
 import json
-import pytest
 import subprocess
 import time
 from datetime import datetime

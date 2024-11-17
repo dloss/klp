@@ -1,8 +1,6 @@
 import os
-import re
 import pytest
 import subprocess
-from pathlib import Path
 
 
 # Helper to get paths relative to repo root

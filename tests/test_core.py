@@ -2,7 +2,6 @@ import pytest
 from klp import (
     parse_kv,
     split_startswith,
-    split_endswith,
     extract_blocks,
     extract_json,
     make_greppable,

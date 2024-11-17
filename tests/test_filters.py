@@ -3,9 +3,6 @@ import argparse
 import datetime as dt
 from klp import (
     visible,
-    get_timestamp_datetime,
-    get_log_level,
-    make_greppable,
     matches_python_expr,
 )
 
@@ -87,7 +84,7 @@ def test_visible_with_time_bounds(mock_args, sample_event):
     # Event after upper bound
     sample_event["timestamp"] = "2024-03-16T15:00:01Z"
     # Add a second file to prevent StoppedEarly
-    mock_args.files = ["file1.log", "file2.log"]  
+    mock_args.files = ["file1.log", "file2.log"]
     assert visible(sample_event) is False
 
     # Invalid timestamp

@@ -1,7 +1,7 @@
 import pytest
 import argparse
 import datetime as dt
-from klp import guess_datetime, format_datetime, timedelta_from, add_ts_delta
+from klp import guess_datetime, timedelta_from, add_ts_delta
 
 
 @pytest.fixture
