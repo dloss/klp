@@ -575,7 +575,7 @@ def format_datetime(val):
 def extract_regex(
     pattern: str, s: str, *groupargs: int
 ) -> Optional[Union[str, Tuple[str, ...]]]:
-    """
+    r"""
     Extract substring(s) from text that match a specified regular expression pattern.
 
     Searches for the first match of a regex pattern in the input string and returns
