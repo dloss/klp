@@ -1,5 +1,22 @@
-# tests/test_parsing.py
-from klp import parse_unix, parse_combined, parse_clf
+from klp import parse_logfmt, parse_jsonl, parse_unix, parse_combined, parse_clf
+
+
+def test_parse_logfmt():
+    """Test parsing of logfmt formatted strings."""
+    text = 'timestamp="2024-03-16T14:30:00Z" level=info msg="Starting service"'
+    expected = {
+        "timestamp": "2024-03-16T14:30:00Z",
+        "level": "info",
+        "msg": "Starting service",
+    }
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_jsonl():
+    """Test parsing of JSONL formatted strings."""
+    text = '{"timestamp": "2024-03-16T14:30:00Z", "level": "info", "msg": "Test"}'
+    expected = {"timestamp": "2024-03-16T14:30:00Z", "level": "info", "msg": "Test"}
+    assert parse_jsonl(text) == expected
 
 
 def test_parse_clf():
