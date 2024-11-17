@@ -7,7 +7,6 @@ klp: Kool Logfmt Parser
 For logs in key=value format (and some others), show only the interesting parts
 """
 
-
 # Standard library imports for functionality
 import argparse
 import contextlib

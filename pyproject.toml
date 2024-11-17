@@ -23,8 +23,33 @@ Documentation = "https://github.com/dloss/klp"
 Repository = "https://github.com/dloss/klp.git"
 Issues = "https://github.com/dloss/klp/issues"
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
 [tool.setuptools]
 py-modules = ["klp"]
 
 [tool.setuptools.dynamic]
 version = {attr = "klp.__version__"}
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=klp --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["klp"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "raise ValueError",
+]
