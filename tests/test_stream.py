@@ -53,8 +53,15 @@ def run_pipeline(generator_args=None, klp_args=None, duration=0.2):
         text=True,
     )
 
-    # Let it run for specified duration
+    # Add these lines after starting klp process
+    generator.stdout.flush()  # Force flush the generator output
+    time.sleep(0.1)  # Give processes time to start up
+
+    # Let it run
     time.sleep(duration)
+
+    # Add a small delay before cleanup
+    time.sleep(0.1)
 
     # Clean kill of generator will cause klp to exit when stdin closes
     generator.terminate()
