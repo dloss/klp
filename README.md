@@ -660,6 +660,12 @@ line.cols(1, "-2,2,4:", 3)  # Returns ["beta", "delta gamma epsilon", "delta"]
 This method can be called on any string field in your event. 
 Out-of-range indices are silently ignored, returning an empty string for invalid selections.
 
+As a shortcut, you can just call the field, which will call the `cols()` method: 
+
+```python
+line(1, "-2,2,4:", 3)  # Returns ["beta", "delta gamma epsilon", "delta"]
+```
+
 #### Helper Functions
 
 When using `--input-exec`, you have access to a variety of helper functions designed for common log processing tasks. The full list of available functions and modules can be viewed using `klp --help-python`.
