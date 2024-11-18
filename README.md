@@ -675,9 +675,9 @@ Here are some that need more explanation:
 
 `extract_regex(pattern, text, *groupargs)`: Extract text matching a regular expression pattern, with optional capture group selection
 
-  - pattern: Regular expression pattern to match
-  - text: String to search within
-  - groupargs: Optional indices of capture groups to extract
+  - `pattern`: Regular expression pattern to match
+  - `text`: String to search within
+  - `groupargs`: Optional indices of capture groups to extract
 
 Returns matched text, or `None` if no match. With `groupargs`, returns tuple of matched groups.
 
