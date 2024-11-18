@@ -1760,6 +1760,9 @@ class EStr(str):
     def __getitem__(self, key):
         return estr_or_none(super().__getitem__(key))
 
+    def __call__(self, *args, **kwargs):
+        return self.cols(*args, **kwargs)
+
     def upper(self):
         return estr_or_none(super().upper())
 
