@@ -665,6 +665,37 @@ Out-of-range indices are silently ignored, returning an empty string for invalid
 When using `--input-exec`, you have access to a variety of helper functions designed for common log processing tasks. The full list of available functions and modules can be viewed using `klp --help-python`.
 Here are some that need more explanation:
 
+##### `extract_regex()`
+
+`extract_regex(pattern, text, *groupargs)`: Extract text matching a regular expression pattern, with optional capture group selection
+
+  - pattern: Regular expression pattern to match
+  - text: String to search within
+  - groupargs: Optional indices of capture groups to extract
+
+Returns matched text, or `None` if no match. With `groupargs`, returns tuple of matched groups.
+
+```bash
+# Extract the first number from a message
+$ echo 'time=2024-02-08T15:04:05Z msg="Server CPU usage: 95.2%"' | \
+  klp -I 'cpu=extract_regex(r"CPU usage: (\d+\.?\d*)%", msg, 1)'
+time=2024-02-08T15:04:05Z msg="Server CPU usage: 95.2%" cpu=95.2
+
+# Extract multiple parts from a complex message
+$ echo 'time=2024-02-08T15:04:05Z msg="User alice (role=admin) accessed /api/users"' | \
+  klp -I 'user,role = extract_regex(r"User (\w+) \(role=(\w+)\)", msg, 1, 2)'
+time=2024-02-08T15:04:05Z msg="User alice (role=admin) accessed /api/users" user=alice role=admin
+```
+
+Like `cols()` and other helper functions, this is available as a method on the fields as well: 
+
+```bash
+# Use method syntax. Extract whole match if no groups specified 
+$ echo 'time=2024-02-08T15:04:05Z msg="Request from 192.168.1.100"' | \
+  klp -I 'ip=msg.extract_regex(r"\d+\.\d+\.\d+\.\d+")'
+time=2024-02-08T15:04:05Z msg="Request from 192.168.1.100" ip=192.168.1.100
+```
+
 ##### `parse_kv()`
 
 `parse_kv(text, sep=None, kvsep="=")`: Parse key-value pairs from a string and merge them into the current event
