@@ -3635,7 +3635,7 @@ def parse_args():
 
     other = parser.add_argument_group("other options")
     other.add_argument(
-        "--error",
+        "--errors",
         choices=["ignore", "print", "exit"],
         default="ignore",
         dest="error_handling",

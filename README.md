@@ -255,7 +255,7 @@ klp provides several options to control how input data is read and parsed:
 
 #### Error Handling
 
-Control how klp handles errors with the `--error` option:
+Control how klp handles errors with the `--errors` option:
 
 - `ignore` (default): Silently continue processing when errors occur. With `--debug`, errors will still be printed.
 - `print`: Print error messages to stderr but continue processing
@@ -263,16 +263,16 @@ Control how klp handles errors with the `--error` option:
 
 ```bash
 # Print parsing errors but continue processing
-$ klp --error print malformed.log
+$ klp --errors print malformed.log
 
 # Stop processing at first error
-$ klp --error exit app.log
+$ klp --errors exit app.log
 
 # Process as much as possible, ignoring errors (default)
-$ klp --error ignore mixed.log
+$ klp --errors ignore mixed.log
 
 # Show errors even in ignore mode
-$ klp --error ignore --debug mixed.log
+$ klp --errors ignore --debug mixed.log
 ```
 
 ### Event Creation
