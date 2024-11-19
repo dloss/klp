@@ -2864,6 +2864,7 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
             not in ("_", "_klp_event", "__", "_klp_event_add", "___", "_klp_events")
         }
 
+    orig_event = event
     # Allow special methods on String
     local_vars = {key: EStr(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
@@ -2897,7 +2898,7 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
             debug_eval=True,
             end=f". {event=}]\n",
         )
-        result = []
+        result = [orig_event]
     return result
 
 
