@@ -215,7 +215,7 @@ The timestamp parts are joined and parsed using klp's standard timestamp parsing
 
 More complicated formats can often be parsed using the `line` format and creating or transforming events using Python code (`--input-exec`).
 See the [Advanced input transformations using Python code](#advanced-input-transformations-using-python-code) section below.
-
+Alternatively, you can check out [jc](https://github.com/kellyjonbrazil/jc), a tool that converts numerous formats to JSON, which can be read by klp `-f json`.
 
 #### Input Options
 
