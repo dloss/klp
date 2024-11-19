@@ -3150,6 +3150,11 @@ def parse_args():
         help="Maximum lines to buffer in a block before forcing yield (default: 10000)",
     )
     input.add_argument(
+        "--ignore-mtime",
+        action="store_true",
+        help="process files in command-line order instead of by modification time",
+    )
+    input.add_argument(
         "--parallel",
         type=positive_int_or_zero,
         help="Enable parallel processing with specified number of processes. "
@@ -3595,11 +3600,6 @@ def parse_args():
     )
 
     other = parser.add_argument_group("other options")
-    other.add_argument(
-        "--ignore-mtime",
-        action="store_true",
-        help="process files in command-line order instead of by modification time",
-    )
     other.add_argument(
         "--selftest",
         action="store_true",
