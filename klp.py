@@ -370,6 +370,45 @@ def print_output(*myargs: Any, **kwargs: Any) -> None:
     print(*myargs, **kwargs, file=args.output_file)
 
 
+def handle_error(
+    message: str,
+    e: Optional[Exception] = None,
+    exitcode: int = 1,
+    debug_eval: bool = False,
+    debug_where: bool = False,
+    **kwargs,
+) -> None:
+    """Handle errors according to error_handling setting.
+
+    Args:
+        message: Error description message
+        e: Optional exception that was caught
+        exitcode: Exit code to use when error_handling is "exit" (default: 1)
+        debug_eval: Treat debug_eval like debug
+        debug_where: Treat debug_where like debug
+        **kwargs: Additional arguments passed to print_err
+
+    Side Effects:
+        - May print to stderr depending on error_handling setting
+        - May exit program if error_handling is "exit"
+    """
+    error_text = f"{message}" if e is None else f"{message}: {e}"
+
+    if args.error_handling == "ignore":
+        if (
+            args.debug
+            or (debug_eval and args.debug_eval)
+            or (debug_where and args.debug_where)
+        ):
+            print_err(error_text, **kwargs)
+        return
+    elif args.error_handling == "print":
+        print_err(error_text, **kwargs)
+    else:  # exit
+        print_err(error_text, **kwargs)
+        sys.exit(exitcode)
+
+
 def get_default_process_count() -> int:
     """
     Calculate the default number of processes for parallel processing.
@@ -566,8 +605,7 @@ def format_datetime(val):
                 .replace("+00:00", "Z")
             )
     except ValueError as e:
-        if args.debug:
-            print_err(e)
+        handle_error("Failed to format datetime", e)
     return val
 
 
@@ -1004,7 +1042,6 @@ def parse_jsonl(line: str) -> Dict[str, str]:
             - Non-string values are converted to their string representation
 
     Side Effects:
-        - Prints debug information if args.debug is True and JSON parsing fails
         - Flattens nested objects with dot notation in keys
 
     Example:
@@ -1018,9 +1055,7 @@ def parse_jsonl(line: str) -> Dict[str, str]:
         json_str = line[line.index("{") : line.rindex("}") + 1]
         json_data = json.loads(json_str)
     except (ValueError, json.decoder.JSONDecodeError) as exc:
-        if args.debug:
-            print_err(repr(line))
-            print_err("Invalid JSON syntax in the above line:", exc)
+        handle_error(f"{repr(line)}\nInvalid JSON syntax in the above line", exc)
         return result
     for key, val in flatten_object(json_data).items():
         if isinstance(val, str):
@@ -1494,6 +1529,7 @@ def add_ts_delta(
     try:
         ts_datetime = get_timestamp_datetime(event)
         if ts_datetime is None:
+            handle_error(f"No valid timestamp found in event {event}")
             return event, last_ts_datetime
 
         if last_ts_datetime is None:
@@ -1501,7 +1537,8 @@ def add_ts_delta(
         else:
             try:
                 delta = ts_datetime - last_ts_datetime
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
+                handle_error("Error calculating timestamp delta", e)
                 return event, last_ts_datetime
 
         last_ts_datetime = ts_datetime
@@ -1512,8 +1549,7 @@ def add_ts_delta(
         return new_event, last_ts_datetime
 
     except Exception as e:
-        if args.debug:
-            print_err(f"Error calculating timestamp delta: {e}")
+        handle_error("Error calculating timestamp delta", e)
         return event, last_ts_datetime
 
 
@@ -2006,7 +2042,6 @@ def show(
     Side Effects:
         - Writes output to args.output_file
         - Updates args.cursor for SQLite output
-        - May raise exceptions that are caught and logged if args.debug is True
 
     Notes:
         Uses global args for configuration including:
@@ -2016,8 +2051,7 @@ def show(
         - theme: Color theme to use
     """
     if not isinstance(event, dict):
-        if args.debug:
-            print_err(f"Invalid event type: {type(event)}")
+        handle_error(f"Invalid event type: {type(event)}")
         return
 
     try:
@@ -2045,8 +2079,7 @@ def show(
         elif args.output_format == "extract":
             show_extract(event)
     except Exception as e:
-        if args.debug:
-            print_err(f"Error showing event: {e}")
+        handle_error("Error showing event", e)
 
 
 def escape_doublequotes_quoted(s):
@@ -2111,8 +2144,7 @@ def show_by_eval_template(event, template):
         try:
             return str(eval(expr, EXPORTED_GLOBALS, event_plus_underscore))
         except Exception as e:
-            if args.debug or args.debug_eval:
-                print(f"[Error evaluating {expr!r}: {e}. {event=}]", file=sys.stderr)
+            handle_error(f"[Error evaluating {expr!r}", e, end=f". {event=}]\n")
             return None
 
     # Replace all expressions in the template
@@ -2150,8 +2182,7 @@ def write_sqlite(event, cursor):
     except sqlite3.Error as e:
         print_err(f"SQLite error: {e}")
     except Exception as e:
-        if args.debug:
-            print_err(f"Error writing to SQLite: {e}")
+        handle_error("Error writing to SQLite", e)
 
 
 def show_default(
@@ -2615,7 +2646,6 @@ def matches_python_expr(expr: str, event: Dict[str, Any]) -> bool:
         bool: Result of expression evaluation, coerced to boolean
 
     Side Effects:
-        - Prints debug info to stderr if args.debug or args.debug_where is True
         - Uses EXPORTED_GLOBALS for evaluation context
 
     Notes:
@@ -2635,8 +2665,12 @@ def matches_python_expr(expr: str, event: Dict[str, Any]) -> bool:
     try:
         return eval(expr, EXPORTED_GLOBALS, event_plus_underscore)
     except Exception as e:
-        if args.debug or args.debug_where:
-            print(f"[Error matching {expr}: {e}. event={event}]", file=sys.stderr)
+        handle_error(
+            f"[Error matching {expr}",
+            e,
+            debug_where=True,
+            end=f". {event=}]\n",
+        )
         return False
 
 
@@ -2683,7 +2717,6 @@ def visible(event: Dict[str, Any]) -> bool:
 
     Side Effects:
         - May raise StoppedEarly if time-based limits are exceeded
-        - Prints debug info if args.debug or args.debug_where is True
 
     Filter Application Order:
         1. Pattern exclusions (grep_not)
@@ -2809,7 +2842,6 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     Side Effects:
         - Executes arbitrary Python code in controlled environment
-        - Prints debug info to stderr if args.debug or args.debug_eval is True
 
     Example:
         >>> event = {"message": "test"}
@@ -2859,11 +2891,12 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
         else:  # No special output
             result = [remove_underscores(event)]
     except Exception as e:
-        if args.debug or args.debug_eval:
-            print(
-                f"[Error executing {args.input_exec!r}: {e}. {event=}]",
-                file=sys.stderr,
-            )
+        handle_error(
+            f"[Error executing {args.input_exec!r}",
+            e,
+            debug_eval=True,
+            end=f". {event=}]\n",
+        )
         result = []
     return result
 
@@ -3600,6 +3633,13 @@ def parse_args():
     )
 
     other = parser.add_argument_group("other options")
+    other.add_argument(
+        "--error",
+        choices=["ignore", "print", "exit"],
+        default="ignore",
+        dest="error_handling",
+        help="how to handle errors: ignore (default), print to stderr, or exit",
+    )
     other.add_argument(
         "--selftest",
         action="store_true",
@@ -4613,7 +4653,6 @@ def events_from_jsonfiles_generator(
             - Line/object number (1-based)
 
     Side Effects:
-        - Prints debug info to stderr if args.debug is True
         - Uses file_opener for file handling
         - Applies input_exec transformations to events
 
@@ -4639,8 +4678,7 @@ def events_from_jsonfiles_generator(
             try:
                 data = json.load(f)
             except json.decoder.JSONDecodeError as e:
-                if args.debug:
-                    print_err("Invalid JSON syntax:", e)
+                handle_error("Invalid JSON syntax", e)
             else:
                 if isinstance(data, list):
                     for elem in data:

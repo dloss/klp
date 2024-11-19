@@ -21,6 +21,7 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
   - [Basic Usage](#basic-usage)
 - [Core Features](#core-features)
   - [Input Handling](#input-handling)
+  - [Error Handling](#error-handling)
   - [Event Creation](#event-creation)
   - [Overview and Statistics](#overview-and-statistics)
   - [Time Management](#time-management)
@@ -251,6 +252,28 @@ klp provides several options to control how input data is read and parsed:
   # Skip the first 5 lines of a CSV file
   $ klp -f csv --skip 5 data.csv
   ```
+
+#### Error Handling
+
+Control how klp handles errors with the `--error` option:
+
+- `ignore` (default): Silently continue processing when errors occur. With `--debug`, errors will still be printed.
+- `print`: Print error messages to stderr but continue processing
+- `exit`: Print error messages to stderr and exit with status code 1
+
+```bash
+# Print parsing errors but continue processing
+$ klp --error print malformed.log
+
+# Stop processing at first error
+$ klp --error exit app.log
+
+# Process as much as possible, ignoring errors (default)
+$ klp --error ignore mixed.log
+
+# Show errors even in ignore mode
+$ klp --error ignore --debug mixed.log
+```
 
 ### Event Creation
 
