@@ -1873,6 +1873,72 @@ class EStr(str):
     def expandtabs(self, tabsize=8):
         return estr_or_none(super().expandtabs(tabsize))
 
+    def encode(self, encoding="utf-8", errors="strict"):
+        return super().encode(encoding, errors)
+
+    def decode(self, encoding="utf-8", errors="strict"):
+        return estr_or_none(super().decode(encoding, errors))
+
+    def endswith(self, suffix, start=None, end=None):
+        return super().endswith(suffix, start, end)
+
+    def startswith(self, prefix, start=None, end=None):
+        return super().startswith(prefix, start, end)
+
+    def translate(self, table):
+        return estr_or_none(super().translate(table))
+
+    def maketrans(self, x, y=None, z=None):
+        return super().maketrans(x, y, z)
+
+    def find(self, sub, start=None, end=None):
+        return super().find(sub, start, end)
+
+    def rfind(self, sub, start=None, end=None):
+        return super().rfind(sub, start, end)
+
+    def index(self, sub, start=None, end=None):
+        return super().index(sub, start, end)
+
+    def rindex(self, sub, start=None, end=None):
+        return super().rindex(sub, start, end)
+
+    def count(self, sub, start=None, end=None):
+        return super().count(sub, start, end)
+
+    def isalnum(self):
+        return super().isalnum()
+
+    def isalpha(self):
+        return super().isalpha()
+
+    def isdigit(self):
+        return super().isdigit()
+
+    def isspace(self):
+        return super().isspace()
+
+    def islower(self):
+        return super().islower()
+
+    def isupper(self):
+        return super().isupper()
+
+    def istitle(self):
+        return super().istitle()
+
+    def isprintable(self):
+        return super().isprintable()
+
+    def isidentifier(self):
+        return super().isidentifier()
+
+    def isnumeric(self):
+        return super().isnumeric()
+
+    def isdecimal(self):
+        return super().isdecimal()
+
     def col(self, n):
         """Extracts the nth column from the string.
 
