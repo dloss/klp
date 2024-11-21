@@ -4259,24 +4259,8 @@ def events_from_sqlitefiles_generator(
 
 
 class MyTests(unittest.TestCase):
-    def test_guess_datetime_military_ns(self):
-        self.assertEqual(
-            guess_datetime("2022-12-30T20:55:00.123000000Z"),
-            dt.datetime(2022, 12, 30, 20, 55, 0, 123000, tzinfo=dt.timezone.utc),
-        )
-
-    def test_guess_datetime_military_ms(self):
-        self.assertEqual(
-            guess_datetime("2022-12-30T20:55:00.123Z"),
-            dt.datetime(2022, 12, 30, 20, 55, 0, 123000, tzinfo=dt.timezone.utc),
-        )
-
-    def test_guess_datetime_military_s(self):
-        self.assertEqual(
-            guess_datetime("2022-12-30T20:55:00Z"),
-            dt.datetime(2022, 12, 30, 20, 55, 0, 0, tzinfo=dt.timezone.utc),
-        )
-
+    # Tests that depend on the local system (e.g. local timezone)
+    # and thus should be run on the live system
     def test_guess_datetime_no_tz_ns(self):
         self.assertEqual(
             guess_datetime("2022-12-30T20:55:00.123000000"),
@@ -4307,12 +4291,6 @@ class MyTests(unittest.TestCase):
             dt.datetime(2022, 12, 1, 0, 0, 0, 0).astimezone(),
         )
 
-    def test_guess_datetime_offset(self):
-        self.assertEqual(
-            guess_datetime("2022-12-30T22:55:00+02:00"),
-            dt.datetime(2022, 12, 30, 20, 55, 0, 0, tzinfo=dt.timezone.utc),
-        )
-
     def test_timedelta_from_no_unit(self):
         self.assertRaises(
             argparse.ArgumentTypeError,
@@ -4326,184 +4304,6 @@ class MyTests(unittest.TestCase):
             timedelta_from,
             "-3s",
         )
-
-    def test_builtin_regexes_compile(self):
-        for name, regexes in BUILTIN_REGEXES.items():
-            for regex in regexes:
-                try:
-                    re.compile(regex)
-                except re.error as e:
-                    self.fail(
-                        f"Regex compilation for {name} failed with error: {e.msg}"
-                    )
-
-    # Logfmt parsing
-    def test_parse_logfmt_basic(self):
-        text = "key1=value1 key2=value2"
-        expected = {"key1": "value1", "key2": "value2"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_spaces(self):
-        text = 'key1="value with spaces" key2=value2'
-        expected = {"key1": "value with spaces", "key2": "value2"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_escaped_quotes(self):
-        text = 'key1="value with \\"escaped quotes\\"" key2=value2'
-        expected = {"key1": 'value with "escaped quotes"', "key2": "value2"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_quotes_inside(self):
-        text = 'key1=singlequote\'s key2=double"quot"es'
-        expected = {"key1": "singlequote's", "key2": 'double"quot"es'}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_unicode(self):
-        text = 'schlüssel=Schloß kauf="Äpfel aus Köln"'
-        expected = {"schlüssel": "Schloß", "kauf": "Äpfel aus Köln"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_dots_in_key(self):
-        text = "my.long.key=value1 key2=value2"
-        expected = {"my.long.key": "value1", "key2": "value2"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_with_equal_in_val(self):
-        text = "key=2+2=4 key2=test"
-        expected = {"key": "2+2=4", "key2": "test"}
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_parse_logfmt_empty_string(self):
-        expected = {}
-        text = ""
-        self.assertEqual(parse_logfmt(text), expected)
-
-    def test_escape1(self):
-        text = 'a "string" with double quotes'
-        expected = 'a \\"string\\" with double quotes'
-        self.assertEqual(escape_doublequotes_quoted(text), expected)
-
-    def test_escape2(self):
-        text = "a 'string' with single quotes"
-        expected = "a 'string' with single quotes"
-        self.assertEqual(escape_doublequotes_quoted(text), expected)
-
-    def test_escape3(self):
-        text = "Escape seqs: \x00\t\n"
-        expected = "Escape seqs: \\x00\\t\\n"
-        self.assertEqual(escape_doublequotes_quoted(text), expected)
-
-    def test_unescape(self):
-        self.assertEqual(
-            unescape(r"This is a \"test\" string"), 'This is a "test" string'
-        )
-        self.assertEqual(
-            unescape(r"Escape sequences: \n \t"), "Escape sequences: \n \t"
-        )
-        self.assertEqual(unescape("значение со spaces"), "значение со spaces")
-        self.assertEqual(unescape("\\x01"), "\x01")
-
-    def test_extract_json_valid_json_object(self):
-        self.assertEqual(
-            extract_json('{"name": "John", "age": 30}'),
-            '{"name": "John", "age": 30}',
-        )
-
-    def test_extract_json_valid_json_array(self):
-        self.assertEqual(extract_json("[1, 2, 3, 4]"), "[1, 2, 3, 4]")
-
-    def test_extract_json_nested_json(self):
-        self.assertEqual(
-            extract_json('{"person": {"name": "John", "age": 30}, "city": "New York"}'),
-            '{"person": {"name": "John", "age": 30}, "city": "New York"}',
-        )
-
-    def test_extract_json_json_with_text_before(self):
-        self.assertEqual(
-            extract_json('Hello world {"name": "John", "age": 30}'),
-            '{"name": "John", "age": 30}',
-        )
-
-    def test_extract_json_json_with_text_after(self):
-        self.assertEqual(
-            extract_json('{"name": "John", "age": 30} and more text'),
-            '{"name": "John", "age": 30}',
-        )
-
-    def test_extract_json_invalid_json(self):
-        with self.assertRaises(ValueError):
-            extract_json('{"name": "John" "age": 30}')
-
-    def test_extract_json_no_json(self):
-        with self.assertRaises(ValueError):
-            extract_json("Just a plain text without JSON")
-
-    def test_extract_json_multiple_json_objects(self):
-        self.assertEqual(
-            extract_json('{"name": "John"} {"age": 30}'), '{"name": "John"}'
-        )
-
-    def test_extract_json_empty_string(self):
-        with self.assertRaises(ValueError):
-            extract_json("")
-
-    def test_init(self):
-        s = EStr("This is a test")
-        self.assertEqual(s, "This is a test")
-
-    def test_str(self):
-        s = EStr("This is a test")
-        self.assertEqual(str(s), "This is a test")
-
-    def test_len(self):
-        s = EStr("This is a test")
-        self.assertEqual(len(s), 14)
-
-    def test_getitem(self):
-        s = EStr("This is a test")
-        self.assertEqual(s[0], "T")
-        self.assertEqual(s[1], "h")
-        self.assertEqual(s[2], "i")
-        self.assertEqual(s[3], "s")
-        self.assertEqual(s[4], " ")
-        self.assertEqual(s[5], "i")
-        self.assertEqual(s[6], "s")
-        self.assertEqual(s[7], " ")
-        self.assertEqual(s[8], "a")
-
-    def test_col(self):
-        s = EStr("This is a test")
-        self.assertEqual(s.col(0), "This")
-        self.assertEqual(s.col(1), "is")
-        self.assertEqual(s.col(2), "a")
-        self.assertEqual(s.col(3), "test")
-        self.assertEqual(s.col(4), None)
-
-    def test_cols(self):
-        s = EStr("This is  a test  with 7 columns")
-        self.assertEqual(s.cols(), ["This", "is", "a", "test", "with", "7", "columns"])
-        self.assertEqual(s.cols(0, 3), ["This", "test"])
-        self.assertEqual(s.cols(0, -1, 2, 2), ["This", "columns", "a", "a"])
-        self.assertEqual(s.cols("0,3"), "This test")
-        self.assertEqual(s.cols("1"), "is")
-        self.assertEqual(s.cols(1), "is")
-        self.assertEqual(s.cols("14"), "")
-        self.assertEqual(s.cols("1:3"), "is a")
-        self.assertEqual(s.cols("-2,2,4:"), "7 a with 7 columns")
-        self.assertEqual(s.cols("0,3", sep=" "), "This a")
-        self.assertEqual(
-            s.cols(-2, "0,4", "3:", 1, outsep="_"),
-            ["7", "This_with", "test_with_7_columns", "is"],
-        )
-
-    def test_cols_sep(self):
-        s = EStr("This|is a|test with|4 columns")
-        self.assertEqual(s.cols("1:3", sep="|"), "is a test with")
-        self.assertEqual(s.cols("-2,2,4:", sep="|", outsep=":"), "test with:test with")
-
-    def test_cols_regexsep(self):
-        s = EStr("This2334is7453a654test232with232regex")
-        self.assertEqual(s.cols("1:5", sep=re.compile(r"\d+")), "is a test with")
 
 
 def do_tests():

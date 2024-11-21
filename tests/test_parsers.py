@@ -1,4 +1,10 @@
-from klp import parse_logfmt, parse_jsonl, parse_unix, parse_combined, parse_clf
+from klp import (
+    parse_logfmt,
+    parse_jsonl,
+    parse_clf,
+    parse_combined,
+    parse_unix,
+)
 
 
 def test_parse_logfmt():
@@ -91,3 +97,49 @@ def test_parse_unix():
 
     # Invalid format
     assert parse_unix("Invalid line") == {}
+
+
+def test_parse_logfmt_basic():
+    text = "key1=value1 key2=value2"
+    expected = {"key1": "value1", "key2": "value2"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_spaces():
+    text = 'key1="value with spaces" key2=value2'
+    expected = {"key1": "value with spaces", "key2": "value2"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_escaped_quotes():
+    text = 'key1="value with \\"escaped quotes\\"" key2=value2'
+    expected = {"key1": 'value with "escaped quotes"', "key2": "value2"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_quotes_inside():
+    text = 'key1=singlequote\'s key2=double"quot"es'
+    expected = {"key1": "singlequote's", "key2": 'double"quot"es'}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_unicode():
+    text = 'schlüssel=Schloß kauf="Äpfel aus Köln"'
+    expected = {"schlüssel": "Schloß", "kauf": "Äpfel aus Köln"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_dots_in_key():
+    text = "my.long.key=value1 key2=value2"
+    expected = {"my.long.key": "value1", "key2": "value2"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_with_equal_in_val():
+    text = "key=2+2=4 key2=test"
+    expected = {"key": "2+2=4", "key2": "test"}
+    assert parse_logfmt(text) == expected
+
+
+def test_parse_logfmt_empty_string():
+    assert parse_logfmt("") == {}
