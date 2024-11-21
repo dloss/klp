@@ -135,6 +135,16 @@ def test_timedelta_from_floatseconds():
     assert result == expected
 
 
+def test_timedelta_from_no_unit():
+    with pytest.raises(argparse.ArgumentTypeError):
+        timedelta_from("567")
+
+
+def test_timedelta_from_no_negatives():
+    with pytest.raises(argparse.ArgumentTypeError):
+        timedelta_from("-3s")
+
+
 def test_guess_datetime_formats():
     """Test datetime parsing from various formats."""
 

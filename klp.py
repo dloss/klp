@@ -4291,20 +4291,6 @@ class MyTests(unittest.TestCase):
             dt.datetime(2022, 12, 1, 0, 0, 0, 0).astimezone(),
         )
 
-    def test_timedelta_from_no_unit(self):
-        self.assertRaises(
-            argparse.ArgumentTypeError,
-            timedelta_from,
-            "567",
-        )
-
-    def test_timedelta_from_no_negatives(self):
-        self.assertRaises(
-            argparse.ArgumentTypeError,
-            timedelta_from,
-            "-3s",
-        )
-
 
 def do_tests():
     loader = unittest.TestLoader()
