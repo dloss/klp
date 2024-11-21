@@ -27,6 +27,7 @@ def mock_args():
     args.to_dt = None
     args.files = []  # Add default empty list of files
     args.files = []  # Added this line
+    args.error_handling = "ignore"
     return args
 
 

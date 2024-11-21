@@ -12,6 +12,7 @@ def mock_args():
     args.localtime = False
     args.utc = True
     args.ts_key = None
+    args.error_handling = "ignore"
     return args
 
 
