@@ -4258,7 +4258,7 @@ def events_from_sqlitefiles_generator(
                 yield dict(zip(column_names, row)), i
 
 
-class MyTests(unittest.TestCase):
+class SelfTests(unittest.TestCase):
     # Tests that depend on the local system (e.g. local timezone)
     # and thus should be run on the live system
     def test_guess_datetime_no_tz_ns(self):
@@ -4294,7 +4294,7 @@ class MyTests(unittest.TestCase):
 
 def do_tests():
     loader = unittest.TestLoader()
-    suite = loader.loadTestsFromTestCase(MyTests)
+    suite = loader.loadTestsFromTestCase(SelfTests)
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
     return result
