@@ -2107,9 +2107,6 @@ class EStr(str):
     def parse_data(self):
         return parse_data(self)
 
-    def pprint_json(self, indent=2, sort_keys=True, ensure_ascii=False):
-        return estr_or_none(pprint_json(self, indent, sort_keys, ensure_ascii))
-
 
 def show(
     event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None
