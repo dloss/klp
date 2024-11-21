@@ -211,6 +211,11 @@ def test_estr_init():
     assert s == "This is a test"
 
 
+def test_estr_init_empty():
+    s = EStr("")
+    assert s == ""
+
+
 def test_estr_basic_ops():
     s = EStr("This is a test")
     assert str(s) == "This is a test"
@@ -246,6 +251,48 @@ def test_estr_cols_with_separators():
     s = EStr("This|is a|test with|4 columns")
     assert s.cols("1:3", sep="|") == "is a test with"
     assert s.cols("-2,2,4:", sep="|", outsep=":") == "test with:test with"
+
+
+def test_estr_cols_empty_sep():
+    # Character-by-character splitting with empty separators
+    text = EStr("Hello")
+    assert text.cols("0,2,4", sep="", outsep="") == "Hlo"  # Single arg joins indices
+    assert text.cols("1:4", sep="", outsep="") == "ell"  # Single slice
+    assert text.cols("0,2", "4", sep="", outsep="") == [
+        "Hl",
+        "o",
+    ]  # Multiple args as list
+    assert text.cols(0, "2:4", sep="", outsep="") == [
+        "H",
+        "ll",
+    ]  # Mix of single index and slice
+
+    assert text.cols(0, "2:4", sep="", outsep="!") == [
+        "H",
+        "l!l",
+    ]  # Non-empty outsep
+
+    assert text.cols(0, "2:4", "1:4", sep="", outsep=".") == [
+        "H",
+        "l.l",
+        "e.l.l",
+    ]  # Overlapping columns
+
+    # Character-by-character splitting for DNA sequence
+    dna = EStr("ATCGTA")
+    assert dna.cols(sep="") == ["A", "T", "C", "G", "T", "A"]
+    assert dna.cols("1,3,5", sep="") == "T G A"
+    assert dna.cols("0:3", sep="", outsep="") == "ATC"
+
+    # Multiple arguments with character splitting
+    text = EStr("Hello world!")
+    assert text.cols("0", "1:5", sep="") == ["H", "e l l o"]
+    assert text.cols("0:4", "6:9", sep="", outsep="-") == ["H-e-l-l", "w-o-r"]
+
+    # Unicode characters
+    emoji = EStr("👋🌍")
+    assert emoji.cols(sep="") == ["👋", "🌍"]
+    assert emoji.cols("0", sep="") == "👋"
 
 
 def test_estr_cols_with_regex():

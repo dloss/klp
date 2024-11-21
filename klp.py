@@ -1873,6 +1873,18 @@ class EStr(str):
     def expandtabs(self, tabsize=8):
         return estr_or_none(super().expandtabs(tabsize))
 
+    def pprint_json(self, indent=2, sort_keys=True, ensure_ascii=False):
+        return estr_or_none(pprint_json(self, indent, sort_keys, ensure_ascii))
+
+    def sh(self, **kwargs):
+        return estr_or_none(sh(str(self), **kwargs))
+
+    def to_datetime(self):
+        return to_datetime(str(self))
+
+    def flatten_object(self, separator="."):
+        return flatten_object(json.loads(str(self)), separator)
+
     def encode(self, encoding="utf-8", errors="strict"):
         return super().encode(encoding, errors)
 
@@ -1967,7 +1979,7 @@ class EStr(str):
                     If no arguments are provided, the entire string is returned.
                     If more than one argument is provided, returns a list
             * sep (optional): Delimiter used to separate columns in the internal string (defaults to whitespace).
-                    Can be a compiled regex
+                    Can be a compiled regex. If empty string, splits after each character.
             * outsep (optional): Delimiter used to join the selected columns (defaults to whitespace).
 
         * Column selection:
@@ -2003,16 +2015,18 @@ class EStr(str):
         >>> t.cols("-2,2,4:", sep="|", outsep=":")  # Specify both column and output separators
         'test with:test with'
         """
-
-        result = []
         if isinstance(sep, re.Pattern):
             columns = re.split(sep, self)
+        elif sep == "":
+            columns = list(self)  # Split into individual characters
         else:
             columns = self.split(sep)
+
         columns = [EStr(c) for c in columns]
         if not args:
             return columns
 
+        result = []
         for arg in args:
             # Split the input by commas for multiple indices or slices
             indices_list = str(arg).split(",")
@@ -2037,11 +2051,19 @@ class EStr(str):
                     except (ValueError, IndexError):
                         # Ignore invalid or out-of-range integer inputs
                         pass
-            result.append(outsep.join(arg_result))
 
-        if len(args) > 1:
-            return [EStr(elem) for elem in result]
-        return estr_or_none(outsep.join(result))
+            # Join the results for this argument with outsep
+            if arg_result:
+                if len(args) > 1:
+                    result.append(
+                        estr_or_none(outsep.join([str(elem) for elem in arg_result]))
+                    )
+                else:
+                    result.extend(arg_result)
+
+        if len(args) == 1:
+            return estr_or_none(outsep.join([str(elem) for elem in result]))
+        return [EStr(elem) for elem in result]
 
     def extract_json(self):
         return estr_or_none(extract_json(self))
