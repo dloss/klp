@@ -63,6 +63,78 @@ def test_add_ts_delta(mock_args):
     assert "_klp_timedelta" not in result_invalid
 
 
+def test_guess_datetime_military_ns():
+    result = guess_datetime("2022-12-30T20:55:00.123000000Z")
+    expected = dt.datetime(2022, 12, 30, 20, 55, 0, 123000, tzinfo=dt.timezone.utc)
+    assert result == expected
+
+
+def test_guess_datetime_military_ms():
+    result = guess_datetime("2022-12-30T20:55:00.123Z")
+    expected = dt.datetime(2022, 12, 30, 20, 55, 0, 123000, tzinfo=dt.timezone.utc)
+    assert result == expected
+
+
+def test_guess_datetime_military_s():
+    result = guess_datetime("2022-12-30T20:55:00Z")
+    expected = dt.datetime(2022, 12, 30, 20, 55, 0, 0, tzinfo=dt.timezone.utc)
+    assert result == expected
+
+
+def test_guess_datetime_offset():
+    result = guess_datetime("2022-12-30T22:55:00+02:00")
+    expected = dt.datetime(2022, 12, 30, 20, 55, 0, 0, tzinfo=dt.timezone.utc)
+    assert result == expected
+
+
+def test_timedelta_from_microseconds():
+    result = timedelta_from("4us")
+    expected = dt.timedelta(microseconds=4)
+    assert result == expected
+
+
+def test_timedelta_from_milliseconds():
+    result = timedelta_from("4ms")
+    expected = dt.timedelta(microseconds=4000)
+    assert result == expected
+
+
+def test_timedelta_from_seconds():
+    result = timedelta_from("54s")
+    expected = dt.timedelta(seconds=54)
+    assert result == expected
+
+
+def test_timedelta_from_minutes():
+    result = timedelta_from("4m")
+    expected = dt.timedelta(minutes=4)
+    assert result == expected
+
+
+def test_timedelta_from_hours():
+    result = timedelta_from("4h")
+    expected = dt.timedelta(hours=4)
+    assert result == expected
+
+
+def test_timedelta_from_days():
+    result = timedelta_from("2d")
+    expected = dt.timedelta(days=2)
+    assert result == expected
+
+
+def test_timedelta_from_weeks():
+    result = timedelta_from("5w")
+    expected = dt.timedelta(weeks=5)
+    assert result == expected
+
+
+def test_timedelta_from_floatseconds():
+    result = timedelta_from("1.567s")
+    expected = dt.timedelta(seconds=1, microseconds=567000)
+    assert result == expected
+
+
 def test_guess_datetime_formats():
     """Test datetime parsing from various formats."""
 

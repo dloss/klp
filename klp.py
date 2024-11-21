@@ -4313,54 +4313,6 @@ class MyTests(unittest.TestCase):
             dt.datetime(2022, 12, 30, 20, 55, 0, 0, tzinfo=dt.timezone.utc),
         )
 
-    def test_timedelta_from_microseconds(self):
-        self.assertEqual(
-            timedelta_from("4us"),
-            dt.timedelta(microseconds=4),
-        )
-
-    def test_timedelta_from_milliseconds(self):
-        self.assertEqual(
-            timedelta_from("4ms"),
-            dt.timedelta(microseconds=4000),
-        )
-
-    def test_timedelta_from_seconds(self):
-        self.assertEqual(
-            timedelta_from("54s"),
-            dt.timedelta(seconds=54),
-        )
-
-    def test_timedelta_from_minutes(self):
-        self.assertEqual(
-            timedelta_from("4m"),
-            dt.timedelta(minutes=4),
-        )
-
-    def test_timedelta_from_hours(self):
-        self.assertEqual(
-            timedelta_from("4h"),
-            dt.timedelta(hours=4),
-        )
-
-    def test_timedelta_from_days(self):
-        self.assertEqual(
-            timedelta_from("2d"),
-            dt.timedelta(days=2),
-        )
-
-    def test_timedelta_from_weeks(self):
-        self.assertEqual(
-            timedelta_from("5w"),
-            dt.timedelta(weeks=5),
-        )
-
-    def test_timedelta_from_floatseconds(self):
-        self.assertEqual(
-            timedelta_from("1.567s"),
-            dt.timedelta(seconds=1, microseconds=567000),
-        )
-
     def test_timedelta_from_no_unit(self):
         self.assertRaises(
             argparse.ArgumentTypeError,
