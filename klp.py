@@ -1998,7 +1998,7 @@ class EStr(str):
         >>> s.cols("0,3")  # Select columns 0 and 3 using a comma-separated string
         'This test'
         >>> s.cols(0, 3)  # Select columns 0 and 3 and return list
-        'This test'
+        ['This test']
         >>> s.cols("1")  # Select column 1
         'is'
         >>> s.cols(1)  # Select column 1, equivalent to above
@@ -2011,7 +2011,7 @@ class EStr(str):
         '7 a with 7 columns'
         >>> t = EStr("This|is a|test with|4 columns")
         >>> t.cols("1:3", sep="|")  # Specify a different column separator
-        'is a|test with'
+        'is a test with'
         >>> t.cols("-2,2,4:", sep="|", outsep=":")  # Specify both column and output separators
         'test with:test with'
         """
