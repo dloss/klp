@@ -17,7 +17,6 @@
 - Performance
     * fast paths (simple output, no color, ...)
 - Other features
-    * --errors ignore|print|exit
     * --grepmap just showing if a line matches
     * --gapmap showing the unit of the timegap (u,s,m,h,D,M,Y)
     * --grep-time-context (context by timespan, not number of lines)
