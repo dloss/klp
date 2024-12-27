@@ -2187,6 +2187,46 @@ class EStr(str):
         except ValueError:
             return EStr("")
 
+    def between(self, a: str, b: str) -> str:
+        """Return the part of the string that lies between a and b.
+
+        Args:
+            a: Starting substring to find
+            b: Ending substring to find after a
+
+        Returns:
+            Text between first occurrence of a and first occurrence of b after a.
+            Returns empty string if either substring is not found.
+            Returns empty string if a occurs after b.
+            Returns empty string if source is empty.
+            Returns source string if both a and b are empty.
+
+        Raises:
+            TypeError: If either a or b is None
+
+        Examples:
+            >>> EStr("name:alice:bob").between(":", ":")
+            'alice'
+            >>> EStr("<tag>value</tag>").between(">", "<")
+            'value'
+            >>> EStr("no delimiters").between("[", "]")
+            ''
+        """
+        if a is None or b is None:
+            raise TypeError("Input cannot be None")
+
+        if a == "" and b == "":
+            return self
+
+        if self == "":
+            return EStr("")
+
+        after_a = self.after(a)
+        if not after_a:
+            return EStr("")
+
+        return after_a.before(b)
+
 
 def show(
     event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None

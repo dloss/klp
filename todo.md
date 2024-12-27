@@ -27,6 +27,7 @@
 - README and help
     * Document how to use -f data together with -I
     * Document --logical-lines
+    * Document EStr.before/after/between()
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
     * Add --manual with examples

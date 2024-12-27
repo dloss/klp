@@ -248,3 +248,70 @@ def test_between_multichar():
     # Different length delimiters
     s = EStr("prefix-->content<----suffix")
     assert s.between("-->", "<----") == "content"
+
+
+def test_between_basic():
+    """Test basic functionality of between()"""
+    s = EStr("name:alice:bob")
+    assert s.between(":", ":") == "alice"
+    assert isinstance(s.between(":", ":"), EStr)  # Return type should be EStr
+
+
+def test_between_html_tags():
+    """Test extracting content between HTML-like tags"""
+    s = EStr("<tag>value</tag>")
+    assert s.between(">", "<") == "value"
+
+
+def test_between_not_found():
+    """Test when substrings are not found"""
+    s = EStr("test")
+    assert s.between("[", "]") == ""
+    assert s.between("test", "]") == ""
+    assert s.between("[", "test") == ""
+
+
+def test_between_empty_inputs():
+    """Test with empty strings"""
+    s = EStr("")
+    assert s.between("", "") == ""  # Empty source string
+    assert s.between("x", "y") == ""  # Empty source string, non-empty targets
+
+    s = EStr("hello")
+    assert s.between("", "") == "hello"  # Empty targets return full string
+
+
+def test_between_none_inputs():
+    """Test handling of None inputs"""
+    s = EStr("test")
+    with pytest.raises(TypeError, match="Input cannot be None"):
+        s.between(None, "")
+    with pytest.raises(TypeError, match="Input cannot be None"):
+        s.between("", None)
+    with pytest.raises(TypeError, match="Input cannot be None"):
+        s.between(None, None)
+
+
+def test_between_multiple_occurrences():
+    """Test when substrings appear multiple times"""
+    s = EStr("[first][second][third]")
+    assert s.between("[", "]") == "first"
+
+
+def test_between_nested():
+    """Test with nested delimiters"""
+    # Just matches from first opening delimiter to next closing one - no bracket matching
+    s = EStr("outer[inner[deep]inner]outer")
+    assert s.between("[", "]") == "inner[deep"
+
+
+def test_between_a_after_b():
+    """Test when first substring appears after second"""
+    s = EStr("]before[")
+    assert s.between("[", "]") == ""
+
+
+def test_between_adjacent():
+    """Test when substrings are adjacent"""
+    s = EStr("name[]value")
+    assert s.between("[", "]") == ""
