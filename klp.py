@@ -2107,6 +2107,86 @@ class EStr(str):
     def parse_data(self):
         return parse_data(self)
 
+    def before(self, t: str) -> str:
+        """Return the part of the string that comes before t.
+
+        Args:
+            t: Target substring to find
+
+        Returns:
+            Everything before the first occurrence of t, or empty string if not found.
+            Returns empty string if t is longer than self.
+            Returns empty string if source is empty.
+            Returns source string if t is empty.
+
+        Raises:
+            TypeError: If t is None
+
+        Examples:
+            >>> EStr("name:alice").before(":")
+            'name'
+            >>> EStr("test").before("@")
+            ''
+            >>> EStr("a:b:c").before(":")
+            'a'
+        """
+        if t is None:
+            raise TypeError("Input cannot be None")
+
+        if t == "":
+            return self
+
+        if self == "":
+            return EStr("")
+
+        if len(t) > len(self):
+            return EStr("")
+
+        try:
+            index = self.index(t)
+            return EStr(self[:index])
+        except ValueError:
+            return EStr("")
+
+    def after(self, t: str) -> str:
+        """Return the part of the string that comes after t.
+
+        Args:
+            t: Target substring to find
+
+        Returns:
+            Everything after the first occurrence of t, or empty string if not found.
+            Returns empty string if t is longer than self.
+            Returns empty string if source is empty.
+            Returns source string if t is empty.
+
+        Raises:
+            TypeError: If t is None
+
+        Examples:
+            >>> EStr("name:alice").after(":")
+            'alice'
+            >>> EStr("test").after("@")
+            ''
+            >>> EStr("a:b:c").after(":")
+            'b:c'
+        """
+        if t is None:
+            raise TypeError("Input cannot be None")
+
+        if t == "":
+            return self
+        if self == "":
+            return EStr("")
+        if len(t) > len(self):
+            return EStr("")
+
+        try:
+            index = self.index(t)
+            return self[index + len(t) :]
+        except ValueError:
+            return EStr("")
+
 
 def show(
     event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None
