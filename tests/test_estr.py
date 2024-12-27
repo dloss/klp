@@ -29,7 +29,7 @@ def test_estr_col():
     assert s.col(1) == "is"
     assert s.col(2) == "a"
     assert s.col(3) == "test"
-    assert s.col(4) == None
+    assert s.col(4) is None
 
 
 def test_estr_cols_basic():

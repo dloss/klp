@@ -2,7 +2,6 @@ import pytest
 import re
 from klp import (
     BUILTIN_REGEXES,
-    EStr,
     escape_doublequotes_quoted,
     extract_blocks,
     extract_json,
@@ -204,100 +203,6 @@ def test_extract_blocks(
         )
     )
     assert blocks == expected_blocks
-
-
-def test_estr_init():
-    s = EStr("This is a test")
-    assert s == "This is a test"
-
-
-def test_estr_init_empty():
-    s = EStr("")
-    assert s == ""
-
-
-def test_estr_basic_ops():
-    s = EStr("This is a test")
-    assert str(s) == "This is a test"
-    assert len(s) == 14
-    assert s[0] == "T"
-    assert s[1] == "h"
-    assert s[2] == "i"
-
-
-def test_estr_col():
-    s = EStr("This is a test")
-    assert s.col(0) == "This"
-    assert s.col(1) == "is"
-    assert s.col(2) == "a"
-    assert s.col(3) == "test"
-    assert s.col(4) == None
-
-
-def test_estr_cols_basic():
-    s = EStr("This is  a test  with 7 columns")
-    assert s.cols() == ["This", "is", "a", "test", "with", "7", "columns"]
-    assert s.cols(0, 3) == ["This", "test"]
-    assert s.cols(0, -1, 2, 2) == ["This", "columns", "a", "a"]
-    assert s.cols("0,3") == "This test"
-    assert s.cols("1") == "is"
-    assert s.cols(1) == "is"
-    assert s.cols("14") == ""
-    assert s.cols("1:3") == "is a"
-    assert s.cols("-2,2,4:") == "7 a with 7 columns"
-
-
-def test_estr_cols_with_separators():
-    s = EStr("This|is a|test with|4 columns")
-    assert s.cols("1:3", sep="|") == "is a test with"
-    assert s.cols("-2,2,4:", sep="|", outsep=":") == "test with:test with"
-
-
-def test_estr_cols_empty_sep():
-    # Character-by-character splitting with empty separators
-    text = EStr("Hello")
-    assert text.cols("0,2,4", sep="", outsep="") == "Hlo"  # Single arg joins indices
-    assert text.cols("1:4", sep="", outsep="") == "ell"  # Single slice
-    assert text.cols("0,2", "4", sep="", outsep="") == [
-        "Hl",
-        "o",
-    ]  # Multiple args as list
-    assert text.cols(0, "2:4", sep="", outsep="") == [
-        "H",
-        "ll",
-    ]  # Mix of single index and slice
-
-    assert text.cols(0, "2:4", sep="", outsep="!") == [
-        "H",
-        "l!l",
-    ]  # Non-empty outsep
-
-    assert text.cols(0, "2:4", "1:4", sep="", outsep=".") == [
-        "H",
-        "l.l",
-        "e.l.l",
-    ]  # Overlapping columns
-
-    # Character-by-character splitting for DNA sequence
-    dna = EStr("ATCGTA")
-    assert dna.cols(sep="") == ["A", "T", "C", "G", "T", "A"]
-    assert dna.cols("1,3,5", sep="") == "T G A"
-    assert dna.cols("0:3", sep="", outsep="") == "ATC"
-
-    # Multiple arguments with character splitting
-    text = EStr("Hello world!")
-    assert text.cols("0", "1:5", sep="") == ["H", "e l l o"]
-    assert text.cols("0:4", "6:9", sep="", outsep="-") == ["H-e-l-l", "w-o-r"]
-
-    # Unicode characters
-    emoji = EStr("👋🌍")
-    assert emoji.cols(sep="") == ["👋", "🌍"]
-    assert emoji.cols("0", sep="") == "👋"
-
-
-def test_estr_cols_with_regex():
-    s = EStr("This2334is7453a654test232with232regex")
-    assert s.cols("1:5", sep=re.compile(r"\d+")) == "is a test with"
 
 
 def test_extract_json_valid_json_object():
