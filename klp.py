@@ -4659,6 +4659,7 @@ def file_opener(
 
     Raises:
         NotImplementedError: If trying to open zipped SQLite database
+        ValueError: If ZIP archive contains multiple files
         sqlite3.Error: For SQLite connection issues
         IOError: For file access issues
 
@@ -4673,11 +4674,13 @@ def file_opener(
             yield f
     elif filename.lower().endswith(".zip"):
         if sqlite_mode:
-            raise (NotImplementedError("Zipped SQLite databases are not supported."))
+            raise NotImplementedError("Zipped SQLite databases are not supported.")
         with zipfile.ZipFile(filename, "r") as z:
-            for name in z.namelist():
-                with z.open(name) as f:
-                    yield io.TextIOWrapper(f, encoding=encoding)
+            namelist = z.namelist()
+            if len(namelist) != 1:
+                raise ValueError("ZIP archives with multiple files are not supported")
+            with z.open(namelist[0]) as f:
+                yield io.TextIOWrapper(f, encoding=encoding)
     else:
         if sqlite_mode:
             conn = sqlite3.connect(filename)
@@ -5008,6 +5011,9 @@ def main():
         if fuse_maybe_last:
             show(fuse_maybe_last, "fuse_last", lineno=1 + fuse_skipped + 1)
 
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         sys.exit(1)
