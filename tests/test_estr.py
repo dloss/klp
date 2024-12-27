@@ -4,17 +4,17 @@ import pytest
 from klp import EStr
 
 
-def test_estr_init():
+def test__init():
     s = EStr("This is a test")
     assert s == "This is a test"
 
 
-def test_estr_init_empty():
+def test__init_empty():
     s = EStr("")
     assert s == ""
 
 
-def test_estr_basic_ops():
+def test__basic_ops():
     s = EStr("This is a test")
     assert str(s) == "This is a test"
     assert len(s) == 14
@@ -23,7 +23,7 @@ def test_estr_basic_ops():
     assert s[2] == "i"
 
 
-def test_estr_col():
+def test__col():
     s = EStr("This is a test")
     assert s.col(0) == "This"
     assert s.col(1) == "is"
@@ -32,7 +32,7 @@ def test_estr_col():
     assert s.col(4) is None
 
 
-def test_estr_cols_basic():
+def test__cols_basic():
     s = EStr("This is  a test  with 7 columns")
     assert s.cols() == ["This", "is", "a", "test", "with", "7", "columns"]
     assert s.cols(0, 3) == ["This", "test"]
@@ -45,13 +45,13 @@ def test_estr_cols_basic():
     assert s.cols("-2,2,4:") == "7 a with 7 columns"
 
 
-def test_estr_cols_with_separators():
+def test__cols_with_separators():
     s = EStr("This|is a|test with|4 columns")
     assert s.cols("1:3", sep="|") == "is a test with"
     assert s.cols("-2,2,4:", sep="|", outsep=":") == "test with:test with"
 
 
-def test_estr_cols_empty_sep():
+def test__cols_empty_sep():
     # Character-by-character splitting with empty separators
     text = EStr("Hello")
     assert text.cols("0,2,4", sep="", outsep="") == "Hlo"  # Single arg joins indices
@@ -93,7 +93,7 @@ def test_estr_cols_empty_sep():
     assert emoji.cols("0", sep="") == "👋"
 
 
-def test_estr_cols_with_regex():
+def test__cols_with_regex():
     s = EStr("This2334is7453a654test232with232regex")
     assert s.cols("1:5", sep=re.compile(r"\d+")) == "is a test with"
 
