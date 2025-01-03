@@ -557,7 +557,10 @@ def guess_datetime(timestamp: str) -> Optional[datetime.datetime]:
         try:
             datetime = converter(timestamp)
             # print("guess", i, timestamp, "as", datetime, datetime.tzname(), file=sys.stderr) # debug
-            break
+            if datetime is None:
+                continue
+            else:
+                break
         except (AttributeError, ValueError, TypeError):
             continue
     # Bring found converter to the front so that it's tried first next time
@@ -1645,6 +1648,8 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(
         s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%f"
     ).astimezone(),
+    # Classic Unix timestamp with weekday (Thu Sep 25 10:36:28 2003)
+    lambda s: dt.datetime.strptime(s, "%a %b %d %H:%M:%S %Y").astimezone(),
     # NCSA Common Log Format
     lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
     # RFC 2822 (date -R)
@@ -1672,6 +1677,18 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(
         f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M"
     ).astimezone(),
+    # Basic format YYYYMMDDTHHMMSS (20030925T104941)
+    lambda s: (
+        dt.datetime.strptime(s, "%Y%m%dT%H%M%S").astimezone()
+        if 1900 <= int(s[:4]) <= 2100
+        else None
+    ),
+    # Basic format YYYYMMDDHHMM (199709020900)
+    lambda s: (
+        dt.datetime.strptime(s, "%Y%m%d%H%M").astimezone()
+        if 1900 <= int(s[:4]) <= 2100
+        else None
+    ),
     # Unix timestamps (seconds since epoch)
     lambda s: dt.datetime.fromtimestamp(float(s)),
     # Nginx timestamps (milliseconds since epoch)
@@ -1698,6 +1715,36 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s[:26], "%b %d, %Y %H:%M:%S.%f")
     .replace(microsecond=int(s[26:]) // 1000)
     .astimezone(),
+    # Classic Unix timestamp format
+    lambda s: dt.datetime.strptime(s, "%b %d %H:%M:%S %Y").astimezone(),
+    # Short month with year
+    lambda s: dt.datetime.strptime(s, "%b %d %Y").astimezone(),
+    # 24-hour time only (assume current date)
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().date()} {s}", "%Y-%m-%d %H:%M"
+    ).astimezone(),
+    # Year with month name and day
+    lambda s: dt.datetime.strptime(s, "%Y %b %d").astimezone(),
+    # DD-MM-YYYY format
+    lambda s: dt.datetime.strptime(s, "%d-%m-%Y").astimezone(),
+    # Month name, day with suffix, and year with apostrophe
+    lambda s: dt.datetime.strptime(s.replace("'", ""), "%a, %B %d, %y").astimezone(),
+    # Day with ordinal indicator and month name
+    lambda s: dt.datetime.strptime(s.replace("rd of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("st of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("nd of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("th of ", " "), "%d %B %Y").astimezone(),
+    # HMS format with fractional seconds (10h36m28.5s)
+    lambda s: dt.datetime.combine(
+        dt.datetime.now().date(),
+        dt.datetime.strptime(
+            s.replace("h", ":").replace("m", ":").replace("s", ""), "%H:%M:%S.%f"
+        ).time(),
+    ).astimezone(),
+    # AM/PM format (10am, 10pm)
+    lambda s: dt.datetime.combine(
+        dt.datetime.now().date(), dt.datetime.strptime(s, "%I%p").time()
+    ).astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
