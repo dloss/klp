@@ -4951,8 +4951,8 @@ def main():
                                         "fuse_last",
                                         lineno=1 + fuse_skipped + 1,
                                     )
-                                    show_gap_marker(ts_delta, terminal_width)
-                                    fuse_maybe_last = None
+                                show_gap_marker(ts_delta, terminal_width)
+                                fuse_maybe_last = None
                         elif args.mark_gaps is not None:
                             if ts_delta > args.mark_gaps:
                                 show_gap_marker(ts_delta, terminal_width)
