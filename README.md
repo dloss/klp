@@ -537,7 +537,7 @@ klp supports multiple output formats:
 - `csv`: Comma separated values
 - `tsv`: Tab separated values 
 - `psv`: Pipe separated values
-- `sqlite`: SQLite database
+- `sqlite`: SQLite database (use `--output-tablename` to set table name. Default: data)
 - `extract`: Only output the grep matches
 
 Select an output format with `--output-format` or `-F`:
