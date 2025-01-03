@@ -3090,25 +3090,27 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
     global _klp_global_set
     global _klp_global_dict
     orig_event = event
-    # Allow special methods on String
-    local_vars = {key: EStr(val) for key, val in event.items()}
-    # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
-    local_vars["_"] = event
-    local_vars["_klp_event"] = event  # more descriptive alternative
-    local_vars["_klp_global_num"] = _klp_global_num
-    local_vars["_klp_global_list"] = _klp_global_list
-    local_vars["_klp_global_set"] = _klp_global_set
-    local_vars["_klp_global_dict"] = _klp_global_dict
+
+    global_vars = [
+        "_klp_global_num",
+        "_klp_global_list",
+        "_klp_global_set",
+        "_klp_global_dict",
+    ]
+    local_vars = {
+        **{key: EStr(val) for key, val in event.items()},
+        "_": event,
+        "_klp_event": event,
+        **{var: globals()[var] for var in global_vars},
+    }
     try:
         event = exec_and_get_locals(code, local_vars)
-        if "_klp_global_num" in event:
-            _klp_global_num = event["_klp_global_num"]
-        if "_klp_global_list" in event:
-            _klp_global_list = event["_klp_global_list"]
-        if "_klp_global_set" in event:
-            _klp_global_set = event["_klp_global_set"]
-        if "_klp_global_dict" in event:
-            _klp_global_dict = event["_klp_global_dict"]
+
+        # Update globals
+        for var in global_vars:
+            if var in event:
+                globals()[var] = event[var]
+
         if "___" in event:  # Multiple output events
             result = [ev for ev in event["___"] if ev is not None]
         elif (
