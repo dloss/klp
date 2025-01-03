@@ -2454,16 +2454,6 @@ def show_default(
         for key, val in part.items():
             key_lower = key.lower()
             val = str(val)
-            double_quotes_needed = args.output_quoting == csv.QUOTE_ALL or (
-                not args.plain
-                and args.output_quoting != csv.QUOTE_NONE
-                and RE_WHITESPACE.search(val)
-            )
-            val = (
-                escape_doublequotes_quoted(val)
-                if double_quotes_needed
-                else escape_plain(val)
-            )
 
             key_color = THEMES[args.theme]["keys"]
             quote_color = THEMES[args.theme]["quotes"]
@@ -2475,6 +2465,17 @@ def show_default(
                 val_color = THEMES[args.theme]["levels"].get(val.lower(), "off")
             elif key_lower in MSG_KEYS:
                 val_color = THEMES[args.theme]["message_key"]
+
+            double_quotes_needed = args.output_quoting == csv.QUOTE_ALL or (
+                not args.plain
+                and args.output_quoting != csv.QUOTE_NONE
+                and RE_WHITESPACE.search(val)
+            )
+            val = (
+                escape_doublequotes_quoted(val)
+                if double_quotes_needed
+                else escape_plain(val)
+            )
 
             if args.color:
                 if args.plain:
