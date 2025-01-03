@@ -4822,6 +4822,9 @@ def sort_files_by_mtime(filenames):
 
 
 def main():
+    # Prevent Python from throwing BrokenPipeError at shutdown
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
     global args
     global is_first_visible_line
     interrupted = False
