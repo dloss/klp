@@ -292,6 +292,11 @@ Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
 
 terminal_width = shutil.get_terminal_size((80, 24)).columns
 
+_klp_global_num = 0
+_klp_global_list = []
+_klp_global_set = set({})
+_klp_global_dict = {}
+
 
 def build_globals_dict(modules: List[Any]) -> Dict[str, Any]:
     """
@@ -3066,18 +3071,44 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
             for key, val in event.items()
             if val is not None
             and key
-            not in ("_", "_klp_event", "__", "_klp_event_add", "___", "_klp_events")
+            not in (
+                "_",
+                "_klp_event",
+                "__",
+                "_klp_event_add",
+                "___",
+                "_klp_events",
+                "_klp_global_num",
+                "_klp_global_list",
+                "_klp_global_set",
+                "_klp_global_dict",
+            )
         }
 
+    global _klp_global_num
+    global _klp_global_list
+    global _klp_global_set
+    global _klp_global_dict
     orig_event = event
     # Allow special methods on String
     local_vars = {key: EStr(val) for key, val in event.items()}
     # Make event available via underscore to allow keys that are not valid Python variable names (e.g. "req.method")
     local_vars["_"] = event
     local_vars["_klp_event"] = event  # more descriptive alternative
+    local_vars["_klp_global_num"] = _klp_global_num
+    local_vars["_klp_global_list"] = _klp_global_list
+    local_vars["_klp_global_set"] = _klp_global_set
+    local_vars["_klp_global_dict"] = _klp_global_dict
     try:
         event = exec_and_get_locals(code, local_vars)
-
+        if "_klp_global_num" in event:
+            _klp_global_num = event["_klp_global_num"]
+        if "_klp_global_list" in event:
+            _klp_global_list = event["_klp_global_list"]
+        if "_klp_global_set" in event:
+            _klp_global_set = event["_klp_global_set"]
+        if "_klp_global_dict" in event:
+            _klp_global_dict = event["_klp_global_dict"]
         if "___" in event:  # Multiple output events
             result = [ev for ev in event["___"] if ev is not None]
         elif (
