@@ -3034,101 +3034,79 @@ def reorder(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Execute Python code to transform an event dictionary.
-
-    Provides a sandboxed environment for executing Python code that can modify
-    or split events. Supports special output variables for different transformation types.
+    """Execute Python code to transform event dict.
 
     Args:
-        code: Python code string to execute
-        event: Input event dictionary to transform
+        code: Python code to execute
+        event: Input event dict
 
     Returns:
-        List[Dict[str, Any]]: List of transformed events where:
-            - Single event: Use '__' or '_klp_event_add' to modify
-            - Multiple events: Use '___' or '_klp_events' to split
-            - No special vars: Return original event with removed underscore keys
-
-    Side Effects:
-        - Executes arbitrary Python code in controlled environment
-
-    Example:
-        >>> event = {"message": "test"}
-        >>> code = "__ = {'new_field': len(message)}"
-        >>> input_exec(code, event)
-        [{'message': 'test', 'new_field': 4}]
+        List of transformed event dicts based on special output variables:
+        - __/_klp_event_add: Modify single event
+        - ___/_klp_events: Split into multiple events
+        - No special vars: Return original event with underscore keys removed
     """
 
-    def exec_and_get_locals(code, local_vars):
-        local_vars = local_vars or {}
-        exec(code, EXPORTED_GLOBALS, local_vars)
-        return local_vars
+    SPECIAL_KEYS = {
+        "_",
+        "_klp_event",
+        "__",
+        "_klp_event_add",
+        "___",
+        "_klp_events",
+        "_klp_global_num",
+        "_klp_global_list",
+        "_klp_global_set",
+        "_klp_global_dict",
+    }
 
-    def remove_underscores(event):
-        return {
-            key: val
-            for key, val in event.items()
-            if val is not None
-            and key
-            not in (
-                "_",
-                "_klp_event",
-                "__",
-                "_klp_event_add",
-                "___",
-                "_klp_events",
-                "_klp_global_num",
-                "_klp_global_list",
-                "_klp_global_set",
-                "_klp_global_dict",
-            )
-        }
-
-    global _klp_global_num
-    global _klp_global_list
-    global _klp_global_set
-    global _klp_global_dict
-    orig_event = event
-
-    global_vars = [
+    GLOBAL_VARS = [
         "_klp_global_num",
         "_klp_global_list",
         "_klp_global_set",
         "_klp_global_dict",
     ]
-    local_vars = {
+
+    def clean_event(event):
+        return {
+            k: v for k, v in event.items() if v is not None and k not in SPECIAL_KEYS
+        }
+
+    orig_event = event
+
+    locals_dict = {
         **{key: EStr(val) for key, val in event.items()},
         "_": event,
         "_klp_event": event,
-        **{var: globals()[var] for var in global_vars},
+        **{var: globals()[var] for var in GLOBAL_VARS},
     }
     try:
-        event = exec_and_get_locals(code, local_vars)
+        exec(code, EXPORTED_GLOBALS, locals_dict)
+        event = locals_dict
 
         # Update globals
-        for var in global_vars:
+        for var in GLOBAL_VARS:
             if var in event:
                 globals()[var] = event[var]
 
         if "___" in event:  # Multiple output events
-            result = [ev for ev in event["___"] if ev is not None]
+            return [ev for ev in event["___"] if ev is not None]
         elif (
             "_klp_events" in event
         ):  # Multiple output events, more descriptive alternative
-            result = [ev for ev in event["_klp_events"] if ev is not None]
+            return [ev for ev in event["_klp_events"] if ev is not None]
         elif "__" in event:  # One output event
             merged_event = {**event, **event["__"]}
             del merged_event["__"]
-            result = [remove_underscores(merged_event)]
+            return [clean_event(merged_event)]
         elif (
             "_klp_event_add" in event
         ):  # One output event, more descriptive alternative
             merged_event = {**event, **event["_klp_event_add"]}
             del merged_event["_klp_event_add"]
-            result = [remove_underscores(merged_event)]
+            return [clean_event(merged_event)]
         else:  # No special output
-            result = [remove_underscores(event)]
+            return [clean_event(event)]
     except Exception as e:
         handle_error(
             f"[Error executing {args.input_exec!r}",
@@ -3136,8 +3114,7 @@ def input_exec(code: str, event: Dict[str, Any]) -> List[Dict[str, Any]]:
             debug_eval=True,
             end=f". {event=}]\n",
         )
-        result = [orig_event]
-    return result
+        return [orig_event]
 
 
 def extract_key_regex(spec):
