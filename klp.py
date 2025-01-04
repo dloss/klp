@@ -273,7 +273,7 @@ BUILTIN_REGEXES = {
     "sha1": [r"\b(([a-fA-F0-9]{40}))\b"],
     "sha256": [r"\b(([a-fA-F0-9]{64}))\b"],
     "sql": [
-        r"\b((?i:(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|MERGE))\b)"
+        r'"(((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|MERGE)\s+(?:(?!"|\().|\([^)]*\))*))"'
     ],
     "url": [
         r"\b(((?:[a-z][a-z0-9+.-]*):\/\/(?:(?:[^\s:@]+(?::[^\s:@]*)?@)?(?:[^\s:/?#]+)(?::\d+)?(?:\/[^\s?#]*)?(?:\?[^\s#]*)?(?:#[^\s]*)?)))\b"
