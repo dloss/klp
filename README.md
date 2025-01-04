@@ -27,6 +27,7 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
   - [Time Management](#time-management)
   - [Search and Filter](#search-and-filter)
   - [Output Control](#output-control)
+  - [Configuration File](#configuration-file)
 - [Advanced Usage](#advanced-usage)
   - [Complex Filtering with Python Expressions](#complex-filtering-with-python-expressions)
   - [Advanced Input Transformations Using Python Code](#advanced-input-transformations-using-python-code)
@@ -579,6 +580,62 @@ $ klp app.log -s -F jsonl -o events.jsonl
 ```
 
 Note: Using `--output-file` disables color output by default, unless explicitly requested with `--color`.
+
+### Configuration File
+
+klp can be configured using an INI-style configuration file. The configuration allows setting default options and defining aliases for commonly used argument combinations.
+
+#### File Locations
+
+The configuration file is searched for in these locations (in order):
+1. `$XDG_CONFIG_HOME/klp/config.ini` (usually `~/.config/klp/config.ini`)
+2. `~/.klprc` (legacy compatibility)
+
+On Windows:
+1. `%APPDATA%\klp\config.ini`
+2. `%USERPROFILE%\.klprc`
+
+Use `klp --show-config` to see the current configuration and search locations.
+
+#### File Format
+
+The configuration file uses INI format with two sections:
+
+```ini
+[defaults]
+# Default values for command line options
+input-format = logfmt
+input-encoding = utf-8
+errors = ignore
+
+[aliases]
+# Define shortcuts for commonly used argument combinations.
+# Aliases can reference other aliases with -a.
+
+# Input format shortcuts
+fmt_spring = -f line -I 'ts,level,thread,cls,msg=line.split("|",4)'
+fmt_java = -f line -I 'ts,level,thread,msg=line.cols("0","1","2","3:")'
+
+# Output format shortcuts
+style_brief = -k timestamp,level,message -p
+style_full = -k timestamp,level,source,thread,message
+
+# Combined format (references other aliases)
+spring_brief = -a fmt_spring -a style_brief
+```
+
+Use aliases with the `-a/--alias` option, which can be specified multiple times:
+
+```bash
+# Use a single alias
+$ klp -a fmt_spring app.log
+
+# Combine multiple aliases
+$ klp -a fmt_spring -a style_brief app.log
+
+# Mix with other options
+$ klp -a spring_brief --mark-gaps 1h app.log
+```
 
 ## Advanced Usage
 

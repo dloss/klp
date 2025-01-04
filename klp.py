@@ -9,6 +9,7 @@ For logs in key=value format (and some others), show only the interesting parts
 
 # Standard library imports for functionality
 import argparse
+import configparser
 import contextlib
 import csv
 import dataclasses
@@ -51,6 +52,7 @@ from typing import (
     Tuple,
     List,
     Iterator,
+    Set,
     Union,
     TextIO,
     Callable,
@@ -3359,6 +3361,180 @@ def validate_tablename(tablename):
         raise argparse.ArgumentTypeError(str(e))
 
 
+class ConfigError(Exception):
+    """Configuration-related errors."""
+
+    pass
+
+
+import os
+import sys
+from typing import List
+
+
+def get_config_paths() -> List[str]:
+    """Get list of possible config file locations."""
+    paths = []
+
+    if sys.platform == "win32":
+        # Windows paths in order of preference:
+        # 1. %APPDATA%\klp\config.ini
+        # 2. %USERPROFILE%\.klprc (legacy/compatibility)
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            paths.append(os.path.join(appdata, "klp", "config.ini"))
+
+        userprofile = os.environ.get("USERPROFILE")
+        if userprofile:
+            paths.append(os.path.join(userprofile, ".klprc"))
+
+    else:
+        # Unix paths in order of preference:
+        # 1. $XDG_CONFIG_HOME/klp/config.ini
+        # 2. ~/.klprc (legacy/compatibility)
+        xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        paths.extend(
+            [
+                os.path.join(xdg_config, "klp", "config.ini"),
+                os.path.expanduser("~/.klprc"),
+            ]
+        )
+
+    return paths
+
+
+def find_config_path() -> Optional[str]:
+    """Find the configuration file path."""
+    paths = get_config_paths()
+    return next((p for p in paths if os.path.exists(p)), None)
+
+
+def load_config() -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Load defaults and aliases from config file."""
+    config_file = find_config_path()
+    if config_file is None:
+        return {}, {}
+
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read(config_file)
+        defaults = dict(parser["defaults"]) if "defaults" in parser else {}
+        aliases = dict(parser["aliases"]) if "aliases" in parser else {}
+        return defaults, aliases
+    except Exception as e:
+        raise ConfigError(f"Error reading {config_file}: {e}")
+
+
+def show_config():
+    """Display current configuration."""
+    config_file = find_config_path()
+    defaults, aliases = load_config()
+
+    if config_file is None:
+        print("No config file found. Searched locations:")
+        for path in get_config_paths():
+            print(f"  {path}")
+        print("\nCreate a config file at any of these locations. Example:")
+        print("""\n[defaults]
+input_format = line
+errors = debug
+
+[aliases]
+extract_hashes = -x md5 -x sha1 -x sha256
+""")
+        return
+
+    print(f"Using config file: {config_file}")
+
+    if not defaults and not aliases:
+        print("File exists but contains no defaults or aliases.")
+        return
+
+    if defaults:
+        print("\nDefaults:")
+        for key, value in sorted(defaults.items()):
+            print(f"  {key} = {value}")
+
+    if aliases:
+        print("\nAliases:")
+        for name, value in sorted(aliases.items()):
+            print(f"  {name}")
+            print(f"    {value}")
+        print("\nUse aliases with -a/--alias (can be specified multiple times)")
+
+
+def resolve_alias(
+    name: str, aliases: Dict[str, str], seen: Set[str], depth: int = 0
+) -> List[str]:
+    """Resolve a single alias, handling recursive references."""
+    if depth > 10:
+        raise ConfigError(f"Alias chain too deep: {' -> '.join(seen)}")
+
+    if name in seen:
+        raise ConfigError(
+            f"Circular dependency detected: {' -> '.join(seen)} -> {name}"
+        )
+
+    if name not in aliases:
+        raise ConfigError(f"Unknown alias: {name}")
+
+    seen.add(name)
+    try:
+        # Split the alias value into args
+        args = shlex.split(aliases[name])
+    except ValueError as e:
+        raise ConfigError(f"Invalid alias '{name}': {e}")
+
+    # Process each argument, handling -a references
+    result = []
+    i = 0
+    while i < len(args):
+        if args[i] in ("-a", "--alias"):
+            if i + 1 >= len(args):
+                raise ConfigError(f"Alias '{name}' has -a/--alias without value")
+            # Recursively resolve the referenced alias
+            ref_name = args[i + 1]
+            result.extend(resolve_alias(ref_name, aliases, seen.copy(), depth + 1))
+            i += 2
+        else:
+            result.append(args[i])
+            i += 1
+
+    return result
+
+
+def process_args(
+    args: List[str], parser: argparse.ArgumentParser
+) -> Tuple[List[str], argparse.ArgumentParser]:
+    """
+    Process config file: apply defaults to parser and expand aliases in args.
+    Returns (expanded argument list, parser with defaults applied).
+    """
+
+    defaults, aliases = load_config()
+
+    # Apply defaults directly to existing parser
+    if defaults:
+        parser.set_defaults(**defaults)
+
+    # Process arguments, expanding aliases
+    result = []
+    i = 0
+    while i < len(args):
+        if args[i] in ("-a", "--alias"):
+            if i + 1 >= len(args):
+                raise ConfigError("Missing value for -a/--alias")
+            name = args[i + 1]
+            # Resolve alias with empty seen set for each top-level alias
+            result.extend(resolve_alias(name, aliases, set()))
+            i += 2
+        else:
+            result.append(args[i])
+            i += 1
+
+    return result, parser
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -3912,6 +4088,15 @@ def parse_args():
         help="how to handle errors: ignore (default), print to stderr, or exit",
     )
     other.add_argument(
+        "--show-config", action="store_true", help="Show current configuration and exit"
+    )
+    other.add_argument(
+        "-a",
+        "--alias",
+        action="append",
+        help="Use alias from config file. Can be given multiple times",
+    )
+    other.add_argument(
         "--selftest",
         action="store_true",
         help="run tests",
@@ -3933,8 +4118,12 @@ def parse_args():
     other.add_argument(
         "-h", "--help", action="help", help="show this help message and exit"
     )
-
-    args = parser.parse_args()
+    try:
+        expanded_args, parser = process_args(sys.argv[1:], parser)
+        args = parser.parse_args(expanded_args)
+    except ConfigError as e:
+        print_err(f"Error: {e}")
+        sys.exit(1)
 
     if args.help_python:
         print_python_help(terminal_width)
@@ -3942,6 +4131,10 @@ def parse_args():
 
     if args.help_time:
         print_time_format_help()
+        sys.exit(0)
+
+    if args.show_config:
+        show_config()
         sys.exit(0)
 
     if sys.stdin.isatty() and not args.files and not args.selftest:
@@ -5084,6 +5277,9 @@ def main():
         sys.exit(1)
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
+        sys.exit(1)
+    except ConfigError as e:
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except BrokenPipeError:
         # Ignore broken pipe errors (e.g. caused by piping our output to head)
