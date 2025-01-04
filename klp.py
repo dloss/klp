@@ -134,7 +134,9 @@ THEMES = {
             "panic": "bright_red",
             "alert": "bright_red",
             "crit": "bright_red",
+            "critical": "bright_red",
             "emerg": "bright_red",
+            "emergency": "bright_red",
         },
         "context_prefix": {
             "before": "blue",
