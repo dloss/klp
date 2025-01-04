@@ -866,7 +866,7 @@ def parse_logfmt(text: str) -> Dict[str, str]:
     }
 
 
-def split_startswith(s: str, pattern: str) -> List[str]:
+def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
     """
     Split string into parts where each part starts with text matching a regex pattern.
 
@@ -901,14 +901,16 @@ def split_startswith(s: str, pattern: str) -> List[str]:
     # Find all starting positions of the pattern
     matches = list(re.finditer(pattern, s))
 
-    # If no matches found, return the entire string
     if not matches:
-        return [s]
+        if keep_all:
+            return [s]
+        else:
+            return []
 
     result = []
 
     # Add the part before first match only if it's non-empty
-    if matches[0].start() > 0:
+    if keep_all and matches[0].start() > 0:
         result.append(s[: matches[0].start()])
 
     # Process each match
@@ -925,7 +927,7 @@ def split_startswith(s: str, pattern: str) -> List[str]:
     return result
 
 
-def split_endswith(s, pattern):
+def split_endswith(s, pattern, keep_all=True):
     r"""
     Split a string into parts where each part ends with text matching the specified regex pattern.
     Uses greedy (non-overlapping) matching and preserves the pattern in the output.
@@ -976,7 +978,10 @@ def split_endswith(s, pattern):
 
     # If no matches found, return the entire string
     if not matches:
-        return [s]
+        if keep_all:
+            return [s]
+        else:
+            return []
 
     # Build result from matches
     result = []
@@ -987,7 +992,7 @@ def split_endswith(s, pattern):
         last_end = match.end()
 
     # Add remaining text if any
-    if last_end < len(s):
+    if keep_all and last_end < len(s):
         result.append(s[last_end:])
 
     return result
@@ -2131,11 +2136,11 @@ class EStr(str):
     def guess_datetime(self):
         return guess_datetime(self)
 
-    def split_startswith(self, pattern):
-        return split_startswith(self, pattern)
+    def split_startswith(self, pattern, keep_all=True):
+        return split_startswith(self, pattern, keep_all)
 
-    def split_endswith(self, pattern):
-        return split_endswith(self, pattern)
+    def split_endswith(self, pattern, keep_all=True):
+        return split_endswith(self, pattern, keep_all)
 
     def parse_kv(self, sep=None, kvsep="="):
         return parse_kv(self, sep, kvsep)
