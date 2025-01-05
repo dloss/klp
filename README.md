@@ -257,10 +257,8 @@ klp provides several options to control how input data is read and parsed:
 - `--logical-lines`: Handle log entries that span multiple physical lines by combining related lines into a single event. Two methods are supported:
  
   1. *Indentation Continuation*: Lines starting with whitespace are joined with a space between them (indentation removed)
-  2. *Backslash Continuation*: Lines ending with `\` are concatenated with the next line (backslash removed)
 
   ```bash
-  # Indentation continuation
   $ cat multi_indented.log
   Starting SQL query:
       SELECT * FROM users
@@ -270,8 +268,10 @@ klp provides several options to control how input data is read and parsed:
   $ klp -f line --logical-lines multi_indented.log
   line="Starting SQL query: SELECT * FROM users WHERE active = true"
   line="Query completed"
+  ```
+  2. *Backslash Continuation*: Lines ending with `\` are concatenated with the next line (backslash removed)
 
-  # Backslash continuation
+  ```bash
   $ cat multi_backslash.log
   Dec 16 10:15:30 shade app[123]: Starting a long process \
   with multiple arguments and lots of long configuration o\
