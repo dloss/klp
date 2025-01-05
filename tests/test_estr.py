@@ -315,3 +315,109 @@ def test_between_adjacent():
     """Test when substrings are adjacent"""
     s = EStr("name[]value")
     assert s.between("[", "]") == ""
+
+
+def test_before_doctest_examples():
+    """Test the examples provided in the docstring"""
+    assert EStr("name:alice").before(":") == "name"
+    assert EStr("test").before("@") == ""
+    assert EStr("a:b:c").before(":") == "a"
+
+
+def test_before_edge_cases():
+    """Test edge cases for before() method"""
+    assert EStr("").before("x") == ""  # Empty source string
+    assert EStr("test").before("") == "test"  # Empty target string
+    assert EStr("test").before("test123") == ""  # Target longer than source
+
+
+def test_after_doctest_examples():
+    """Test the examples provided in the docstring"""
+    assert EStr("name:alice").after(":") == "alice"
+    assert EStr("test").after("@") == ""
+    assert EStr("a:b:c").after(":") == "b:c"
+
+
+def test_after_edge_cases():
+    """Test edge cases for after() method"""
+    assert EStr("").after("x") == ""  # Empty source string
+    assert EStr("test").after("") == "test"  # Empty target string
+    assert EStr("test").after("test123") == ""  # Target longer than source
+
+
+def test_between_doctest_examples():
+    """Test the examples provided in the docstring"""
+    assert EStr("name:alice:bob").between(":", ":") == "alice"
+    assert EStr("<tag>value</tag>").between(">", "<") == "value"
+    assert EStr("no delimiters").between("[", "]") == ""
+
+
+def test_between_edge_cases():
+    """Test edge cases for between() method"""
+    assert EStr("").between("x", "y") == ""  # Empty source string
+    assert EStr("test").between("", "") == "test"  # Empty delimiters
+    assert (
+        EStr("test").between("test123", "x") == ""
+    )  # First delimiter longer than source
+
+
+def test_between_complex_cases():
+    """Test more complex scenarios for between() method"""
+    assert EStr("[[nested]]").between("[", "]") == "[nested"  # Nested delimiters
+    assert EStr("start:middle:end").between(":", ":") == "middle"  # Multiple delimiters
+    assert (
+        EStr("no second delimiter").between("no ", "x") == ""
+    )  # Missing second delimiter
+    assert EStr("text:").between(":", ":") == ""  # No content between delimiters
+
+
+def test_starting_with_doctest_examples():
+    """Test the examples provided in the docstring"""
+    assert EStr("hello world").starting_with("o w") == "o world"
+    assert EStr("hello world").starting_with("hello") == "hello world"
+    assert EStr("test").starting_with("x") == ""
+    assert EStr("abc").starting_with("abcd") == ""
+
+
+def test_starting_with_edge_cases():
+    """Test edge cases for starting_with() method"""
+    assert EStr("").starting_with("x") == ""  # Empty source string
+    assert EStr("test").starting_with("") == "test"  # Empty target string
+    assert EStr("test").starting_with("test123") == ""  # Target longer than source
+
+
+def test_starting_with_multiple_occurrences():
+    """Test behavior with multiple occurrences of target"""
+    assert EStr("hello hello world").starting_with("hello") == "hello hello world"
+    assert EStr("start start end").starting_with("start") == "start start end"
+    assert EStr("prefixprefixsuffix").starting_with("prefix") == "prefixprefixsuffix"
+
+
+def test_ending_with_doctest_examples():
+    """Test the examples provided in the docstring"""
+    assert EStr("hello world").ending_with("world") == "hello world"
+    assert EStr("hello world").ending_with("o wo") == "hello wo"
+    assert EStr("test").ending_with("x") == ""
+    assert EStr("abc").ending_with("abcd") == ""
+
+
+def test_ending_with_edge_cases():
+    """Test edge cases for ending_with() method"""
+    assert EStr("").ending_with("x") == ""  # Empty source string
+    assert EStr("test").ending_with("") == "test"  # Empty target string
+    assert EStr("test").ending_with("test123") == ""  # Target longer than source
+
+
+def test_ending_with_multiple_occurrences():
+    """Test behavior with multiple occurrences of target"""
+    assert EStr("world hello world").ending_with("world") == "world"
+    assert EStr("end start end").ending_with("end") == "end"
+    assert EStr("prefixsuffixsuffix").ending_with("suffix") == "prefixsuffix"
+
+
+def test_chaining_methods():
+    """Test that methods can be chained together"""
+    text = EStr("start:middle:end")
+    assert text.after(":").before(":") == "middle"
+    assert text.between(":", ":").starting_with("mid") == "middle"
+    assert text.starting_with("start").ending_with("middle:end") == "start:middle:end"
