@@ -2168,28 +2168,21 @@ class EStr(str):
     def parse_data(self):
         return parse_data(self)
 
-    def before(self, t: str) -> str:
-        """Return the part of the string that comes before t.
+    def before(self, t: str, n: int = 1) -> str:
+        """Return the part of the string that comes before the nth occurrence of t.
 
         Args:
             t: Target substring to find
+            n: The occurrence to match (default 1). Negative values count from the end.
 
         Returns:
-            Everything before the first occurrence of t, or empty string if not found.
+            Everything before the nth occurrence of t, or empty string if not found.
             Returns empty string if t is longer than self.
             Returns empty string if source is empty.
             Returns source string if t is empty.
 
         Raises:
             TypeError: If t is None
-
-        Examples:
-            >>> EStr("name:alice").before(":")
-            'name'
-            >>> EStr("test").before("@")
-            ''
-            >>> EStr("a:b:c").before(":")
-            'a'
         """
         if t is None:
             raise TypeError("Input cannot be None")
@@ -2197,66 +2190,94 @@ class EStr(str):
         if t == "":
             return self
 
-        if self == "":
+        if self == "" or len(t) > len(self):
             return EStr("")
 
-        if len(t) > len(self):
+        # Find all occurrences
+        matches = []
+        start = 0
+        while True:
+            try:
+                index = self.index(t, start)
+                matches.append(index)
+                start = index + 1
+            except ValueError:
+                break
+
+        # Handle nth match selection
+        if not matches or n == 0:
             return EStr("")
 
-        try:
-            index = self.index(t)
-            return EStr(self[:index])
-        except ValueError:
+        # Convert negative indices
+        if n < 0:
+            n = len(matches) + n + 1
+
+        # Check if n is within bounds
+        if n < 1 or n > len(matches):
             return EStr("")
 
-    def after(self, t: str) -> str:
-        """Return the part of the string that comes after t.
+        return EStr(self[: matches[n - 1]])
+
+    def after(self, t: str, n: int = 1) -> str:
+        """Return the part of the string that comes after the nth occurrence of t.
 
         Args:
             t: Target substring to find
+            n: The occurrence to match (default 1). Negative values count from the end.
 
         Returns:
-            Everything after the first occurrence of t, or empty string if not found.
+            Everything after the nth occurrence of t, or empty string if not found.
             Returns empty string if t is longer than self.
             Returns empty string if source is empty.
             Returns source string if t is empty.
 
         Raises:
             TypeError: If t is None
-
-        Examples:
-            >>> EStr("name:alice").after(":")
-            'alice'
-            >>> EStr("test").after("@")
-            ''
-            >>> EStr("a:b:c").after(":")
-            'b:c'
         """
         if t is None:
             raise TypeError("Input cannot be None")
 
         if t == "":
             return self
-        if self == "":
-            return EStr("")
-        if len(t) > len(self):
+
+        if self == "" or len(t) > len(self):
             return EStr("")
 
-        try:
-            index = self.index(t)
-            return self[index + len(t) :]
-        except ValueError:
+        # Find all occurrences
+        matches = []
+        start = 0
+        while True:
+            try:
+                index = self.index(t, start)
+                matches.append(index)
+                start = index + 1
+            except ValueError:
+                break
+
+        # Handle nth match selection
+        if not matches or n == 0:
             return EStr("")
 
-    def between(self, a: str, b: str) -> str:
-        """Return the part of the string that lies between a and b.
+        # Convert negative indices
+        if n < 0:
+            n = len(matches) + n + 1
+
+        # Check if n is within bounds
+        if n < 1 or n > len(matches):
+            return EStr("")
+
+        return self[matches[n - 1] + len(t) :]
+
+    def between(self, a: str, b: str, n: int = 1) -> str:
+        """Return the part of the string that lies between the nth occurrence of a and b.
 
         Args:
             a: Starting substring to find
             b: Ending substring to find after a
+            n: The occurrence to match (default 1). Negative values count from the end.
 
         Returns:
-            Text between first occurrence of a and first occurrence of b after a.
+            Text between nth occurrence of a and its following b.
             Returns empty string if either substring is not found.
             Returns empty string if a occurs after b.
             Returns empty string if source is empty.
@@ -2264,14 +2285,6 @@ class EStr(str):
 
         Raises:
             TypeError: If either a or b is None
-
-        Examples:
-            >>> EStr("name:alice:bob").between(":", ":")
-            'alice'
-            >>> EStr("<tag>value</tag>").between(">", "<")
-            'value'
-            >>> EStr("no delimiters").between("[", "]")
-            ''
         """
         if a is None or b is None:
             raise TypeError("Input cannot be None")
@@ -2282,20 +2295,47 @@ class EStr(str):
         if self == "":
             return EStr("")
 
-        after_a = self.after(a)
-        if not after_a:
+        # Find all pairs of matches
+        pairs = []
+        start = 0
+        while True:
+            try:
+                # Find next 'a'
+                a_index = self.index(a, start)
+                # Look for 'b' after this 'a'
+                try:
+                    b_index = self.index(b, a_index + len(a))
+                    pairs.append((a_index, b_index))
+                    start = a_index + 1
+                except ValueError:
+                    break
+            except ValueError:
+                break
+
+        # Handle nth match selection
+        if not pairs or n == 0:
             return EStr("")
 
-        return after_a.before(b)
+        # Convert negative indices
+        if n < 0:
+            n = len(pairs) + n + 1
 
-    def starting_with(self, t: str) -> str:
-        """Return the part of the string that starts with t (first match).
+        # Check if n is within bounds
+        if n < 1 or n > len(pairs):
+            return EStr("")
+
+        a_pos, b_pos = pairs[n - 1]
+        return self[a_pos + len(a) : b_pos]
+
+    def starting_with(self, t: str, n: int = 1) -> str:
+        """Return the part of the string that starts with the nth occurrence of t.
 
         Args:
             t: Target substring to find at start
+            n: The occurrence to match (default 1). Negative values count from the end.
 
         Returns:
-            The substring starting from first occurrence of t to the end.
+            The substring from nth occurrence of t to the end.
             Returns empty string if t is not found.
             Returns empty string if t is longer than self.
             Returns empty string if source is empty.
@@ -2303,58 +2343,6 @@ class EStr(str):
 
         Raises:
             TypeError: If t is None
-
-        Examples:
-            >>> EStr("hello world").starting_with("o w")
-            'o world'
-            >>> EStr("hello world").starting_with("hello")
-            'hello world'
-            >>> EStr("test").starting_with("x")
-            ''
-            >>> EStr("abc").starting_with("abcd")
-            ''
-        """
-
-        if t == "":
-            return self
-
-        if self == "":
-            return EStr("")
-
-        if len(t) > len(self):
-            return EStr("")
-
-        try:
-            index = self.index(t)
-            return EStr(self[index:])
-        except ValueError:
-            return EStr("")
-
-    def ending_with(self, t: str) -> str:
-        """Return the part of the string that ends with t (first match).
-
-        Args:
-            t: Target substring to find at end
-
-        Returns:
-            The substring from start up through the last occurrence of t.
-            Returns empty string if t is not found.
-            Returns empty string if t is longer than self.
-            Returns empty string if source is empty.
-            Returns source string if t is empty.
-
-        Raises:
-            TypeError: If t is None
-
-        Examples:
-            >>> EStr("hello world").ending_with("world")
-            'hello world'
-            >>> EStr("hello world").ending_with("o wo")
-            'hello wo'
-            >>> EStr("test").ending_with("x")
-            ''
-            >>> EStr("abc").ending_with("abcd")
-            ''
         """
         if t is None:
             raise TypeError("Input cannot be None")
@@ -2362,17 +2350,84 @@ class EStr(str):
         if t == "":
             return self
 
-        if self == "":
+        if self == "" or len(t) > len(self):
             return EStr("")
 
-        if len(t) > len(self):
+        # Find all occurrences
+        matches = []
+        start = 0
+        while True:
+            try:
+                index = self.index(t, start)
+                matches.append(index)
+                start = index + 1
+            except ValueError:
+                break
+
+        # Handle nth match selection
+        if not matches or n == 0:
             return EStr("")
 
-        try:
-            index = self.index(t)
-            return EStr(self[: index + len(t)])
-        except ValueError:
+        # Convert negative indices
+        if n < 0:
+            n = len(matches) + n + 1
+
+        # Check if n is within bounds
+        if n < 1 or n > len(matches):
             return EStr("")
+
+        return self[matches[n - 1] :]
+
+    def ending_with(self, t: str, n: int = 1) -> str:
+        """Return the part of the string that ends with the nth occurrence of t.
+
+        Args:
+            t: Target substring to find at end
+            n: The occurrence to match (default 1). Negative values count from the end.
+
+        Returns:
+            The substring from start through nth occurrence of t.
+            Returns empty string if t is not found.
+            Returns empty string if t is longer than self.
+            Returns empty string if source is empty.
+            Returns source string if t is empty.
+
+        Raises:
+            TypeError: If t is None
+        """
+        if t is None:
+            raise TypeError("Input cannot be None")
+
+        if t == "":
+            return self
+
+        if self == "" or len(t) > len(self):
+            return EStr("")
+
+        # Find all occurrences
+        matches = []
+        start = 0
+        while True:
+            try:
+                index = self.index(t, start)
+                matches.append(index)
+                start = index + 1
+            except ValueError:
+                break
+
+        # Handle nth match selection
+        if not matches or n == 0:
+            return EStr("")
+
+        # Convert negative indices
+        if n < 0:
+            n = len(matches) + n + 1
+
+        # Check if n is within bounds
+        if n < 1 or n > len(matches):
+            return EStr("")
+
+        return self[: matches[n - 1] + len(t)]
 
 
 def show(

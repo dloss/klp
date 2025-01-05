@@ -421,3 +421,149 @@ def test_chaining_methods():
     assert text.after(":").before(":") == "middle"
     assert text.between(":", ":").starting_with("mid") == "middle"
     assert text.starting_with("start").ending_with("middle:end") == "start:middle:end"
+
+
+def test_before_nth_match():
+    """Test nth match functionality of before()"""
+    s = EStr("a:b:c:d")
+    assert s.before(":", n=1) == "a"  # First match (default)
+    assert s.before(":", n=2) == "a:b"  # Second match
+    assert s.before(":", n=3) == "a:b:c"  # Third match
+    assert s.before(":", n=0) == ""  # Invalid n
+    assert s.before(":", n=-1) == "a:b:c"  # Last match
+    assert s.before(":", n=-2) == "a:b"  # Second to last match
+    assert s.before(":", n=-3) == "a"  # Third to last match
+    assert s.before(":", n=99) == ""  # n beyond available matches
+    assert s.before(":", n=-99) == ""  # negative n beyond available matches
+
+
+def test_after_nth_match():
+    """Test nth match functionality of after()"""
+    s = EStr("a:b:c:d")
+    assert s.after(":", n=1) == "b:c:d"  # First match (default)
+    assert s.after(":", n=2) == "c:d"  # Second match
+    assert s.after(":", n=3) == "d"  # Third match
+    assert s.after(":", n=0) == ""  # Invalid n
+    assert s.after(":", n=-1) == "d"  # Last match
+    assert s.after(":", n=-2) == "c:d"  # Second to last match
+    assert s.after(":", n=-3) == "b:c:d"  # Third to last match
+    assert s.after(":", n=99) == ""  # n beyond available matches
+    assert s.after(":", n=-99) == ""  # negative n beyond available matches
+
+
+def test_between_nth_match():
+    """Test nth match functionality of between()"""
+    s = EStr("[1][2][3][4]")
+    assert s.between("[", "]", n=1) == "1"  # First match (default)
+    assert s.between("[", "]", n=2) == "2"  # Second match
+    assert s.between("[", "]", n=3) == "3"  # Third match
+    assert s.between("[", "]", n=0) == ""  # Invalid n
+    assert s.between("[", "]", n=-1) == "4"  # Last match
+    assert s.between("[", "]", n=-2) == "3"  # Second to last match
+    assert s.between("[", "]", n=-3) == "2"  # Third to last match
+    assert s.between("[", "]", n=99) == ""  # n beyond available matches
+    assert s.between("[", "]", n=-99) == ""  # negative n beyond available matches
+
+    # Test when second delimiter has multiple matches after nth first delimiter
+    s = EStr("a[1]b[2]c[3]d")
+    assert (
+        s.between("[", "]", n=2) == "2"
+    )  # Should match with closest closing delimiter
+
+
+def test_starting_with_nth_match():
+    """Test nth match functionality of starting_with()"""
+    s = EStr("start middle start end start")
+    assert (
+        s.starting_with("start", n=1) == "start middle start end start"
+    )  # First match (default)
+    assert s.starting_with("start", n=2) == "start end start"  # Second match
+    assert s.starting_with("start", n=3) == "start"  # Third match
+    assert s.starting_with("start", n=0) == ""  # Invalid n
+    assert s.starting_with("start", n=-1) == "start"  # Last match
+    assert s.starting_with("start", n=-2) == "start end start"  # Second to last match
+    assert (
+        s.starting_with("start", n=-3) == "start middle start end start"
+    )  # Third to last match
+    assert s.starting_with("start", n=99) == ""  # n beyond available matches
+    assert s.starting_with("start", n=-99) == ""  # negative n beyond available matches
+
+
+def test_ending_with_nth_match():
+    """Test nth match functionality of ending_with()"""
+    s = EStr("start middle start end start")
+    assert s.ending_with("start", n=1) == "start"  # First match from left (default)
+    assert s.ending_with("start", n=2) == "start middle start"  # Second match from left
+    assert (
+        s.ending_with("start", n=3) == "start middle start end start"
+    )  # Third match from left
+    assert s.ending_with("start", n=0) == ""  # Invalid n
+    assert (
+        s.ending_with("start", n=-1) == "start middle start end start"
+    )  # Last match from right
+    assert (
+        s.ending_with("start", n=-2) == "start middle start"
+    )  # Second to last match from right
+    assert s.ending_with("start", n=-3) == "start"  # Third to last match from right
+    assert s.ending_with("start", n=99) == ""  # n beyond available matches
+    assert s.ending_with("start", n=-99) == ""  # negative n beyond available matches
+
+
+def test_nth_match_with_overlapping():
+    """Test nth match behavior with overlapping matches"""
+    s = EStr("aaaaa")
+    assert s.before("aa", n=1) == ""  # First 'aa'
+    assert s.before("aa", n=2) == "a"  # Second 'aa'
+    assert s.before("aa", n=3) == "aa"  # Third 'aa'
+    assert s.before("aa", n=4) == "aaa"  # Fourth 'aa'
+
+    assert s.after("aa", n=1) == "aaa"  # First 'aa'
+    assert s.after("aa", n=2) == "aa"  # Second 'aa'
+    assert s.after("aa", n=3) == "a"  # Third 'aa'
+    assert s.after("aa", n=4) == ""  # Fourth 'aa'
+
+
+def test_nth_match_complex_patterns():
+    """Test nth match with more complex patterns"""
+    # Test with multi-character patterns
+    s = EStr("abc--def--ghi--jkl")
+    assert s.before("--", n=2) == "abc--def"
+    assert s.after("--", n=2) == "ghi--jkl"
+
+    # Test with empty strings between matches
+    s = EStr("::text::")
+    assert s.between(":", ":", n=1) == ""  # First pair
+    assert s.between(":", ":", n=2) == "text"  # Second pair
+
+    # Test with mixed delimiters
+    s = EStr("[1]{2}[3]{4}")
+    assert s.between("[", "]", n=1) == "1"
+    assert s.between("[", "]", n=2) == "3"
+    assert s.between("{", "}", n=1) == "2"
+    assert s.between("{", "}", n=2) == "4"
+
+
+def test_nth_match_whitespace():
+    """Test nth match behavior with whitespace patterns"""
+    s = EStr("  word  another  word  ")
+    assert s.between("  ", "  ", n=1) == "word"
+    assert s.between("  ", "  ", n=2) == "another"
+    assert s.between("  ", "  ", n=3) == "word"
+
+
+def test_nth_match_empty_and_edge():
+    """Test nth match edge cases"""
+    # Empty string
+    s = EStr("")
+    assert s.before("x", n=1) == ""
+    assert s.before("x", n=2) == ""
+
+    # Empty pattern
+    s = EStr("text")
+    assert s.before("", n=1) == "text"
+    assert s.before("", n=2) == "text"
+
+    # Pattern longer than string
+    s = EStr("abc")
+    assert s.before("abcd", n=1) == ""
+    assert s.before("abcd", n=2) == ""
