@@ -17,7 +17,6 @@
 - Utility functions
     * llm() # batch handling of multiple lines
     * render_file(template_path)
-    * starting_with()/ending_with() in addition to before()/after()
 - Stats
     * Continuously displaying the current message rate (sliding window or exponentail moving average)
 - Performance
