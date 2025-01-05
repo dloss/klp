@@ -2288,6 +2288,92 @@ class EStr(str):
 
         return after_a.before(b)
 
+    def starting_with(self, t: str) -> str:
+        """Return the part of the string that starts with t (first match).
+
+        Args:
+            t: Target substring to find at start
+
+        Returns:
+            The substring starting from first occurrence of t to the end.
+            Returns empty string if t is not found.
+            Returns empty string if t is longer than self.
+            Returns empty string if source is empty.
+            Returns source string if t is empty.
+
+        Raises:
+            TypeError: If t is None
+
+        Examples:
+            >>> EStr("hello world").starting_with("o w")
+            'o world'
+            >>> EStr("hello world").starting_with("hello")
+            'hello world'
+            >>> EStr("test").starting_with("x")
+            ''
+            >>> EStr("abc").starting_with("abcd")
+            ''
+        """
+
+        if t == "":
+            return self
+
+        if self == "":
+            return EStr("")
+
+        if len(t) > len(self):
+            return EStr("")
+
+        try:
+            index = self.index(t)
+            return EStr(self[index:])
+        except ValueError:
+            return EStr("")
+
+    def ending_with(self, t: str) -> str:
+        """Return the part of the string that ends with t (first match).
+
+        Args:
+            t: Target substring to find at end
+
+        Returns:
+            The substring from start up through the last occurrence of t.
+            Returns empty string if t is not found.
+            Returns empty string if t is longer than self.
+            Returns empty string if source is empty.
+            Returns source string if t is empty.
+
+        Raises:
+            TypeError: If t is None
+
+        Examples:
+            >>> EStr("hello world").ending_with("world")
+            'hello world'
+            >>> EStr("hello world").ending_with("o wo")
+            'hello wo'
+            >>> EStr("test").ending_with("x")
+            ''
+            >>> EStr("abc").ending_with("abcd")
+            ''
+        """
+        if t is None:
+            raise TypeError("Input cannot be None")
+
+        if t == "":
+            return self
+
+        if self == "":
+            return EStr("")
+
+        if len(t) > len(self):
+            return EStr("")
+
+        try:
+            index = self.index(t)
+            return EStr(self[: index + len(t)])
+        except ValueError:
+            return EStr("")
+
 
 def show(
     event: Dict[str, Any], context_type: str = "", lineno: Optional[int] = None
