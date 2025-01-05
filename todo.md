@@ -1,17 +1,23 @@
+- Bug fixes, robustness
+    * Synthetic fields not shown if no other keys specified
+    * Problems with multiple files in ZIP archives
+    * Fix grep when used both with and without keys
+    * More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
 - Input formats
+    * -f rfc5242 (syslog with priority)
     * -f cef
-    * -f syslog
     * -f mbox
     * -f xml
     * formats from logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
     * Input format guessing? (probably too error-prone)
 - Output formats
+    * Allow to specify output encoding (fix commit 9698a8b9)
     * -F yaml  (simple)
     * -F xml
-    * Allow to specify output encoding (fix commit 9698a8b9)
 - Utility functions
     * llm() # batch handling of multiple lines
     * render_file(template_path)
+    * starting_with()/ending_with() in addition to before()/after()
 - Stats
     * Continuously displaying the current message rate (sliding window or exponentail moving average)
 - Performance
@@ -25,7 +31,6 @@
     - Add TUI with textual
 - README and help
     * Document how to use -f data together with -I
-    * Document --logical-lines
     * Document EStr.before/after/between()
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
@@ -34,11 +39,7 @@
     * Nice logo
     * Autocompletion for bash
     * Standalone executable (e.g. with Nuitka)
-- Bug fixes, performance, stability
-    * Synthetic fields not shown if no other keys specified
-    * Problems with multiple files in ZIP archives
-    * Fix grep when used both with and without keys
+- Performance
     * Use fast string comparison for ISO dates
-    * More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
     * Rewrite in Rust :-)
     
