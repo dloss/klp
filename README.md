@@ -254,42 +254,39 @@ klp provides several options to control how input data is read and parsed:
   $ klp -f csv --skip 5 data.csv
   ```
 
-#### Logical Lines
+- `--logical-lines`: Handle log entries that span multiple physical lines, by combining related lines into a single event.
 
-klp can handle log entries that span multiple physical lines using the `--logical-lines` option.
-This feature combines related lines into a single event, making it easier to process logs with complex formatting.
+  Lines are joined into a single logical line in two cases:
 
-Lines are joined into a single logical line in two cases:
+  1. **Backslash Continuation**: Lines ending with `\` are concatenated with the next line (backslash removed)
+  2. **Indentation Continuation**: Lines starting with whitespace are joined with a space between them (indentation removed)
 
-1. **Backslash Continuation**: Lines ending with `\` are concatenated with the next line (backslash removed)
-2. **Indentation Continuation**: Lines starting with whitespace are joined with a space between them (indentation removed)
+  ```bash
+  # Indentation continuation
+  $ cat multi_indented.log
+  Starting SQL query:
+      SELECT * FROM users
+      WHERE active = true
+  Query completed
 
-```bash
-# Indentation continuation
-$ cat multi_indented.log
-Starting SQL query:
-    SELECT * FROM users
-    WHERE active = true
-Query completed
+  $ klp -f line --logical-lines multi_indented.log
+  line="Starting SQL query: SELECT * FROM users WHERE active = true"
+  line="Query completed"
 
-$ klp -f line --logical-lines multi_indented.log
-line="Starting SQL query: SELECT * FROM users WHERE active = true"
-line="Query completed"
+  # Backslash continuation
+  $ cat multi_backslash.log
+  Dec 16 10:15:30 shade app[123]: Starting a long process \
+  with multiple arguments and lots of long configuration o\
+  ptions
+  Dec 16 10:15:31 shade app[123]: Process completed
 
-# Backslash continuation
-$ cat multi_backslash.log
-Dec 16 10:15:30 shade app[123]: Starting a long process \
-with multiple arguments and lots of long configuration o\
-ptions
-Dec 16 10:15:31 shade app[123]: Process completed
+  $ klp -f unix --logical-lines multi_backslash.log
+  timestamp="Dec 16 10:15:30" hostname=shade service=app pid=123 message="Starting a long process with multiple arguments and lots of long configuration options"
+  timestamp="Dec 16 10:15:31" hostname=shade service=app pid=123 message="Process completed"
+  ```
 
-$ klp -f unix --logical-lines multi_backslash.log
-timestamp="Dec 16 10:15:30" hostname=shade service=app pid=123 message="Starting a long process with multiple arguments and lots of long configuration options"
-timestamp="Dec 16 10:15:31" hostname=shade service=app pid=123 message="Process completed"
-```
-
-The `--logical-lines` option can be combined with any line-based input format and works with streaming input.
-It processes the lines before they are parsed according to the input format, so it works transparently with all klp's features.
+  The `--logical-lines` option can be combined with any line-based input format and works with streaming input.
+  It processes the lines before they are parsed according to the input format, so it works transparently with all klp's features.
 
 #### Error Handling
 
