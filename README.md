@@ -254,12 +254,10 @@ klp provides several options to control how input data is read and parsed:
   $ klp -f csv --skip 5 data.csv
   ```
 
-- `--logical-lines`: Handle log entries that span multiple physical lines, by combining related lines into a single event.
-
-  Lines are joined into a single logical line in two cases:
-
-  1. **Backslash Continuation**: Lines ending with `\` are concatenated with the next line (backslash removed)
-  2. **Indentation Continuation**: Lines starting with whitespace are joined with a space between them (indentation removed)
+- `--logical-lines`: Handle log entries that span multiple physical lines by combining related lines into a single event. Two methods are supported:
+ 
+  1. *Indentation Continuation*: Lines starting with whitespace are joined with a space between them (indentation removed)
+  2. *Backslash Continuation*: Lines ending with `\` are concatenated with the next line (backslash removed)
 
   ```bash
   # Indentation continuation
