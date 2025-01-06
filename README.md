@@ -706,6 +706,12 @@ $ klp app.log -f line -I 'ts,level,msg = line.split(maxsplit=2); del line' -I 'l
 This shows how to use Python code to transform events, create new fields through assignment, chain multiple transformations, and remove intermediate fields that are no longer needed. 
 Each transformation has access to fields created by previous ones.
 
+To read the code from a file, use a `@` prefix:
+
+```bash
+$ klp app.log -I @myscript.py
+```
+
 #### Special Variables
 
 When using `--input-exec`/`-I`, there are three special variables available for more complex transformations.
