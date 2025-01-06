@@ -3576,13 +3576,15 @@ def show_config():
         for path in get_config_paths():
             print(f"  {path}")
         print("\nCreate a config file at any of these locations. Example:")
-        print("""\n[defaults]
+        print(
+            """\n[defaults]
 input_format = line
 errors = debug
 
 [aliases]
 extract_hashes = -x md5 -x sha1 -x sha256
-""")
+"""
+        )
         return
 
     print(f"Using config file: {config_file}")
@@ -3651,6 +3653,10 @@ def process_args(
     Process config file: apply defaults to parser and expand aliases in args.
     Returns (expanded argument list, parser with defaults applied).
     """
+
+    # Parse manually because argparse hasn't run yet
+    if "--ignore-config" in args:
+        return args, parser
 
     defaults, aliases = load_config()
 
@@ -4230,6 +4236,9 @@ def parse_args():
     )
     other.add_argument(
         "--show-config", action="store_true", help="Show current configuration and exit"
+    )
+    other.add_argument(
+        "--ignore-config", action="store_true", help="Don't read config file"
     )
     other.add_argument(
         "-a",
