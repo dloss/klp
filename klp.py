@@ -731,10 +731,27 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
     return extraction_function
 
 
+def get_code(code_or_script):
+    """
+    Load code from a string or file path.
+
+    If prefixed with '@', reads from file. Otherwise, returns input directly.
+    """
+    if not code_or_script.startswith("@"):
+        return code_or_script
+
+    try:
+        with open(code_or_script[1:], "r", encoding="utf-8") as file:
+            return file.read()
+    except Exception as e:
+        raise ValueError(f"Error reading code from file: {e}")
+
+
 def apply_input_exec(event):
     events = [event]
     if args.input_exec:
-        for code in args.input_exec:
+        for item in args.input_exec:
+            code = get_code(item)
             new_events = []
             for event in events:
                 new_events.extend(input_exec(code, event))
