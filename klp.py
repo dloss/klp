@@ -1347,517 +1347,6 @@ def sh(command, **kwargs):
     return result.stdout.strip() if hasattr(result, "stdout") else result
 
 
-# Make some modules available for use in filters and templates
-EXPORTED_GLOBALS = build_globals_dict(
-    [
-        base64,
-        collections,
-        datetime,
-        hashlib,
-        itertools,
-        json,
-        math,
-        pprint,
-        random,
-        re,
-        string,
-        textwrap,
-        extract_json,
-        extract_regex,
-    ]
-    + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
-    + [
-        format_datetime,
-        guess_datetime,
-        split_startswith,
-        split_endswith,
-        parse_kv,
-        parse_logfmt,
-        parse_jsonl,
-        parse_clf,
-        parse_combined,
-        parse_unix,
-        parse_line,
-        parse_data,
-        pprint_json,
-        sh,
-    ]
-)
-
-
-def list_exported_objects(ignore_underscore=True):
-    """List all exported objects (modules and functions).
-
-    Args:
-        ignore_underscore (bool): Whether to ignore names starting with underscore
-
-    Returns:
-        list: List of exported objects
-    """
-    funcs = EXPORTED_GLOBALS.values()
-    if ignore_underscore:
-        funcs = [f for f in funcs if not getattr(f, "__name__", "").startswith("_")]
-    return funcs
-
-
-def print_json_elem(*myargs, **mykwargs):
-    global is_first_visible_line
-    if is_first_visible_line:
-        is_first_visible_line = False
-    else:
-        print_output(args.output_event_sep, end="", **mykwargs)
-    print_output(*myargs, end="", flush=True, **mykwargs)
-
-
-def expand_color_codes(line):
-    for _, (color, scolor) in COLOR_CODES.items():
-        line = line.replace(scolor, color)
-    return line
-
-
-@dataclasses.dataclass
-class Stats:
-    # Sets would make this a few percent faster and simplify the implementation.
-    # But we want to show items in their original order.
-    keys: list
-    loglevel_keys: list
-    loglevels: list
-    num_lines_seen: int
-    num_events_shown: int
-    first_timestamp: str
-    last_timestamp: str
-    timespan: str
-
-
-class StoppedEarly(Exception):
-    pass
-
-
-def timedelta_from(duration: str) -> datetime.timedelta:
-    """
-    Convert a duration string into a datetime.timedelta object.
-
-    Parses duration strings with numerical values followed by time unit identifiers.
-    Supports microseconds, milliseconds, seconds, minutes, hours, days, and weeks.
-
-    Args:
-        duration (str): Duration string (e.g., "5d", "3h30m", "2.5s", "500ms")
-
-    Returns:
-        datetime.timedelta: A timedelta object representing the duration
-
-    Raises:
-        argparse.ArgumentTypeError: If duration string is invalid or contains
-                                  unsupported time units
-
-    Supported units:
-        - "us": microseconds
-        - "ms": milliseconds
-        - "s": seconds
-        - "m": minutes
-        - "h": hours
-        - "d": days
-        - "w": weeks
-
-    Examples:
-        >>> timedelta_from("5d")
-        datetime.timedelta(days=5)
-        >>> timedelta_from("3h30m")
-        datetime.timedelta(hours=3, minutes=30)
-    """
-    pattern = re.compile(r"([-\d.]+)([a-z]+)")
-    matches = pattern.findall(duration)
-    if not matches:
-        raise argparse.ArgumentTypeError(f"Invalid timespec: {duration}")
-
-    unit_map = {
-        "us": "microseconds",
-        "ms": "microseconds",  # timedelta argument, not description
-        "s": "seconds",
-        "m": "minutes",
-        "h": "hours",
-        "d": "days",
-        "w": "weeks",
-    }
-
-    result = dt.timedelta()
-    for value, unit in matches:
-        value = float(value)
-        if value < 0:
-            raise argparse.ArgumentTypeError(
-                f"Durations cannot be negative: {duration}"
-            )
-
-        if unit in unit_map:
-            if unit == "ms":
-                value *= 1000  # Convert milliseconds to microseconds
-            result += dt.timedelta(**{unit_map[unit]: value})
-        else:
-            raise argparse.ArgumentTypeError(
-                f"Unsupported time unit: '{unit}. Supported units: {', '.join(unit_map.keys())}"
-            )
-
-    return result
-
-
-def format_ts_delta(timedelta: Optional[datetime.timedelta]) -> str:
-    """
-    Format a timedelta object for consistent display with microsecond precision.
-
-    Converts a timedelta to a string representation, ensuring consistent formatting
-    with microseconds even when the timedelta has no fractional seconds.
-
-    Args:
-        timedelta: Time difference to format, or None
-
-    Returns:
-        str: Formatted string representation:
-            - "unknown" if timedelta is None
-            - String representation with .000000 if no microseconds
-            - Standard string representation if microseconds present
-
-    Examples:
-        >>> format_ts_delta(datetime.timedelta(seconds=1))
-        '1.000000'
-        >>> format_ts_delta(datetime.timedelta(seconds=1, microseconds=500000))
-        '1.500000'
-        >>> format_ts_delta(None)
-        'unknown'
-    """
-    if timedelta is None:
-        return "unknown"
-    # XXX: better heuristics
-    s = str(timedelta)
-    if "." not in s:
-        s += ".000000"
-    return s
-
-
-def add_ts_delta(
-    event: Dict[str, Any], last_ts_datetime: Optional[datetime.datetime]
-) -> Tuple[Dict[str, Any], Optional[datetime.datetime]]:
-    """
-    Add timestamp delta to event and calculate the new last timestamp.
-
-    Calculates the time difference between the current event's timestamp and the last seen timestamp,
-    adds this delta to the event, and updates the last timestamp reference.
-
-    Args:
-        event (Dict[str, Any]): The event dictionary to process
-        last_ts_datetime (Optional[datetime.datetime]): The timestamp of the last processed event
-
-    Returns:
-        Tuple[Dict[str, Any], Optional[datetime.datetime]]: A tuple containing:
-            - The modified event with added delta
-            - The updated last timestamp for use with next event
-
-    Side Effects:
-        Modifies the input event dictionary by adding a '_klp_timedelta' key
-
-    Example:
-        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
-        >>> new_event, last_ts = add_ts_delta(event, None)
-        >>> print(new_event['_klp_timedelta'])
-        '2024-03-16 14:30:00.000000'
-    """
-    try:
-        ts_datetime = get_timestamp_datetime(event)
-        if ts_datetime is None:
-            handle_error(f"No valid timestamp found in event {event}")
-            return event, last_ts_datetime
-
-        if last_ts_datetime is None:
-            delta = ts_datetime
-        else:
-            try:
-                delta = ts_datetime - last_ts_datetime
-            except (TypeError, ValueError) as e:
-                handle_error("Error calculating timestamp delta", e)
-                return event, last_ts_datetime
-
-        last_ts_datetime = ts_datetime
-
-        # Add to start of event dict so delta is displayed first
-        new_event = {"_klp_timedelta": format_ts_delta(delta)}
-        new_event.update(event)
-        return new_event, last_ts_datetime
-
-    except Exception as e:
-        handle_error("Error calculating timestamp delta", e)
-        return event, last_ts_datetime
-
-
-def datetime_from(text: str) -> datetime.datetime:
-    """
-    Parse date/time from command line argument format.
-
-    Converts various textual date/time formats into datetime objects, supporting
-    both absolute dates and relative references like 'today' or 'tomorrow'.
-
-    Args:
-        text: Date/time string, supporting formats:
-            - ISO format timestamps
-            - 'today', 'tomorrow', 'yesterday' (local midnight)
-            - 'todayZ', 'tomorrowZ', 'yesterdayZ' (UTC midnight)
-            - 'now' (current UTC time)
-
-    Returns:
-        datetime.datetime: Parsed datetime object with timezone information
-
-    Raises:
-        argparse.ArgumentTypeError: If text cannot be parsed as a valid timestamp
-
-    Example:
-        >>> datetime_from("today")  # Returns midnight today in local time
-        >>> datetime_from("2024-03-16T14:30:00Z")  # Returns specific UTC time
-    """
-    midnight_today_localtime = (
-        dt.datetime.now()
-        .astimezone()
-        .replace(hour=0, minute=0, second=0, microsecond=0)
-    )
-    midnight_today_utc = dt.datetime.now(tz=dt.timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-
-    if text == "today":
-        return midnight_today_localtime
-    elif text == "tomorrow":
-        return midnight_today_localtime + dt.timedelta(days=1)
-    elif text == "yesterday":
-        return midnight_today_localtime - dt.timedelta(days=1)
-    elif text == "todayZ":
-        return midnight_today_utc
-    elif text == "tomorrowZ":
-        return midnight_today_utc + dt.timedelta(days=1)
-    elif text == "yesterdayZ":
-        return midnight_today_utc - dt.timedelta(days=1)
-    elif text == "now":
-        return dt.datetime.now(tz=dt.timezone.utc)
-    else:
-        datetime = guess_datetime(text)
-        if datetime is None:
-            raise argparse.ArgumentTypeError(f"Not a valid timestamp: {text}")
-        return datetime
-
-
-datetime_converters = [
-    # We don't want external dependencies like dateutil
-    # military timezone (Z), very common for our K8s config
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-        tzinfo=dt.timezone.utc
-    ),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%fZ").replace(
-        tzinfo=dt.timezone.utc
-    ),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(
-        tzinfo=dt.timezone.utc
-    ),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%SZ").replace(
-        tzinfo=dt.timezone.utc
-    ),
-    # XXX: datetime does not support nanoseconds, so we just treat them as 000
-    lambda s: dt.datetime.strptime(s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-        tzinfo=dt.timezone.utc
-    ),
-    # usual timezone (+01:00), as we print with -z
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z"),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f%z"),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z"),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S%z"),
-    # no timezone given (treat as localtime; for UTC, users could easily add Z)
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S").astimezone(),
-    # XXX: datetime does not support nanoseconds, so we just treat them as 000
-    lambda s: dt.datetime.strptime(
-        s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%f"
-    ).astimezone(),
-    # Classic Unix timestamp with weekday (Thu Sep 25 10:36:28 2003)
-    lambda s: dt.datetime.strptime(s, "%a %b %d %H:%M:%S %Y").astimezone(),
-    # NCSA Common Log Format
-    lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
-    # RFC 2822 (date -R)
-    lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
-    # With day name (git log)
-    lambda s: dt.datetime.strptime(
-        " ".join(s.split()[1:]), "%b %d %H:%M:%S %Y %z"
-    ).astimezone(),
-    # date -u
-    lambda s: dt.datetime.strptime(
-        " ".join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y"
-    ).replace(tzinfo=dt.timezone.utc),
-    # only date
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
-    lambda s: dt.datetime.strptime(s, "%Y %b %d %H:%M").astimezone(),
-    # Assume current year if not given
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S.%f"
-    ).astimezone(),
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S"
-    ).astimezone(),
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M"
-    ).astimezone(),
-    # Basic format YYYYMMDDTHHMMSS (20030925T104941)
-    lambda s: (
-        dt.datetime.strptime(s, "%Y%m%dT%H%M%S").astimezone()
-        if 1900 <= int(s[:4]) <= 2100
-        else None
-    ),
-    # Basic format YYYYMMDDHHMM (199709020900)
-    lambda s: (
-        dt.datetime.strptime(s, "%Y%m%d%H%M").astimezone()
-        if 1900 <= int(s[:4]) <= 2100
-        else None
-    ),
-    # Unix timestamps (seconds since epoch)
-    lambda s: dt.datetime.fromtimestamp(float(s)),
-    # Nginx timestamps (milliseconds since epoch)
-    lambda s: dt.datetime.fromtimestamp(int(s) / 1000),
-    # Android logs
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().year}-{s}", "%Y-%m-%d %H:%M:%S.%f"
-    ).astimezone(),
-    # Proxifier
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().year}.{s}", "%Y.[%m.%d %H:%M:%S]"
-    ).astimezone(),
-    # HealthApp
-    lambda s: dt.datetime.strptime(s + "000", "%Y%m%d-%H:%M:%S:%f").astimezone(),
-    # Zookeeper
-    lambda s: dt.datetime.strptime(s + "000", "%Y-%m-%d %H:%M:%S,%f").astimezone(),
-    # Apache
-    lambda s: dt.datetime.strptime(s, "[%a %b %d %H:%M:%S %Y]").astimezone(),
-    # Spark
-    lambda s: dt.datetime.strptime(s, "%y/%m/%d %H:%M:%S").astimezone(),
-    # BGL
-    lambda s: dt.datetime.strptime(s, "%Y-%m-%d-%H.%M.%S.%f").astimezone(),
-    # Wireshark
-    lambda s: dt.datetime.strptime(s[:26], "%b %d, %Y %H:%M:%S.%f")
-    .replace(microsecond=int(s[26:]) // 1000)
-    .astimezone(),
-    # Classic Unix timestamp format
-    lambda s: dt.datetime.strptime(s, "%b %d %H:%M:%S %Y").astimezone(),
-    # Short month with year
-    lambda s: dt.datetime.strptime(s, "%b %d %Y").astimezone(),
-    # 24-hour time only (assume current date)
-    lambda s: dt.datetime.strptime(
-        f"{dt.datetime.now().date()} {s}", "%Y-%m-%d %H:%M"
-    ).astimezone(),
-    # Year with month name and day
-    lambda s: dt.datetime.strptime(s, "%Y %b %d").astimezone(),
-    # DD-MM-YYYY format
-    lambda s: dt.datetime.strptime(s, "%d-%m-%Y").astimezone(),
-    # Month name, day with suffix, and year with apostrophe
-    lambda s: dt.datetime.strptime(s.replace("'", ""), "%a, %B %d, %y").astimezone(),
-    # Day with ordinal indicator and month name
-    lambda s: dt.datetime.strptime(s.replace("rd of ", " "), "%d %B %Y").astimezone(),
-    lambda s: dt.datetime.strptime(s.replace("st of ", " "), "%d %B %Y").astimezone(),
-    lambda s: dt.datetime.strptime(s.replace("nd of ", " "), "%d %B %Y").astimezone(),
-    lambda s: dt.datetime.strptime(s.replace("th of ", " "), "%d %B %Y").astimezone(),
-    # HMS format with fractional seconds (10h36m28.5s)
-    lambda s: dt.datetime.combine(
-        dt.datetime.now().date(),
-        dt.datetime.strptime(
-            s.replace("h", ":").replace("m", ":").replace("s", ""), "%H:%M:%S.%f"
-        ).time(),
-    ).astimezone(),
-    # AM/PM format (10am, 10pm)
-    lambda s: dt.datetime.combine(
-        dt.datetime.now().date(), dt.datetime.strptime(s, "%I%p").time()
-    ).astimezone(),
-]
-
-dt_conv_order = list(range(len(datetime_converters)))
-
-
-def now_rfc3339():
-    return dt.datetime.now(tz=dt.timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def to_datetime(timestamp: Optional[str]) -> datetime.datetime:
-    """
-    Convert a timestamp string to a datetime object.
-
-    Attempts to parse a timestamp using guess_datetime(). Raises an error if parsing
-    fails or if timestamp is None.
-
-    Args:
-        timestamp: String representation of a timestamp, or None
-
-    Returns:
-        datetime.datetime: The parsed datetime object
-
-    Raises:
-        ValueError: If timestamp is None or cannot be parsed
-
-    Example:
-        >>> to_datetime("2024-03-16T14:30:00Z")
-        datetime.datetime(2024, 3, 16, 14, 30, tzinfo=datetime.timezone.utc)
-        >>> to_datetime(None)
-        ValueError: No timestamp found.
-    """
-    if timestamp is None:
-        raise ValueError("No timestamp found.")
-    datetime = guess_datetime(timestamp)
-    if datetime is None:
-        raise ValueError(
-            f"Could not parse timestamp '{timestamp}'. Use --ts-format to specify the format. See --help-time for syntax help"
-        )
-    return datetime
-
-
-def get_timestamp_datetime(event: Dict[str, Any]) -> Optional[datetime.datetime]:
-    """
-    Extract and parse timestamp from an event dictionary into a datetime object.
-
-    Attempts to find and parse a timestamp from common timestamp field names.
-    If args.ts_key is specified, only that key is checked. Otherwise, tries
-    several common timestamp keys in order.
-
-    Args:
-        event (Dict[str, Any]): Event dictionary that may contain timestamp fields
-
-    Returns:
-        Optional[datetime.datetime]: Parsed datetime object, or None if no valid timestamp found
-
-    Side Effects:
-        Uses global args.ts_key setting to determine which field to check first
-
-    Example:
-        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
-        >>> dt = get_timestamp_datetime(event)
-        >>> print(dt.isoformat())
-        2024-03-16T14:30:00+00:00
-    """
-    if args.ts_key and args.ts_key in event:
-        try:
-            return to_datetime(event[args.ts_key])
-        except ValueError:
-            return None
-
-    for key in ("timestamp", "ts", "time", "t", "at"):
-        if key in event:
-            try:
-                return to_datetime(event[key])
-            except ValueError:
-                continue
-
-    return None
-
-
-def estr_or_none(val):
-    if val is None:
-        return None
-    else:
-        return EStr(val)
-
-
 class EStr(str):
     def __init__(self, content):
         super().__init__()
@@ -2445,6 +1934,518 @@ class EStr(str):
             return EStr("")
 
         return self[: matches[n - 1] + len(t)]
+
+
+# Make some modules available for use in filters and templates
+EXPORTED_GLOBALS = build_globals_dict(
+    [
+        base64,
+        collections,
+        datetime,
+        hashlib,
+        itertools,
+        json,
+        math,
+        pprint,
+        random,
+        re,
+        string,
+        textwrap,
+        extract_json,
+        extract_regex,
+    ]
+    + [create_extraction_function(regex) for regex in BUILTIN_REGEXES]
+    + [
+        format_datetime,
+        guess_datetime,
+        split_startswith,
+        split_endswith,
+        parse_kv,
+        parse_logfmt,
+        parse_jsonl,
+        parse_clf,
+        parse_combined,
+        parse_unix,
+        parse_line,
+        parse_data,
+        pprint_json,
+        sh,
+        EStr,
+    ]
+)
+
+
+def list_exported_objects(ignore_underscore=True):
+    """List all exported objects (modules and functions).
+
+    Args:
+        ignore_underscore (bool): Whether to ignore names starting with underscore
+
+    Returns:
+        list: List of exported objects
+    """
+    funcs = EXPORTED_GLOBALS.values()
+    if ignore_underscore:
+        funcs = [f for f in funcs if not getattr(f, "__name__", "").startswith("_")]
+    return funcs
+
+
+def print_json_elem(*myargs, **mykwargs):
+    global is_first_visible_line
+    if is_first_visible_line:
+        is_first_visible_line = False
+    else:
+        print_output(args.output_event_sep, end="", **mykwargs)
+    print_output(*myargs, end="", flush=True, **mykwargs)
+
+
+def expand_color_codes(line):
+    for _, (color, scolor) in COLOR_CODES.items():
+        line = line.replace(scolor, color)
+    return line
+
+
+@dataclasses.dataclass
+class Stats:
+    # Sets would make this a few percent faster and simplify the implementation.
+    # But we want to show items in their original order.
+    keys: list
+    loglevel_keys: list
+    loglevels: list
+    num_lines_seen: int
+    num_events_shown: int
+    first_timestamp: str
+    last_timestamp: str
+    timespan: str
+
+
+class StoppedEarly(Exception):
+    pass
+
+
+def timedelta_from(duration: str) -> datetime.timedelta:
+    """
+    Convert a duration string into a datetime.timedelta object.
+
+    Parses duration strings with numerical values followed by time unit identifiers.
+    Supports microseconds, milliseconds, seconds, minutes, hours, days, and weeks.
+
+    Args:
+        duration (str): Duration string (e.g., "5d", "3h30m", "2.5s", "500ms")
+
+    Returns:
+        datetime.timedelta: A timedelta object representing the duration
+
+    Raises:
+        argparse.ArgumentTypeError: If duration string is invalid or contains
+                                  unsupported time units
+
+    Supported units:
+        - "us": microseconds
+        - "ms": milliseconds
+        - "s": seconds
+        - "m": minutes
+        - "h": hours
+        - "d": days
+        - "w": weeks
+
+    Examples:
+        >>> timedelta_from("5d")
+        datetime.timedelta(days=5)
+        >>> timedelta_from("3h30m")
+        datetime.timedelta(hours=3, minutes=30)
+    """
+    pattern = re.compile(r"([-\d.]+)([a-z]+)")
+    matches = pattern.findall(duration)
+    if not matches:
+        raise argparse.ArgumentTypeError(f"Invalid timespec: {duration}")
+
+    unit_map = {
+        "us": "microseconds",
+        "ms": "microseconds",  # timedelta argument, not description
+        "s": "seconds",
+        "m": "minutes",
+        "h": "hours",
+        "d": "days",
+        "w": "weeks",
+    }
+
+    result = dt.timedelta()
+    for value, unit in matches:
+        value = float(value)
+        if value < 0:
+            raise argparse.ArgumentTypeError(
+                f"Durations cannot be negative: {duration}"
+            )
+
+        if unit in unit_map:
+            if unit == "ms":
+                value *= 1000  # Convert milliseconds to microseconds
+            result += dt.timedelta(**{unit_map[unit]: value})
+        else:
+            raise argparse.ArgumentTypeError(
+                f"Unsupported time unit: '{unit}. Supported units: {', '.join(unit_map.keys())}"
+            )
+
+    return result
+
+
+def format_ts_delta(timedelta: Optional[datetime.timedelta]) -> str:
+    """
+    Format a timedelta object for consistent display with microsecond precision.
+
+    Converts a timedelta to a string representation, ensuring consistent formatting
+    with microseconds even when the timedelta has no fractional seconds.
+
+    Args:
+        timedelta: Time difference to format, or None
+
+    Returns:
+        str: Formatted string representation:
+            - "unknown" if timedelta is None
+            - String representation with .000000 if no microseconds
+            - Standard string representation if microseconds present
+
+    Examples:
+        >>> format_ts_delta(datetime.timedelta(seconds=1))
+        '1.000000'
+        >>> format_ts_delta(datetime.timedelta(seconds=1, microseconds=500000))
+        '1.500000'
+        >>> format_ts_delta(None)
+        'unknown'
+    """
+    if timedelta is None:
+        return "unknown"
+    # XXX: better heuristics
+    s = str(timedelta)
+    if "." not in s:
+        s += ".000000"
+    return s
+
+
+def add_ts_delta(
+    event: Dict[str, Any], last_ts_datetime: Optional[datetime.datetime]
+) -> Tuple[Dict[str, Any], Optional[datetime.datetime]]:
+    """
+    Add timestamp delta to event and calculate the new last timestamp.
+
+    Calculates the time difference between the current event's timestamp and the last seen timestamp,
+    adds this delta to the event, and updates the last timestamp reference.
+
+    Args:
+        event (Dict[str, Any]): The event dictionary to process
+        last_ts_datetime (Optional[datetime.datetime]): The timestamp of the last processed event
+
+    Returns:
+        Tuple[Dict[str, Any], Optional[datetime.datetime]]: A tuple containing:
+            - The modified event with added delta
+            - The updated last timestamp for use with next event
+
+    Side Effects:
+        Modifies the input event dictionary by adding a '_klp_timedelta' key
+
+    Example:
+        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
+        >>> new_event, last_ts = add_ts_delta(event, None)
+        >>> print(new_event['_klp_timedelta'])
+        '2024-03-16 14:30:00.000000'
+    """
+    try:
+        ts_datetime = get_timestamp_datetime(event)
+        if ts_datetime is None:
+            handle_error(f"No valid timestamp found in event {event}")
+            return event, last_ts_datetime
+
+        if last_ts_datetime is None:
+            delta = ts_datetime
+        else:
+            try:
+                delta = ts_datetime - last_ts_datetime
+            except (TypeError, ValueError) as e:
+                handle_error("Error calculating timestamp delta", e)
+                return event, last_ts_datetime
+
+        last_ts_datetime = ts_datetime
+
+        # Add to start of event dict so delta is displayed first
+        new_event = {"_klp_timedelta": format_ts_delta(delta)}
+        new_event.update(event)
+        return new_event, last_ts_datetime
+
+    except Exception as e:
+        handle_error("Error calculating timestamp delta", e)
+        return event, last_ts_datetime
+
+
+def datetime_from(text: str) -> datetime.datetime:
+    """
+    Parse date/time from command line argument format.
+
+    Converts various textual date/time formats into datetime objects, supporting
+    both absolute dates and relative references like 'today' or 'tomorrow'.
+
+    Args:
+        text: Date/time string, supporting formats:
+            - ISO format timestamps
+            - 'today', 'tomorrow', 'yesterday' (local midnight)
+            - 'todayZ', 'tomorrowZ', 'yesterdayZ' (UTC midnight)
+            - 'now' (current UTC time)
+
+    Returns:
+        datetime.datetime: Parsed datetime object with timezone information
+
+    Raises:
+        argparse.ArgumentTypeError: If text cannot be parsed as a valid timestamp
+
+    Example:
+        >>> datetime_from("today")  # Returns midnight today in local time
+        >>> datetime_from("2024-03-16T14:30:00Z")  # Returns specific UTC time
+    """
+    midnight_today_localtime = (
+        dt.datetime.now()
+        .astimezone()
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+    )
+    midnight_today_utc = dt.datetime.now(tz=dt.timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+    if text == "today":
+        return midnight_today_localtime
+    elif text == "tomorrow":
+        return midnight_today_localtime + dt.timedelta(days=1)
+    elif text == "yesterday":
+        return midnight_today_localtime - dt.timedelta(days=1)
+    elif text == "todayZ":
+        return midnight_today_utc
+    elif text == "tomorrowZ":
+        return midnight_today_utc + dt.timedelta(days=1)
+    elif text == "yesterdayZ":
+        return midnight_today_utc - dt.timedelta(days=1)
+    elif text == "now":
+        return dt.datetime.now(tz=dt.timezone.utc)
+    else:
+        datetime = guess_datetime(text)
+        if datetime is None:
+            raise argparse.ArgumentTypeError(f"Not a valid timestamp: {text}")
+        return datetime
+
+
+datetime_converters = [
+    # We don't want external dependencies like dateutil
+    # military timezone (Z), very common for our K8s config
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=dt.timezone.utc
+    ),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%fZ").replace(
+        tzinfo=dt.timezone.utc
+    ),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=dt.timezone.utc
+    ),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%SZ").replace(
+        tzinfo=dt.timezone.utc
+    ),
+    # XXX: datetime does not support nanoseconds, so we just treat them as 000
+    lambda s: dt.datetime.strptime(s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=dt.timezone.utc
+    ),
+    # usual timezone (+01:00), as we print with -z
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z"),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f%z"),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z"),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S%z"),
+    # no timezone given (treat as localtime; for UTC, users could easily add Z)
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S").astimezone(),
+    # XXX: datetime does not support nanoseconds, so we just treat them as 000
+    lambda s: dt.datetime.strptime(
+        s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%f"
+    ).astimezone(),
+    # Classic Unix timestamp with weekday (Thu Sep 25 10:36:28 2003)
+    lambda s: dt.datetime.strptime(s, "%a %b %d %H:%M:%S %Y").astimezone(),
+    # NCSA Common Log Format
+    lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
+    # RFC 2822 (date -R)
+    lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
+    # With day name (git log)
+    lambda s: dt.datetime.strptime(
+        " ".join(s.split()[1:]), "%b %d %H:%M:%S %Y %z"
+    ).astimezone(),
+    # date -u
+    lambda s: dt.datetime.strptime(
+        " ".join(s.split()[1:]), "%b %d %H:%M:%S UTC %Y"
+    ).replace(tzinfo=dt.timezone.utc),
+    # only date
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y-%m").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y").astimezone(),
+    lambda s: dt.datetime.strptime(s, "%Y %b %d %H:%M").astimezone(),
+    # Assume current year if not given
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S.%f"
+    ).astimezone(),
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M:%S"
+    ).astimezone(),
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year} {s}", "%Y %b %d %H:%M"
+    ).astimezone(),
+    # Basic format YYYYMMDDTHHMMSS (20030925T104941)
+    lambda s: (
+        dt.datetime.strptime(s, "%Y%m%dT%H%M%S").astimezone()
+        if 1900 <= int(s[:4]) <= 2100
+        else None
+    ),
+    # Basic format YYYYMMDDHHMM (199709020900)
+    lambda s: (
+        dt.datetime.strptime(s, "%Y%m%d%H%M").astimezone()
+        if 1900 <= int(s[:4]) <= 2100
+        else None
+    ),
+    # Unix timestamps (seconds since epoch)
+    lambda s: dt.datetime.fromtimestamp(float(s)),
+    # Nginx timestamps (milliseconds since epoch)
+    lambda s: dt.datetime.fromtimestamp(int(s) / 1000),
+    # Android logs
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year}-{s}", "%Y-%m-%d %H:%M:%S.%f"
+    ).astimezone(),
+    # Proxifier
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().year}.{s}", "%Y.[%m.%d %H:%M:%S]"
+    ).astimezone(),
+    # HealthApp
+    lambda s: dt.datetime.strptime(s + "000", "%Y%m%d-%H:%M:%S:%f").astimezone(),
+    # Zookeeper
+    lambda s: dt.datetime.strptime(s + "000", "%Y-%m-%d %H:%M:%S,%f").astimezone(),
+    # Apache
+    lambda s: dt.datetime.strptime(s, "[%a %b %d %H:%M:%S %Y]").astimezone(),
+    # Spark
+    lambda s: dt.datetime.strptime(s, "%y/%m/%d %H:%M:%S").astimezone(),
+    # BGL
+    lambda s: dt.datetime.strptime(s, "%Y-%m-%d-%H.%M.%S.%f").astimezone(),
+    # Wireshark
+    lambda s: dt.datetime.strptime(s[:26], "%b %d, %Y %H:%M:%S.%f")
+    .replace(microsecond=int(s[26:]) // 1000)
+    .astimezone(),
+    # Classic Unix timestamp format
+    lambda s: dt.datetime.strptime(s, "%b %d %H:%M:%S %Y").astimezone(),
+    # Short month with year
+    lambda s: dt.datetime.strptime(s, "%b %d %Y").astimezone(),
+    # 24-hour time only (assume current date)
+    lambda s: dt.datetime.strptime(
+        f"{dt.datetime.now().date()} {s}", "%Y-%m-%d %H:%M"
+    ).astimezone(),
+    # Year with month name and day
+    lambda s: dt.datetime.strptime(s, "%Y %b %d").astimezone(),
+    # DD-MM-YYYY format
+    lambda s: dt.datetime.strptime(s, "%d-%m-%Y").astimezone(),
+    # Month name, day with suffix, and year with apostrophe
+    lambda s: dt.datetime.strptime(s.replace("'", ""), "%a, %B %d, %y").astimezone(),
+    # Day with ordinal indicator and month name
+    lambda s: dt.datetime.strptime(s.replace("rd of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("st of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("nd of ", " "), "%d %B %Y").astimezone(),
+    lambda s: dt.datetime.strptime(s.replace("th of ", " "), "%d %B %Y").astimezone(),
+    # HMS format with fractional seconds (10h36m28.5s)
+    lambda s: dt.datetime.combine(
+        dt.datetime.now().date(),
+        dt.datetime.strptime(
+            s.replace("h", ":").replace("m", ":").replace("s", ""), "%H:%M:%S.%f"
+        ).time(),
+    ).astimezone(),
+    # AM/PM format (10am, 10pm)
+    lambda s: dt.datetime.combine(
+        dt.datetime.now().date(), dt.datetime.strptime(s, "%I%p").time()
+    ).astimezone(),
+]
+
+dt_conv_order = list(range(len(datetime_converters)))
+
+
+def now_rfc3339():
+    return dt.datetime.now(tz=dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def to_datetime(timestamp: Optional[str]) -> datetime.datetime:
+    """
+    Convert a timestamp string to a datetime object.
+
+    Attempts to parse a timestamp using guess_datetime(). Raises an error if parsing
+    fails or if timestamp is None.
+
+    Args:
+        timestamp: String representation of a timestamp, or None
+
+    Returns:
+        datetime.datetime: The parsed datetime object
+
+    Raises:
+        ValueError: If timestamp is None or cannot be parsed
+
+    Example:
+        >>> to_datetime("2024-03-16T14:30:00Z")
+        datetime.datetime(2024, 3, 16, 14, 30, tzinfo=datetime.timezone.utc)
+        >>> to_datetime(None)
+        ValueError: No timestamp found.
+    """
+    if timestamp is None:
+        raise ValueError("No timestamp found.")
+    datetime = guess_datetime(timestamp)
+    if datetime is None:
+        raise ValueError(
+            f"Could not parse timestamp '{timestamp}'. Use --ts-format to specify the format. See --help-time for syntax help"
+        )
+    return datetime
+
+
+def get_timestamp_datetime(event: Dict[str, Any]) -> Optional[datetime.datetime]:
+    """
+    Extract and parse timestamp from an event dictionary into a datetime object.
+
+    Attempts to find and parse a timestamp from common timestamp field names.
+    If args.ts_key is specified, only that key is checked. Otherwise, tries
+    several common timestamp keys in order.
+
+    Args:
+        event (Dict[str, Any]): Event dictionary that may contain timestamp fields
+
+    Returns:
+        Optional[datetime.datetime]: Parsed datetime object, or None if no valid timestamp found
+
+    Side Effects:
+        Uses global args.ts_key setting to determine which field to check first
+
+    Example:
+        >>> event = {"timestamp": "2024-03-16T14:30:00Z", "message": "test"}
+        >>> dt = get_timestamp_datetime(event)
+        >>> print(dt.isoformat())
+        2024-03-16T14:30:00+00:00
+    """
+    if args.ts_key and args.ts_key in event:
+        try:
+            return to_datetime(event[args.ts_key])
+        except ValueError:
+            return None
+
+    for key in ("timestamp", "ts", "time", "t", "at"):
+        if key in event:
+            try:
+                return to_datetime(event[key])
+            except ValueError:
+                continue
+
+    return None
+
+
+def estr_or_none(val):
+    if val is None:
+        return None
+    else:
+        return EStr(val)
 
 
 def show(
