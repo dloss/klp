@@ -32,6 +32,7 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
   - [Complex Filtering with Python Expressions](#complex-filtering-with-python-expressions)
   - [Advanced Input Transformations Using Python Code](#advanced-input-transformations-using-python-code)
   - [Custom Output Formatting using Python](#custom-output-formatting-using-python)
+  - [Parsing Non-Line-Based Formats](#parsing-non-line-based-formats)
 - [Additional Resources](#additional-resources)
   - [Complementary Tools](#complementary-tools)
   - [Alternative Tools](#alternative-tools)
@@ -889,6 +890,34 @@ The following additional functions are available:
 * `format_datetime()`: format given string according to ISO 8601 (with millisecond precision), guessing the datetime format  
 * `guess_datetime()`: convert a string into a Python datetime object
 * `pprint_json()`: pretty print JSON data
+
+
+### Parsing Non-Line-Based Formats with `-f data`
+
+The `-f data` option reads the entire input as a single string into a field named `data`.
+This is particularly useful for creating ad-hoc parsers for formats that aren't naturally line-based, using `--input-exec` to transform the content.
+
+For example, to parse a simple Windows-style INI file:
+
+```bash
+$ cat config.ini
+[database]
+host = localhost
+port = 5432
+
+[api]
+url = https://api.example.com
+key = secret123
+
+$ klp -f data config.ini -I '___ = [{"section": s.split("\n")[0].strip("[]"),
+                                    **dict(l.split(" = ") for l in s.split("\n")[1:] if "=" in l)}
+                                   for s in data.split("\n[")]'
+section=database host=localhost port=5432
+section=api url=https://api.example.com key=secret123
+```
+
+The key advantage of `-f data` is maintaining the complete file context, which makes it easier to split the content on the correct boundaries and extract related information that spans multiple lines.
+Combined with Python's string manipulation functions and regular expressions, this allows quick creation of parsers for various structured formats.
 
 
 ## Additional Resources
