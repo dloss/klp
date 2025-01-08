@@ -5238,8 +5238,12 @@ def sort_files_by_mtime(filenames):
 
 
 def main():
-    # Prevent Python from throwing BrokenPipeError at shutdown
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    # Try to prevent Python from throwing BrokenPipeError at shutdown
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        # SIGPIPE does not exist on Windows, and maybe other platforms
+        pass
 
     global args
     global is_first_visible_line
