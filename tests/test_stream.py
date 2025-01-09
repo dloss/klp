@@ -1,6 +1,7 @@
 import os
 import json
 import subprocess
+import sys
 import time
 from datetime import datetime
 
@@ -27,12 +28,11 @@ def run_pipeline(generator_args=None, klp_args=None, duration=0.2):
     Returns:
         tuple: (stdout lines, stderr lines)
     """
-    # Ensure scripts are executable
-    os.chmod(GENERATE_STREAM_PATH, 0o755)
-    os.chmod(KLP_PATH, 0o755)
+    # On Windows, we need to explicitly use python interpreter
+    python_cmd = [sys.executable]
 
     # Start generator process
-    generator_cmd = [GENERATE_STREAM_PATH]
+    generator_cmd = python_cmd + [GENERATE_STREAM_PATH]
     if generator_args:
         generator_cmd.extend(generator_args)
 
@@ -41,7 +41,7 @@ def run_pipeline(generator_args=None, klp_args=None, duration=0.2):
     )
 
     # Start klp process
-    klp_cmd = [KLP_PATH]
+    klp_cmd = python_cmd + [KLP_PATH]
     if klp_args:
         klp_cmd.extend(klp_args)
 
@@ -179,9 +179,10 @@ def test_streaming_with_time_window():
 
 def test_error_handling():
     """Test handling of malformed input."""
+    python_cmd = [sys.executable]
     # Run klp with invalid input
     process = subprocess.Popen(
-        [KLP_PATH],
+        python_cmd + [KLP_PATH],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
