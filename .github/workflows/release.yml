@@ -8,7 +8,7 @@ on:
 jobs:
   # First run tests across all platforms
   matrix-test:
-    uses: ./.github/workflows/test.yml@${{ github.ref }}  # Added ref to ensure correct version
+    uses: ./.github/workflows/test.yml
 
   # Then proceed with release if tests pass
   release-and-publish:
