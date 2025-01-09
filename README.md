@@ -938,6 +938,11 @@ These tools aren't specialized for log files but are useful to post-process or v
 - [yq](https://github.com/mikefarah/yq): A portable command-line YAML, JSON, XML, CSV, TOML and properties processor
 - [Miller](https://github.com/johnkerl/miller): Like awk, sed, cut, join, and sort for name-indexed data such as CSV, TSV, and tabular JSON 
 - [dasel](https://github.com/TomWright/dasel): Select, put and delete data from JSON, TOML, YAML, XML and CSV files with a single tool. Supports conversion between formats
+- [rare](https://github.com/zix99/rare): Create console histograms, bar graphs, tables, heatmaps and more in realtime using regex and expressions
+- [spyql](https://github.com/dcmoura/spyql): Query data on the command line with SQL-like SELECTs powered by Python expressions
+- [rq](https://git.sr.ht/~charles/rq): CLI tool for evaluating Rego queries
+- [RecordStream](https://github.com/benbernard/RecordStream): A system for command-line analysis of data
+
 
 #### CSV Processing
 - [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
@@ -946,6 +951,8 @@ These tools aren't specialized for log files but are useful to post-process or v
 #### Format Conversion and Viewing
 - [jc](https://github.com/kellyjonbrazil/jc): CLI tool and python library that converts the output of popular command-line tools, file-types, and common strings to JSON, YAML, or Dictionaries
 - [jtbl](https://github.com/kellyjonbrazil/jtbl): CLI tool to convert JSON and JSON Lines to terminal, CSV, HTTP, and markdown tables
+- [evtx2json](https://github.com/vavarachen/evtx2json): convert Windows evtx files (Windows Event Log Files) into JSON
+- [tailspin](https://github.com/bensadeh/tailspin): A log file highlighter
 - [ov](https://github.com/noborus/ov): Feature-rich terminal-based text viewer. It is a so-called terminal pager.
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
 - [Benthos](https://github.com/benthosdev/benthos.git): High performance and resilient stream processor, able to connect various sources and sinks
@@ -990,6 +997,7 @@ If klp doesn't meet your needs, here are some alternatives:
 #### Unstructured Logs CLI/TUI
 - [tailspin](https://github.com/bensadeh/tailspin): A log file highlighter (Rust)
 - [GoAccess](https://goaccess.io): Real-time web log analyzer and interactive viewer that runs in a terminal in *nix systems or through your browser
+- [logmine](https://github.com/trungdq88/logmine): A log pattern analyzer CLI
 
 #### Web UI
 - [Klogg](https://github.com/variar/klogg): Multi-platform GUI application that helps browse and search through long and complex log files
@@ -1002,3 +1010,4 @@ If klp doesn't meet your needs, here are some alternatives:
 - [OpenObserve](https://github.com/openobserve/openobserve): Cloud-native observability platform built specifically for logs, metrics, traces, analytics, RUM, designed to work at petabyte scale
 - [Graylog](https://github.com/Graylog2/graylog2-server): Free and open log management
 - [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): Horizontally-scalable, highly-available, multi-tenant log aggregation system
+- [qryn](https://qryn.metrico.in/): All-in-one polyglot observability
