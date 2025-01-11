@@ -495,7 +495,7 @@ $ klp -x ipv4 -x err server.logfmt
 ```
 
 Use `klp -x ?` to list all available extraction patterns.
-They are also documented as `extract_*()` functions in `klp --help-python` screen.
+They are also documented as `extract_*()` functions on the `klp --help-python` screen.
 
 
 ### Select Blocks of Lines
