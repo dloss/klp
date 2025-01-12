@@ -898,7 +898,7 @@ The following additional functions are available:
 * `pprint_json()`: pretty print JSON data
 
 
-### Parsing Non-Line-Based Formats with `-f data`
+### Parsing Non-Line-Based Formats
 
 The `-f data` option reads the entire input as a single string into a field named `data`.
 This is particularly useful for creating ad-hoc parsers for formats that aren't naturally line-based, using `--input-exec` to transform the content.
