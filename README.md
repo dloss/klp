@@ -983,7 +983,7 @@ If klp doesn't meet your needs, here are some alternatives:
 - [angle-grinder](https://github.com/rcoh/angle-grinder): Slice and dice logs on the command line (Rust). Flexible query syntax
 - [pq](https://github.com/iximiuz/pq): Parse and Query log files as time series
 - [Kelpie](https://github.com/Yord/klp): Small, fast, and magical command-line data processor similar to pxi, jq, mlr, and awk
-- [lnav](https://github.com/tstack/lnav): Very advanced log file viewer. Files-only (no streaming), lots of formats
+- [lnav](https://github.com/tstack/lnav): Very advanced log file viewer, lots of formats
 
 #### JSON CLI/TUI
 - [fblog](https://github.com/brocode/fblog): Small command-line JSON Log viewer (Rust). Lua filters.
