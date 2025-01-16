@@ -62,14 +62,14 @@ from typing import (
 # Type variable for generic types
 T = TypeVar("T")  # Used for generic type hints if needed
 
-__version__ = "0.74.5"
+__version__ = "0.74.6"
 
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
 TS_KEYS = "_klp_timedelta ts time timestamp t at _ts _klp_ts".split()
 MSG_KEYS = "msg message".split()
-LEVEL_KEYS = "log_level level lvl loglevel severity".split()
+LEVEL_KEYS = "log_level level lvl loglevel severity levelname".split()
 
 # Regular expressions
 RE_LOGFMT = re.compile(r'([\w.]+)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^\s]*))')
@@ -3006,7 +3006,7 @@ def get_timestamp_str_or_none(event):
     if args.ts_key:
         return event.get(args.ts_key)
 
-    for key in ("timestamp", "ts", "time", "at", "t"):
+    for key in ("timestamp", "ts", "time", "at", "t", "asctime"):
         value = event.get(key)
         if value is not None:
             return value
