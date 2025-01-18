@@ -67,7 +67,9 @@ __version__ = "0.74.6"
 INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
+# In display order.
 TS_KEYS = "_klp_timedelta ts time timestamp t at _ts _klp_ts".split()
+TS_KEYS_NONKLP = [k for k in TS_KEYS if not k.startswith("_klp_")]
 MSG_KEYS = "msg message".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity levelname".split()
 
@@ -2431,7 +2433,7 @@ def get_timestamp_datetime(event: Dict[str, Any]) -> Optional[datetime.datetime]
         except ValueError:
             return None
 
-    for key in ("timestamp", "ts", "time", "t", "at"):
+    for key in TS_KEYS_NONKLP:
         if key in event:
             try:
                 return to_datetime(event[key])
@@ -3006,7 +3008,7 @@ def get_timestamp_str_or_none(event):
     if args.ts_key:
         return event.get(args.ts_key)
 
-    for key in ("timestamp", "ts", "time", "at", "t", "asctime"):
+    for key in TS_KEYS_NONKLP:
         value = event.get(key)
         if value is not None:
             return value
