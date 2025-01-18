@@ -68,10 +68,10 @@ INPUT_QUOTE = r"\""
 
 # Names of keys our program cares about. Use lowercase keys here.
 # In display order.
-TS_KEYS = "_klp_timedelta ts time timestamp t at _ts _klp_ts".split()
+TS_KEYS = "_klp_timedelta ts time timestamp t at _ts @t _klp_ts".split()
 TS_KEYS_NONKLP = [k for k in TS_KEYS if not k.startswith("_klp_")]
-MSG_KEYS = "msg message".split()
-LEVEL_KEYS = "log_level level lvl loglevel severity levelname".split()
+MSG_KEYS = "msg message @m @mt".split()
+LEVEL_KEYS = "log_level level lvl loglevel severity levelname @l".split()
 
 # Regular expressions
 RE_LOGFMT = re.compile(r'([\w.]+)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^\s]*))')
