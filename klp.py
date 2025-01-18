@@ -4973,7 +4973,7 @@ def flatten_object(json_data: Any, separator: str = ".") -> Dict[str, Any]:
     return flattened
 
 
-def sanitize_key(key: str) -> str:
+def sanitize_key(key: str, strict: bool = False) -> str:
     """
     Convert a JSON/CSV key into a valid logfmt field name.
 
@@ -4992,7 +4992,10 @@ def sanitize_key(key: str) -> str:
         >>> sanitize_key("valid_key_123")
         'valid_key_123'
     """
-    return "".join(char if char.isalnum() else "_" for char in key)
+    return "".join(
+        char if char.isalnum() or (char in "@-.:" and not strict) else "_"
+        for char in key
+    )
 
 
 def skip_lines(fileobj, n):
