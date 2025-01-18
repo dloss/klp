@@ -77,8 +77,9 @@ def test_make_greppable():
 
 def test_sanitize_key():
     """Test sanitization of keys."""
-    assert sanitize_key("user.name@domain") == "user_name_domain"
+    assert sanitize_key("user.name@domain") == "user.name@domain"
     assert sanitize_key("valid_key_123") == "valid_key_123"
+    assert sanitize_key("invalid/key#3") == "invalid_key_3"
 
 
 def test_builtin_regexes_compile():
