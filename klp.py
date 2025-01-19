@@ -127,7 +127,10 @@ THEMES = {
         "timestamp_key": "off",
         "levels": {
             "trace": "cyan",
+            "finest": "cyan",
             "debug": "bright_cyan",
+            "finer": "bright_cyan",
+            "config": "bright_cyan",
             "info": "bright_green",
             "notice": "bright_green",
             "warn": "bright_yellow",
@@ -141,6 +144,7 @@ THEMES = {
             "critical": "bright_red",
             "emerg": "bright_red",
             "emergency": "bright_red",
+            "severe": "bright_red",
         },
         "context_prefix": {
             "before": "blue",
@@ -342,6 +346,7 @@ def build_globals_dict(modules: List[Any]) -> Dict[str, Any]:
         parse_jsonl,
         parse_clf,
         parse_combined,
+        parse_log4j,
         parse_unix,
         parse_line,
         parse_data,
@@ -771,6 +776,7 @@ def parse_linebased(line, format):
         "jsonl": parse_jsonl,
         "clf": parse_clf,
         "combined": parse_combined,
+        "log4j": parse_log4j,
         "unix": parse_unix,
         "line": parse_line,
         "ts1m": parse_ts1m,
@@ -1148,6 +1154,29 @@ def parse_combined(line):
         return d
     else:
         return {}
+
+
+def parse_log4j(line: str) -> dict:
+    """Parse a Log4j formatted line into dictionary with string values.
+
+    Examples:
+    2024-01-19 15:04:23,456 [main] SEVERE [com.example.CustomerService] - Failed to connect
+    19-Jan-2024 15:04:23.456 [main] ERROR [com.example] - Message
+    """
+    pattern = r"""
+        ^\s*(?P<timestamp>[^\[]+?)\s+    # Timestamp (any non-bracket chars until whitespace)
+        \[(?P<thread>[^\]]+)\]\s+        # Thread name in brackets
+        (?P<level>[\w_]+)\s+             # Log level (word chars and underscore)
+        \[(?P<logger>[^\]]+)\]\s+-\s+    # Logger name in brackets
+        (?P<message>.+?)                  # Message (non-greedy)
+        \s*$                             # Optional trailing whitespace
+    """
+
+    match = re.match(pattern, line.strip(), re.VERBOSE)
+    if not match:
+        return {}
+
+    return {k: v.strip() for k, v in match.groupdict().items()}
 
 
 def parse_unix(line: str) -> Dict[str, str]:
@@ -3730,6 +3759,7 @@ def parse_args():
             "table",
             "clf",
             "combined",
+            "log4j",
             "unix",
             "line",
             "data",
