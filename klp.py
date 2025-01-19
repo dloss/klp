@@ -70,7 +70,7 @@ INPUT_QUOTE = r"\""
 # In display order.
 TS_KEYS = "_klp_timedelta ts time timestamp t at _ts @t _klp_ts".split()
 TS_KEYS_NONKLP = [k for k in TS_KEYS if not k.startswith("_klp_")]
-MSG_KEYS = "msg message @m @mt".split()
+MSG_KEYS = "msg message @m".split()
 LEVEL_KEYS = "log_level level lvl loglevel severity levelname @l".split()
 
 # Regular expressions
