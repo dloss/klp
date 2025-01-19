@@ -3,6 +3,7 @@ from klp import (
     parse_jsonl,
     parse_clf,
     parse_combined,
+    parse_log4j,
     parse_unix,
 )
 
@@ -75,6 +76,52 @@ def test_parse_combined():
 
     # Invalid format
     assert parse_combined("Invalid line") == {}
+
+
+def test_parse_log4j():
+    """Test Log4j format parsing with various cases."""
+    # Standard line
+    line = "2024-01-19 15:04:23,456 [main] INFO [com.example.Service] - Started successfully"
+    result = parse_log4j(line)
+    assert result["timestamp"] == "2024-01-19 15:04:23,456"
+    assert result["thread"] == "main"
+    assert result["level"] == "INFO"
+    assert result["logger"] == "com.example.Service"
+    assert result["message"] == "Started successfully"
+
+    # Different timestamp format
+    line = "19-Jan-2024 15:04:23.456 [main] ERROR [com.example] - Failed to start"
+    result = parse_log4j(line)
+    assert result["timestamp"] == "19-Jan-2024 15:04:23.456"
+    assert result["level"] == "ERROR"
+
+    # Complex thread name
+    line = "2024-01-19 15:04:23,456 [http-nio-8080-exec-1] DEBUG [com.example] - Processing request"
+    result = parse_log4j(line)
+    assert result["thread"] == "http-nio-8080-exec-1"
+    assert result["level"] == "DEBUG"
+
+    # Complex logger name with version
+    line = (
+        "2024-01-19 15:04:23,456 [main] INFO [com.example.v2.api.Service] - API ready"
+    )
+    result = parse_log4j(line)
+    assert result["logger"] == "com.example.v2.api.Service"
+
+    # Message with special characters
+    line = '2024-01-19 15:04:23,456 [main] WARN [com.example] - User "john.doe" failed auth: error=Invalid credentials'
+    result = parse_log4j(line)
+    assert result["message"] == 'User "john.doe" failed auth: error=Invalid credentials'
+
+    # With extra whitespace
+    line = (
+        "  2024-01-19 15:04:23,456  [main]   INFO   [com.example]  -   Extra spaces  "
+    )
+    result = parse_log4j(line)
+    assert result["message"] == "Extra spaces"
+
+    # Invalid format
+    assert parse_log4j("Invalid line") == {}
 
 
 def test_parse_unix():
