@@ -1161,13 +1161,13 @@ def parse_log4j(line: str) -> dict:
 
     Examples:
     2024-01-19 15:04:23,456 [main] SEVERE [com.example.CustomerService] - Failed to connect
-    19-Jan-2024 15:04:23.456 [main] ERROR [com.example] - Message
+    19-Jan-2024 15:04:23.456 [main] ERROR com.example - Message
     """
     pattern = r"""
         ^\s*(?P<timestamp>[^\[]+?)\s+    # Timestamp (any non-bracket chars until whitespace)
         \[(?P<thread>[^\]]+)\]\s+        # Thread name in brackets
         (?P<level>[\w_]+)\s+             # Log level (word chars and underscore)
-        \[(?P<logger>[^\]]+)\]\s+-\s+    # Logger name in brackets
+        \[?(?P<logger>[^\]]+)\]?\s+-\s+    # Logger name in optional brackets
         (?P<message>.+?)                  # Message (non-greedy)
         \s*$                             # Optional trailing whitespace
     """
