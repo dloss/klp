@@ -120,6 +120,15 @@ def test_parse_log4j():
     result = parse_log4j(line)
     assert result["message"] == "Extra spaces"
 
+    # Logger without brackets
+    line = "19-Jan-2024 15:04:23.456 [main] ERROR com.example - Message"
+    result = parse_log4j(line)
+    assert result["timestamp"] == "19-Jan-2024 15:04:23.456"
+    assert result["thread"] == "main"
+    assert result["level"] == "ERROR"
+    assert result["logger"] == "com.example"
+    assert result["message"] == "Message"
+
     # Invalid format
     assert parse_log4j("Invalid line") == {}
 
