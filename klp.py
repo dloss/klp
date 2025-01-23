@@ -297,7 +297,7 @@ BUILTIN_REGEXES = {
 
 EPILOG = f"""
 INTERVAL units: us=microseconds/ms=milliseconds/s=seconds/m=minutes/h=hours/d=days/w=weeks"
-Highlighted keys: {','.join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
+Highlighted keys: {",".join(TS_KEYS + MSG_KEYS + LEVEL_KEYS)}
 """
 
 terminal_width = shutil.get_terminal_size((80, 24)).columns
@@ -2892,10 +2892,10 @@ def show_stats(stats: Stats) -> None:
     seen = stats.num_lines_seen
     shown = stats.num_events_shown
     if seen > 0 and shown > 0:
-        percent = f" ({shown/seen:.0%} of { seen } lines seen)"
+        percent = f" ({shown / seen:.0%} of {seen} lines seen)"
     else:
         percent = ""
-    print_err(f"Events shown: { shown }{percent}")
+    print_err(f"Events shown: {shown}{percent}")
     if stats.first_timestamp:
         try:
             span = to_datetime(stats.last_timestamp) - to_datetime(
@@ -2903,21 +2903,21 @@ def show_stats(stats: Stats) -> None:
             )
             total_seconds = span.total_seconds()
             rate_info = (
-                f", {shown/total_seconds:.1f} events/s" if total_seconds > 0 else ""
+                f", {shown / total_seconds:.1f} events/s" if total_seconds > 0 else ""
             )
-            spanstr = f" ({ span }{ rate_info })"
+            spanstr = f" ({span}{rate_info})"
         except ValueError:
             spanstr = ""
         print_err(
-            f"Time span shown: { colorize(format_datetime(stats.first_timestamp), colors['timestamp_key']) } "
-            f"to { colorize(format_datetime(stats.last_timestamp), colors['timestamp_key']) }",
+            f"Time span shown: {colorize(format_datetime(stats.first_timestamp), colors['timestamp_key'])} "
+            f"to {colorize(format_datetime(stats.last_timestamp), colors['timestamp_key'])}",
             spanstr,
         )
     print_err(
-        f"Keys seen: { ','.join( colorize(key, colors['keys']) for key in stats.keys)}"
+        f"Keys seen: {','.join(colorize(key, colors['keys']) for key in stats.keys)}"
     )
     print_err(
-        f"Log levels seen: { ','.join(colorize_loglevels(stats.loglevels))}"
+        f"Log levels seen: {','.join(colorize_loglevels(stats.loglevels))}"
         f" (keys: {','.join(stats.loglevel_keys)})"
     )
 
