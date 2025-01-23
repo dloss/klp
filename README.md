@@ -319,10 +319,11 @@ The events in a file or stream don't have to have the same fields.
 klp tries to automatically detect timestamps, log levels and log messages
 by looking for the following keys:
 
-* Timestamp keys: `timestamp`, `time`, `ts`, `t`, `at`
-* Log level keys: `log_level`, `loglevel`, `level`, `lvl`, `severity`
-* Message keys: `message`, `msg`
+* Timestamp keys: `ts`, `time`, `timestamp`, `t`, `at`, `_t`, `@t`
+* Log level keys: `log_level`, `loglevel`, `level`, `lvl`, `loglevel`, `severity`, `levelname`, `@l`
+* Message keys: `message`, `msg`, `@m` 
 
+If your timestamp or log level fields aren't in these defaults, use `--ts-key KEY` and `--loglevel-key KEY` to specify them.
 klp has special features to select events by timestamp or log level (see below).
 
 
