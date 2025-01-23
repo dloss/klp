@@ -2707,7 +2707,9 @@ def show_default(
             if key_lower in TS_KEYS:
                 val_color = THEMES[args.theme]["timestamp_key"]
                 val = format_datetime(val)
-            elif key_lower in LEVEL_KEYS:
+            elif key_lower in LEVEL_KEYS or (
+                args.loglevel_key and key_lower == args.loglevel_key
+            ):
                 val_color = THEMES[args.theme]["levels"].get(val.lower(), "off")
             elif key_lower in MSG_KEYS:
                 val_color = THEMES[args.theme]["message_key"]
@@ -3047,8 +3049,8 @@ def get_log_level(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
     """
     Extract the log level key and value from an event dictionary.
 
-    Searches through common log level field names to find the first matching key
-    and its corresponding value.
+    Searches through common log level field names or uses the specified key to find
+    the log level value.
 
     Args:
         event: Event dictionary to search for log level
@@ -3059,7 +3061,8 @@ def get_log_level(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
             - Value of the log level (or None if not found)
 
     Notes:
-        - Checks keys in order defined by LEVEL_KEYS global
+        - If args.loglevel_key is set, only checks that key
+        - Otherwise checks keys in order defined by LEVEL_KEYS global
         - Case sensitive key matching
         - Returns first matching key-value pair
         - Returns (None, None) if no log level found
@@ -3072,6 +3075,9 @@ def get_log_level(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
         >>> get_log_level(event)
         (None, None)
     """
+    if args.loglevel_key and args.loglevel_key in event:
+        return args.loglevel_key, event[args.loglevel_key]
+
     for key in LEVEL_KEYS:
         try:
             return key, event[key]
@@ -3852,6 +3858,11 @@ def parse_args():
         metavar="LEVELS",
         type=csv_lower_type,
         help="comma-separated names of loglevels NOT to process (case-insensitive)",
+    )
+    selection.add_argument(
+        "--loglevel-key",
+        metavar="KEY",
+        help="parse log level from KEY",
     )
     selection.add_argument(
         "--skip",
@@ -5377,7 +5388,6 @@ def main():
             if args.add_ts:
                 event["_klp_ts"] = now_rfc3339()
             if visible(event):
-                # breakpoint()
                 if args.fuse is not None or args.mark_gaps is not None:
                     ts_datetime = get_timestamp_datetime(event)
                     if ts_datetime is None:
