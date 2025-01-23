@@ -23,6 +23,7 @@ def mock_args():
     args.where = ""
     args.loglevels = None
     args.loglevels_not = None
+    args.loglevel_key = None
     args.from_dt = None
     args.to_dt = None
     args.files = []  # Add default empty list of files
