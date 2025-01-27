@@ -2292,6 +2292,7 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S").astimezone(),
     lambda s: dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S").astimezone(),
     # XXX: datetime does not support nanoseconds, so we just treat them as 000
+    lambda s: dt.datetime.strptime(s[:-9] + s[-6:], "%Y-%m-%dT%H:%M:%S.%f%z"),
     lambda s: dt.datetime.strptime(
         s[:-4] + s[-1:], "%Y-%m-%dT%H:%M:%S.%f"
     ).astimezone(),
@@ -2301,6 +2302,10 @@ datetime_converters = [
     lambda s: dt.datetime.strptime(s, "%d/%b/%Y:%H:%M:%S %z").astimezone(),
     # RFC 2822 (date -R)
     lambda s: dt.datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %z").astimezone(),
+    # 27 Jan 2025 14:30:45
+    lambda s: dt.datetime.strptime(s, "%d %b %Y %H:%M:%S").astimezone(),
+    # German format: 27.01.2025 14:30:45
+    lambda s: dt.datetime.strptime(s, "%d.%m.%Y %H:%M:%S").astimezone(),
     # With day name (git log)
     lambda s: dt.datetime.strptime(
         " ".join(s.split()[1:]), "%b %d %H:%M:%S %Y %z"

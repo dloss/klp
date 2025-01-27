@@ -129,6 +129,16 @@ def test_parse_log4j():
     assert result["logger"] == "com.example"
     assert result["message"] == "Message"
 
+    line = (
+        "14:08:37.634 [main] TRACE com.ComApp - COM :: LEVEL :: ComApp TRACE Message ::"
+    )
+    result = parse_log4j(line)
+    assert result["timestamp"] == "14:08:37.634"
+    assert result["thread"] == "main"
+    assert result["level"] == "TRACE"
+    assert result["logger"] == "com.ComApp"
+    assert result["message"] == "COM :: LEVEL :: ComApp TRACE Message ::"
+
     # Invalid format
     assert parse_log4j("Invalid line") == {}
 
