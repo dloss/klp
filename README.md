@@ -182,6 +182,8 @@ klp supports a wide range of input formats:
 - `line`: lines of text (trailing whitespace removed)
 - `tsNm`: logs containing a timestamp (with N components) and a message. See below for examples. 
 - `tsNlm`: logs containing a timestamp (with N components), a log level and a message
+- `log4j`: Apache Log4j format
+- `cef`: Common Event Format (CEF)
 - `unix`: Common format of Unix server logs (timestamp, hostname, service, optional pid, message)
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
