@@ -1295,8 +1295,8 @@ def parse_cef(line: str) -> Dict[str, str]:
     if not cef_str.startswith("CEF:"):
         return result  # Defensive check.
 
-    # Remove the "CEF:" prefix.
-    cef_body = cef_str[4:]
+    # Remove the "CEF:" prefix and any leading whitespace.
+    cef_body = cef_str[4:].lstrip()
 
     # Split header fields and extension.
     header_parts = split_cef_header_and_extension(cef_body)
