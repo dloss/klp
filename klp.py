@@ -347,6 +347,7 @@ def build_globals_dict(modules: List[Any]) -> Dict[str, Any]:
         parse_clf,
         parse_combined,
         parse_log4j,
+        parse_cef,
         parse_unix,
         parse_line,
         parse_data,
@@ -777,6 +778,7 @@ def parse_linebased(line, format):
         "clf": parse_clf,
         "combined": parse_combined,
         "log4j": parse_log4j,
+        "cef": parse_cef,
         "unix": parse_unix,
         "line": parse_line,
         "ts1m": parse_ts1m,
@@ -1177,6 +1179,144 @@ def parse_log4j(line: str) -> dict:
         return {}
 
     return {k: v.strip() for k, v in match.groupdict().items()}
+
+
+def split_cef_header_and_extension(cef_body: str) -> List[str]:
+    """
+    Splits the CEF header string into its fields.
+
+    For the first 7 fields (i.e. the CEF header fields), escaped characters
+    (preceded by a backslash) are unescaped. However, the remainder of the
+    string (the extension part after the 7th unescaped '|') is returned
+    "raw" (with escape sequences preserved) so that they can later be parsed
+    correctly.
+    """
+    fields = []
+    current_field = []
+    field_count = 0
+    i = 0
+    n = len(cef_body)
+    while i < n:
+        if field_count < 7:
+            if cef_body[i] == "\\" and i + 1 < n:
+                # Unescape the next character for header fields.
+                current_field.append(cef_body[i + 1])
+                i += 2
+            elif cef_body[i] == "|":
+                # Unescaped pipe found: end of current header field.
+                fields.append("".join(current_field))
+                current_field = []
+                field_count += 1
+                i += 1
+            else:
+                current_field.append(cef_body[i])
+                i += 1
+        else:
+            # We are now in the extension part; do not unescape.
+            break
+    # Append whatever was accumulated for the last header field.
+    if field_count < 7:
+        fields.append("".join(current_field))
+        extension = ""
+    else:
+        extension = cef_body[i:]
+    if extension:
+        fields.append(extension)
+    return fields
+
+
+def _parse_cef_extension(ext_str: str) -> Dict[str, str]:
+    """
+    Parses the CEF extension part (everything after the header fields) into
+    key/value pairs.
+
+    The extension consists of key=value pairs separated by whitespace.
+    The regex below splits on unescaped '=' signs by using a negative lookbehind,
+    so that an escaped '=' (e.g. in a JSON value) is not interpreted as a delimiter.
+
+    After matching, the function then unescapes the backslash escapes in both keys
+    and values.
+    """
+    ext = {}
+    # The pattern works as follows:
+    #   - (?P<key>\S+?)  : non-greedily capture a key (one or more non-whitespace characters)
+    #   - =              : literal equals sign
+    #   - (?P<value>.*?) : non-greedily capture the value
+    #   - (?=\s+\S+(?<!\\)=|$) : stop when we see whitespace followed by a token that contains
+    #                           an unescaped '=' (i.e. the start of the next key=value pair)
+    #                           or at the end of the string.
+    pattern = re.compile(r"(?P<key>\S+?)=(?P<value>.*?)(?=\s+\S+(?<!\\)=|$)", re.DOTALL)
+    for match in pattern.finditer(ext_str):
+        # Unescape the backslash-escaped characters in both key and value.
+        key = re.sub(r"\\(.)", r"\1", match.group("key"))
+        value = re.sub(r"\\(.)", r"\1", match.group("value"))
+        ext[key] = value
+    return ext
+
+
+def parse_cef(line: str) -> Dict[str, str]:
+    """
+    Parses a CEF log line into a dictionary.
+
+    1. The part before "CEF:" (if present) is treated as the syslog prefix.
+       If there are at least 4 whitespace-separated tokens, the first three are
+       joined as the timestamp and the fourth token is used as the host.
+       Otherwise, the last token is used as the host.
+
+    2. The CEF header (starting with "CEF:") is processed as follows:
+       - The "CEF:" prefix is removed.
+       - The next part is split into header fields and the extension. The header
+         fields (cefver, vendor, product, version, eventid, event, severity) are
+         split on unescaped '|' characters and unescaped (using split_header_and_extension).
+         The extension (if any) is kept raw.
+
+    3. The extension part is then parsed into key=value pairs using parse_extension,
+       which correctly handles escaped equals signs.
+    """
+    result: Dict[str, str] = {}
+
+    # Find the beginning of the CEF part.
+    idx = line.find("CEF:")
+    if idx == -1:
+        return result  # Not a valid CEF line.
+
+    # Process syslog prefix.
+    prefix = line[:idx].strip()
+    if prefix:
+        tokens = prefix.split()
+        if len(tokens) > 1:
+            result["host"] = tokens[-1]
+            result["timestamp"] = " ".join(tokens[:-1])
+        else:
+            result["host"] = tokens[0]
+
+    # Process the CEF header.
+    cef_str = line[idx:]
+    if not cef_str.startswith("CEF:"):
+        return result  # Defensive check.
+
+    # Remove the "CEF:" prefix.
+    cef_body = cef_str[4:]
+
+    # Split header fields and extension.
+    header_parts = split_cef_header_and_extension(cef_body)
+    if len(header_parts) < 7:
+        return result  # Malformed message.
+
+    result["cefver"] = header_parts[0]
+    result["vendor"] = header_parts[1]
+    result["product"] = header_parts[2]
+    result["version"] = header_parts[3]
+    result["eventid"] = header_parts[4]
+    result["event"] = header_parts[5]
+    result["severity"] = header_parts[6]
+
+    # If an extension is present, parse it.
+    if len(header_parts) > 7 and header_parts[7].strip():
+        ext_fields = _parse_cef_extension(header_parts[7].lstrip())
+        result.update(ext_fields)
+
+    return result
 
 
 def parse_unix(line: str) -> Dict[str, str]:
@@ -1696,6 +1836,9 @@ class EStr(str):
     def parse_combined(self):
         return parse_combined(self)
 
+    def parse_cef(self):
+        return parse_cef(self)
+
     def parse_unix(self):
         return parse_unix(self)
 
@@ -1996,6 +2139,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         parse_jsonl,
         parse_clf,
         parse_combined,
+        parse_cef,
         parse_unix,
         parse_line,
         parse_data,
@@ -3771,6 +3915,7 @@ def parse_args():
             "clf",
             "combined",
             "log4j",
+            "cef",
             "unix",
             "line",
             "data",
