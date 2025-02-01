@@ -1836,6 +1836,9 @@ class EStr(str):
     def parse_combined(self):
         return parse_combined(self)
 
+    def parse_log4j(self):
+        return parse_log4j(self)
+
     def parse_cef(self):
         return parse_cef(self)
 
@@ -2139,6 +2142,7 @@ EXPORTED_GLOBALS = build_globals_dict(
         parse_jsonl,
         parse_clf,
         parse_combined,
+        parse_log4j,
         parse_cef,
         parse_unix,
         parse_line,
