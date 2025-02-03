@@ -596,7 +596,7 @@ Customize your output with:
 - `--indent`, `--no-indent`: Control indentation
 - `--expand`: Expand newlines
 - `--no-wrap`: Disable line wrapping
-- `--each-key`: Print each key on a separate line
+- `--each-key`: Print each field of an event on a separate line, with proper indentation
 
 For advanced formatting, see [Custom Output Formatting using Python](#custom-output-formatting-using-python).
 
