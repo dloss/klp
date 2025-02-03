@@ -673,6 +673,17 @@ $ klp -a fmt_spring -a style_brief app.log
 $ klp -a spring_brief --mark-gaps 1h app.log
 ```
 
+
+#### Ignoring Configuration
+
+Use `--ignore-config` to skip reading the configuration file entirely,
+if you want to avoid applying your default options.
+
+```bash
+# Run with default settings, ignoring any config file
+$ klp --ignore-config app.log
+```
+
 ## Advanced Usage
 
 ### Complex Filtering with Python Expressions
