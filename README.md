@@ -799,6 +799,59 @@ As a shortcut, you can just call the field, which will call the `cols()` method:
 line(1, "-2,2,4:", 3)  # Returns ["beta", "delta gamma epsilon", "delta"]
 ```
 
+#### String Extraction Methods
+
+Building a new field often requires extracting a specific portion of an existing field based on a known substring.
+The following methods provide a simpler alternative to manual indexing or regular expressions,
+making field extraction more intuitive:
+
+`.before(text, n=1)`: Return the part of string before the nth occurrence of text
+```bash
+$ echo 'time=2024-02-08T15:04:05Z msg="Error: Database: Connection failed"' | \
+  klp -I 'error_type = msg.before(":")'
+time=2024-02-08T15:04:05Z msg="Error: Database: Connection failed" error_type=Error
+```
+
+`.after(text, n=1)`: Return the part of string after the nth occurrence of text
+```bash
+# Extract the error message after the second colon
+$ echo 'time=2024-02-08T15:04:05Z msg="Error: Database: Connection failed"' | \
+  klp -I 'error_details = msg.after(":", 2)'
+time=2024-02-08T15:04:05Z msg="Error: Database: Connection failed" error_details=" Connection failed"
+```
+
+`.between(start, end, n=1)`: Return the part of string between the nth occurrence of start and the following end
+```bash
+# Extract text between parentheses
+$ echo 'time=2024-02-08T15:04:05Z msg="User (id=12345) logged in"' | \
+  klp -I 'user_id = msg.between("(", ")")'
+time=2024-02-08T15:04:05Z msg="User (id=12345) logged in" user_id="id=12345"
+```
+
+`.starting_with(text, n=1)`: Return the substring from the nth occurrence of text to the end
+```bash
+# Get everything from 'Error' onwards
+$ echo 'time=2024-02-08T15:04:05Z msg="[INFO] Error: Connection failed"' | \
+  klp -I 'error_msg = msg.starting_with("Error")'
+time=2024-02-08T15:04:05Z msg="[INFO] Error: Connection failed" error_msg="Error: Connection failed"
+```
+
+`.ending_with(text, n=1)`: Return the substring from start through the nth occurrence of text
+```bash
+# Get the message up to the first colon
+$ echo 'time=2024-02-08T15:04:05Z msg="[INFO] Error: Connection failed"' | \
+  klp -I 'prefix = msg.ending_with(":")'
+time=2024-02-08T15:04:05Z msg="[INFO] Error: Connection failed" prefix="[INFO] Error:"
+```
+
+All these methods:
+- Are available on all fields
+- Accept an optional occurrence number `n` (default 1)
+- Support negative indices to count from the end: `msg.after(":", -1)`
+- Can be chained with other methods: `msg.after(":").strip()`
+- Return empty string if the marker text isn't found
+- Preserve the original string if marker text is empty
+
 #### Helper Functions
 
 When using `--input-exec`, you have access to a variety of helper functions designed for common log processing tasks. The full list of available functions and modules can be viewed using `klp --help-python`.
