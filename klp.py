@@ -2545,6 +2545,8 @@ datetime_converters = [
     lambda s: dt.datetime.combine(
         dt.datetime.now().date(), dt.datetime.strptime(s, "%I%p").time()
     ).astimezone(),
+    # Slashes
+    lambda s: dt.datetime.strptime(s, "%Y/%m/%d %H:%M:%S").astimezone(),
 ]
 
 dt_conv_order = list(range(len(datetime_converters)))
