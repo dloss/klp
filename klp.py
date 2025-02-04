@@ -142,6 +142,16 @@ FACILITY_MAP = {
     23: "local7",
 }
 
+# Regex to match an individual Structured Data (SD) element.
+# It captures the SD-ID and then any parameters of the form key="value".
+RE_SD_ELEMENT = re.compile(
+    r"\[(?P<sd_id>[^\s]+)"  # SD-ID: non-space characters until first whitespace.
+    r"(?P<params>(?:\s+[^\s=]+(?:\s*=\s*\"[^\"]*\")?)*)"  # Zero or more parameters.
+    r"\]"
+)
+
+# Regex to match each parameter inside an SD element.
+RE_SD_PARAM = re.compile(r'\s+(?P<key>[^\s=]+)\s*=\s*"(?P<value>[^"]*)"')
 
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
@@ -1410,63 +1420,113 @@ def parse_unix(line: str) -> Dict[str, str]:
         return {}
 
 
-def parse_rfc5424(line: str) -> Dict[str, str]:
+def _parse_structured_data(sd_str: str) -> List[Dict[str, Any]]:
     """
-    Parse a syslog line in RFC5424 format and extract structured components,
-    including facility and severity (both numeric and as descriptive strings).
-
-    The parser now handles optional fields gracefully:
-      - If `procid` or `msgid` are provided as "-", they are replaced with an empty string.
-      - Structured data may be a single dash or one or more bracketed elements.
+    Parse the structured data string of RFC 5424 into a list of dictionaries.
+    Each dictionary represents one SD element with its SD-ID and parameters.
 
     Args:
-        line (str): A single syslog line in RFC5424 format.
+        sd_str (str): The raw structured data string (not "-" but the bracketed content).
 
     Returns:
-        Dict[str, str]: A dictionary containing the parsed elements:
+        List[Dict[str, Any]]: A list of dictionaries, each with keys:
+            - 'sd_id': The SD-ID of the element.
+            - 'params': A dictionary of parameter key/value pairs.
+    """
+    sd_elements = []
+
+    # Use finditer to match all SD elements.
+    for match in RE_SD_ELEMENT.finditer(sd_str):
+        element = {}
+        sd_id = match.group("sd_id")
+        element["sd_id"] = sd_id
+        params_str = match.group("params")
+        params = {}
+        # Find all parameters within this SD element.
+        for p_match in RE_SD_PARAM.finditer(params_str):
+            key = p_match.group("key")
+            value = p_match.group("value")
+            params[key] = value
+        element["params"] = params
+        sd_elements.append(element)
+
+    return sd_elements
+
+
+def parse_rfc5424(line: str) -> Dict[str, Any]:
+    """
+    Parse a syslog line in RFC5424 format and extract structured components,
+    including facility and severity (both numeric and as descriptive strings) and
+    structured data elements.
+
+    This function handles optional fields:
+      - If `procid`, `msgid`, or `structured_data` are "-", they are replaced with an empty string.
+      - The structured_data part may consist of one or more SD elements.
+    The parameters from the structured data are flattened
+    into the returned dictionary using keys in the format "<sd_id>.<param_key>".
+    Additionally, if the structured_data field was successfully parsed, the raw
+    'structured_data' key is removed from the final dictionary.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing:
             - 'pri': The raw PRI value as a string.
-            - 'facility': The numeric facility as a string.
-            - 'facility_desc': The short descriptive string for the facility.
+            - 'facility_num': The numeric facility as a string.
+            - 'facility': The short descriptive string for the facility.
             - 'severity_num': The numeric severity level as a string.
             - 'severity': The descriptive severity level (e.g., "error").
             - 'version': The syslog version.
             - 'timestamp': The timestamp.
             - 'hostname': The host name.
             - 'appname': The application name.
-            - 'procid': The process ID (empty string if not provided).
-            - 'msgid': The message ID (empty string if not provided).
-            - 'structured_data': The structured data (empty string if not provided).
+            - 'procid': The process ID (empty if not provided).
+            - 'msgid': The message ID (empty if not provided).
             - 'message': The log message.
+            - Plus, the flattened SD parameters using keys like "<sd_id>.<param_key>".
+            - The raw 'structured_data' field is only kept if SD parsing fails.
     """
     match = RE_RFC5424.match(line)
-    if match:
-        data = match.groupdict()
-
-        # Convert optional fields represented by "-" to an empty string.
-        for field in ["procid", "msgid", "structured_data"]:
-            if data.get(field) == "-":
-                data[field] = ""
-
-        try:
-            pri_val = int(data["pri"])
-            # Calculate facility and severity numbers.
-            facility_num = pri_val // 8
-            severity_num = pri_val % 8
-
-            data["facility"] = str(facility_num)
-            data["severity_num"] = str(severity_num)
-            # Map numeric values to descriptive strings.
-            data["severity"] = SEVERITY_MAP.get(severity_num, "unknown")
-            data["facility_desc"] = FACILITY_MAP.get(facility_num, "unknown")
-        except (ValueError, TypeError):
-            data["facility"] = ""
-            data["severity_num"] = ""
-            data["severity"] = ""
-            data["facility_desc"] = ""
-
-        return {k: v for k, v in data.items() if v is not None}
-    else:
+    if not match:
         return {}
+
+    data = match.groupdict()
+
+    # Replace "-" with an empty string for optional fields.
+    for field in ["procid", "msgid", "structured_data"]:
+        if data.get(field) == "-":
+            data[field] = ""
+
+    try:
+        pri_val = int(data["pri"])
+        facility_num = pri_val // 8
+        severity_num = pri_val % 8
+
+        # Store numeric values under *_num.
+        data["facility_num"] = str(facility_num)
+        data["severity_num"] = str(severity_num)
+        # Store descriptive values under the plain keys.
+        data["facility"] = FACILITY_MAP.get(facility_num, "unknown")
+        data["severity"] = SEVERITY_MAP.get(severity_num, "unknown")
+    except (ValueError, TypeError):
+        data["facility_num"] = ""
+        data["severity_num"] = ""
+        data["facility"] = ""
+        data["severity"] = ""
+
+    # Parse structured data if available.
+    sd_raw = data.get("structured_data", "")
+    if sd_raw:
+        sd_elements = _parse_structured_data(sd_raw)
+        # If successfully parsed, flatten the SD parameters and remove the raw field.
+        if sd_elements:
+            for sd in sd_elements:
+                sd_id = sd.get("sd_id")
+                for key, value in sd.get("params", {}).items():
+                    flat_key = f"{sd_id}.{key}"
+                    data[flat_key] = value
+            del data["structured_data"]
+    # Otherwise, leave the raw structured_data intact.
+
+    return {k: v for k, v in data.items() if v is not None}
 
 
 def parse_syslog(line: str) -> Dict[str, str]:
