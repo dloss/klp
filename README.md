@@ -185,6 +185,8 @@ klp supports a wide range of input formats:
 - `log4j`: Apache Log4j format
 - `cef`: Common Event Format (CEF)
 - `unix`: Common format of Unix server logs (timestamp, hostname, service, optional pid, message)
+- `rfc5424`: Syslog as specified in RFC5424 (including a priority)
+- `syslog`: Syslog (either RFC 5424 or the classical Unix one without priority)
 - `clf`: NCSA Common Log Format
 - `combined`: Combined Log Format of Apache httpd
 - `sqlite`: SQLite database (use `--input-tablename` if more than one table is present)

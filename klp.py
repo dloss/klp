@@ -91,6 +91,57 @@ RE_UNIX = re.compile(
     r"(?P<message>.*)"
 )
 
+RE_RFC5424 = re.compile(
+    r"^<(?P<pri>\d+)>"
+    r"(?P<version>\d+)\s+"
+    r"(?P<timestamp>\S+)\s+"
+    r"(?P<hostname>\S+)\s+"
+    r"(?P<appname>\S+)\s+"
+    r"(?P<procid>\S+)\s+"
+    r"(?P<msgid>\S+)\s+"
+    # Structured data: either a dash or one or more bracketed elements with optional whitespace in between.
+    r"(?P<structured_data>(?:-|\[(?:[^\]]+)\](?:\s*\[(?:[^\]]+)\])*))\s*"
+    r"(?P<message>.*)$"
+)
+
+SEVERITY_MAP = {
+    0: "emergency",
+    1: "alert",
+    2: "critical",
+    3: "error",
+    4: "warning",
+    5: "notice",
+    6: "info",  # "informational" seems long
+    7: "debug",
+}
+
+FACILITY_MAP = {
+    0: "kern",
+    1: "user",
+    2: "mail",
+    3: "daemon",
+    4: "auth",
+    5: "syslog",
+    6: "lpr",
+    7: "news",
+    8: "uucp",
+    9: "cron",
+    10: "authpriv",
+    11: "ftp",
+    12: "ntp",
+    13: "audit",
+    14: "alert",
+    15: "clock",
+    16: "local0",
+    17: "local1",
+    18: "local2",
+    19: "local3",
+    20: "local4",
+    21: "local5",
+    22: "local6",
+    23: "local7",
+}
+
 
 # ANSI Escape Codes and a short, temporary replacement sentinel that should not occur otherwise in the text
 COLOR_CODES = {
@@ -132,6 +183,7 @@ THEMES = {
             "finer": "bright_cyan",
             "config": "bright_cyan",
             "info": "bright_green",
+            "informational": "bright_green",
             "notice": "bright_green",
             "warn": "bright_yellow",
             "warning": "bright_yellow",
@@ -780,6 +832,8 @@ def parse_linebased(line, format):
         "log4j": parse_log4j,
         "cef": parse_cef,
         "unix": parse_unix,
+        "rfc5424": parse_rfc5424,
+        "syslog": parse_syslog,
         "line": parse_line,
         "ts1m": parse_ts1m,
         "ts1lm": parse_ts1lm,
@@ -1354,6 +1408,82 @@ def parse_unix(line: str) -> Dict[str, str]:
         }
     else:
         return {}
+
+
+def parse_rfc5424(line: str) -> Dict[str, str]:
+    """
+    Parse a syslog line in RFC5424 format and extract structured components,
+    including facility and severity (both numeric and as descriptive strings).
+
+    The parser now handles optional fields gracefully:
+      - If `procid` or `msgid` are provided as "-", they are replaced with an empty string.
+      - Structured data may be a single dash or one or more bracketed elements.
+
+    Args:
+        line (str): A single syslog line in RFC5424 format.
+
+    Returns:
+        Dict[str, str]: A dictionary containing the parsed elements:
+            - 'pri': The raw PRI value as a string.
+            - 'facility': The numeric facility as a string.
+            - 'facility_desc': The short descriptive string for the facility.
+            - 'severity_num': The numeric severity level as a string.
+            - 'severity': The descriptive severity level (e.g., "error").
+            - 'version': The syslog version.
+            - 'timestamp': The timestamp.
+            - 'hostname': The host name.
+            - 'appname': The application name.
+            - 'procid': The process ID (empty string if not provided).
+            - 'msgid': The message ID (empty string if not provided).
+            - 'structured_data': The structured data (empty string if not provided).
+            - 'message': The log message.
+    """
+    match = RE_RFC5424.match(line)
+    if match:
+        data = match.groupdict()
+
+        # Convert optional fields represented by "-" to an empty string.
+        for field in ["procid", "msgid", "structured_data"]:
+            if data.get(field) == "-":
+                data[field] = ""
+
+        try:
+            pri_val = int(data["pri"])
+            # Calculate facility and severity numbers.
+            facility_num = pri_val // 8
+            severity_num = pri_val % 8
+
+            data["facility"] = str(facility_num)
+            data["severity_num"] = str(severity_num)
+            # Map numeric values to descriptive strings.
+            data["severity"] = SEVERITY_MAP.get(severity_num, "unknown")
+            data["facility_desc"] = FACILITY_MAP.get(facility_num, "unknown")
+        except (ValueError, TypeError):
+            data["facility"] = ""
+            data["severity_num"] = ""
+            data["severity"] = ""
+            data["facility_desc"] = ""
+
+        return {k: v for k, v in data.items() if v is not None}
+    else:
+        return {}
+
+
+def parse_syslog(line: str) -> Dict[str, str]:
+    """
+    Parse a syslog line by first attempting to parse it as RFC5424 format,
+    and if that fails, falling back to the Unix syslog format.
+
+    Args:
+        line (str): A single line of syslog data.
+
+    Returns:
+        Dict[str, str]: A dictionary containing the parsed log components.
+    """
+    result = parse_rfc5424(line)
+    if result:
+        return result
+    return parse_unix(line)
 
 
 def _parse_log_line(line, ts_parts, has_level=False):
@@ -3923,6 +4053,8 @@ def parse_args():
             "log4j",
             "cef",
             "unix",
+            "rfc5424",
+            "syslog",
             "line",
             "data",
             "sqlite",
