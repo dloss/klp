@@ -1381,7 +1381,7 @@ def _parse_log_line(line, ts_parts, has_level=False):
         if has_level:
             return {
                 "timestamp": ts,
-                "level": parts[ts_parts],
+                "level": parts[ts_parts].strip("[]()<>:!"),
                 "message": parts[ts_parts + 1],
             }
         return {"timestamp": ts, "message": parts[ts_parts]}
