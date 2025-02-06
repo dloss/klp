@@ -1067,6 +1067,7 @@ If klp doesn't meet your needs, here are some alternatives:
 - [tailspin](https://github.com/bensadeh/tailspin): A log file highlighter (Rust)
 - [GoAccess](https://goaccess.io): Real-time web log analyzer and interactive viewer that runs in a terminal in *nix systems or through your browser
 - [logmine](https://github.com/trungdq88/logmine): A log pattern analyzer CLI
+- [kl](https://github.com/robinovitch61/kl): An interactive Kubernetes log viewer for your terminal
 
 #### Web UI
 - [Klogg](https://github.com/variar/klogg): Multi-platform GUI application that helps browse and search through long and complex log files
