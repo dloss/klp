@@ -1053,6 +1053,7 @@ If klp doesn't meet your needs, here are some alternatives:
 - [pq](https://github.com/iximiuz/pq): Parse and Query log files as time series
 - [Kelpie](https://github.com/Yord/klp): Small, fast, and magical command-line data processor similar to pxi, jq, mlr, and awk
 - [lnav](https://github.com/tstack/lnav): Very advanced log file viewer, lots of formats
+- [tailtales](https://github.com/davidmoreno/tailtales): Flexible log viewer for logfmt and other formats with filtering, filtering expressions, and real-time pipe following
 
 #### JSON CLI/TUI
 - [fblog](https://github.com/brocode/fblog): Small command-line JSON Log viewer (Rust). Lua filters.
