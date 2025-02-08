@@ -62,7 +62,7 @@ from typing import (
 # Type variable for generic types
 T = TypeVar("T")  # Used for generic type hints if needed
 
-__version__ = "0.76.1"
+__version__ = "0.76.2"
 
 INPUT_QUOTE = r"\""
 
