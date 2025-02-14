@@ -100,6 +100,12 @@ $ klp -S mylog.logfmt
 $ tail -f mylog.logfmt | klp -n
 ```
 
+> [!NOTE]
+> klp defaults to the [logfmt](https://brandur.org/logfmt) input format and will extract any `key=value` patterns it finds, 
+> even if the file is in a different format. 
+> For non-logfmt logs, specify the format explicitly (e.g. `-f syslog`, or `-f line` for plain text).
+
+
 ### Basic Usage
 
 klp can be used as a filter, reading from stdin:
@@ -113,11 +119,6 @@ Or you can read from a file:
 ```bash
 $ klp log.txt
 ```
-
-> [!NOTE]
-> klp defaults to the [logfmt](https://brandur.org/logfmt) format and will extract any `key=value` patterns it finds, 
-> even if the file is in a different format. 
-> For non-logfmt logs, specify the format explicitly (e.g. `-f syslog`, or `-f line` for plain text).
 
 klp can directly process compressed log files:
 
