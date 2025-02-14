@@ -6,48 +6,11 @@ from klp import BUILTIN_REGEXES
 PATTERN = BUILTIN_REGEXES["fail"][0]
 regex = re.compile(PATTERN)
 
-import re
-import pytest
-
-# Enhanced regex incorporating additional keywords.
-PATTERN = (
-    r"(?i)\b(?:"
-    r"err(?:or|r)?|"  # error, err
-    r"fail(?:ure|ed|ing)?|"  # fail, failure, failed, failing
-    r"den(?:y|ied)|"  # deny, denied
-    r"invalid|"  # invalid
-    r"time(?:-?\s*out|d\s*out|out)|"  # timeout, time out, timed out, time-out
-    r"timout|"  # common misspelling
-    r"exception|"  # exception
-    r"blocked|"  # blocked
-    r"expir(?:ed|ing|ation|e)?|"  # expire, expired, expiring, expiration
-    r"reject(?:ed|ing|ion)?|"  # reject, rejected, rejecting, rejection
-    r"unauthoriz(?:e(?:d|ation)?|ed|ation)?|"  # unauthorized variants
-    r"unauth|"  # shorthand for unauthorized
-    r"forbidden|"  # forbidden
-    r"corrupt(?:ed|ion)?|"  # corrupt, corrupted, corruption
-    r"malform(?:ed|ation)?|"  # malform, malformed, malformation
-    r"disconnect(?:ed|ion)?|"  # disconnect, disconnected, disconnection
-    r"unreachable|"  # unreachable
-    r"violat(?:ed|ion|e)?|"  # violate, violated, violation
-    r"blacklist(?:ed|ing)?|"  # blacklist, blacklisted, blacklisting
-    r"crash(?:ed|ing)?|"  # crash, crashed, crashing
-    r"abort(?:ed|ing)?|"  # abort, aborted, aborting
-    r"panic|"  # panic
-    r"crit(?:ical)?|"  # crit or critical
-    r"alert|"  # alert
-    r"fatal|"  # fatal
-    r"emerg(?:ency)?"  # emerg or emergency
-    r")\b"
-)
-regex = re.compile(PATTERN)
-
 
 # Positive test cases: strings that should trigger a match.
 @pytest.mark.parametrize(
     "text",
     [
-        # Existing keywords (with various forms)
         "error",
         "Error",
         "err",
@@ -100,7 +63,6 @@ regex = re.compile(PATTERN)
         "abort",
         "aborted",
         "aborting",
-        # New keywords
         "panic",
         "crit",
         "critical",
@@ -147,7 +109,6 @@ def test_positive_matches(text):
         "timepiece",  # false positive check
         "expiredd",  # extra letter at the end
         "malformedly",  # extra suffix
-        # New keywords with extra letters (should not match)
         "panicking",  # extra suffix, should not match exactly "panic"
         "critiqued",  # false positive for "crit"
         "alerting",  # false positive for "alert"
