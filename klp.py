@@ -321,28 +321,32 @@ BUILTIN_REGEXES = {
     ],
     "fail": [
         r"(?i)\b(?:"
-        r"abnorm(?:al|ally)?|"  # abnormal, abnormally
         r"err(?:or|r)?|"  # error, err
         r"fail(?:ure|ed|ing)?|"  # fail, failure, failed, failing
         r"den(?:y|ied)|"  # deny, denied
         r"invalid|"  # invalid
         r"time(?:-?\s*out|d\s*out|out)|"  # timeout, time out, timed out, time-out
-        r"timout|"  # common misspelling of timeout
+        r"timout|"  # common misspelling
         r"exception|"  # exception
         r"blocked|"  # blocked
         r"expir(?:ed|ing|ation|e)?|"  # expire, expired, expiring, expiration
         r"reject(?:ed|ing|ion)?|"  # reject, rejected, rejecting, rejection
-        r"unauthoriz(?:e(?:d|ation)?|ed|ation)?|"  # unauthorize, unauthorized, unauthorization
+        r"unauthoriz(?:e(?:d|ation)?|ed|ation)?|"  # unauthorized variants
         r"unauth|"  # shorthand for unauthorized
         r"forbidden|"  # forbidden
         r"corrupt(?:ed|ion)?|"  # corrupt, corrupted, corruption
         r"malform(?:ed|ation)?|"  # malform, malformed, malformation
         r"disconnect(?:ed|ion)?|"  # disconnect, disconnected, disconnection
         r"unreachable|"  # unreachable
-        r"violat(?:ed|ion|e)?|"  # violat, violate, violated, violation
+        r"violat(?:ed|ion|e)?|"  # violate, violated, violation
         r"blacklist(?:ed|ing)?|"  # blacklist, blacklisted, blacklisting
         r"crash(?:ed|ing)?|"  # crash, crashed, crashing
-        r"abort(?:ed|ing)?"  # abort, aborted, aborting
+        r"abort(?:ed|ing)?|"  # abort, aborted, aborting
+        r"panic|"  # panic
+        r"crit(?:ical)?|"  # crit or critical
+        r"alert|"  # alert
+        r"fatal|"  # fatal
+        r"emerg(?:ency)?"  # emerg or emergency
         r")\b"
     ],
     "fqdn": [
@@ -834,7 +838,6 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
 
     doc = {
         "email": "email address",
-        "err": "error value",
         "fqdn": "fully qualified domain name (FQDN)",
         "function": "function calls",
         "gitcommit": "git commit hash",
