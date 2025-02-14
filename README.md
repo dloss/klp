@@ -24,6 +24,7 @@ Single file Python script without dependencies apart from Python 3.7+ and its st
   - [Error Handling](#error-handling)
   - [Event Creation](#event-creation)
   - [Overview and Statistics](#overview-and-statistics)
+  - [Pattern Normalization and Deduplication](#pattern-normalization-and-deduplication)
   - [Time Management](#time-management)
   - [Search and Filter](#search-and-filter)
   - [Output Control](#output-control)
@@ -363,6 +364,62 @@ Visualize patterns for any key:
 ```bash
 $ klp --keymap status_code app.log
 ```
+### Pattern Normalization and Deduplication
+
+Use `--normalize` to replace common patterns (like IP addresses, emails, timestamps) with placeholders and only show unique event patterns. This helps identify distinct message types by ignoring variable data.
+
+```bash
+# Original logs
+$ klp app.log
+timestamp="2024-02-14T12:00:01Z" message="Failed login from 192.168.1.100 for user@example.com"
+timestamp="2024-02-14T12:00:05Z" message="Connection from 10.0.0.50 to https://api.example.com"
+timestamp="2024-02-14T12:00:10Z" message="Failed login from 192.168.1.101 for admin@example.com"
+timestamp="2024-02-14T12:00:15Z" message="Connection from 10.0.0.51 to https://api.example.com"
+
+# With normalization - shows unique patterns only
+$ klp --normalize app.log
+timestamp="<timestamp>" message="Failed login from <ipv4> for <email>"
+timestamp="<timestamp>" message="Connection from <ipv4> to <url>"
+```
+
+The following patterns are detected and normalized:
+- Timestamps → `<timestamp>` (only in timestamp fields)
+- Email addresses → `<email>`
+- IPv4/IPv6 addresses → `<ipv4>`, `<ipv6>`
+- URLs → `<url>` (requires protocol prefix like http://)
+- Domain names → `<fqdn>`
+- MAC addresses → `<mac>` (colon or dot separated)
+- Unix path names → `<path>`
+- Hash values:
+  - MD5 → `<md5>` (32 hex chars)
+  - SHA1 → `<sha1>` (40 hex chars)
+  - SHA256 → `<sha256>` (64 hex chars)
+- UUIDs → `<uuid>`
+- Version strings → `<version>` (starting with v/V)
+- Function calls → `<function>` (name with parentheses)
+- Hex color codes → `<hexcolor>` (6 digits with # prefix)
+- OAuth tokens → `<oauth>`
+
+The normalization considers only the fields that would be displayed (affected by `--keys`/`-k` and `--keys-not`/`-K`). 
+Timestamps are only normalized in fields recognized as timestamp fields (configurable with `--ts-key`).
+
+```bash
+# Only consider message patterns, ignore timestamp differences
+$ klp --normalize -k message app.log
+message="Failed login from <ipv4> for <email>"
+message="Connection from <ipv4> to <url>"
+
+# Focus on specific event properties
+$ klp --normalize -k level,component,message app.log
+level=error component=auth message="Invalid credentials for <email>"
+level=warn component=network message="Timeout connecting to <url>"
+```
+
+This feature is particularly useful for:
+- Identifying distinct log patterns in large files
+- Finding unique error types by normalizing variable data
+- Analyzing log structure and message templates
+- Reducing noise from repetitive events with different parameters
 
 ### Time Management
 

@@ -369,6 +369,9 @@ _klp_global_list = []
 _klp_global_set = set({})
 _klp_global_dict = {}
 
+# Tracking set for normalized event deduplication
+_seen_normalized_events = set()
+
 
 def build_globals_dict(modules: List[Any]) -> Dict[str, Any]:
     """
@@ -4385,6 +4388,13 @@ def parse_args():
         help="show only lines for which timestamp is less than INTERVAL after time of first event",
     )
 
+    processing = parser.add_argument_group("event processing options")
+    processing.add_argument(
+        "--normalize",
+        action="store_true",
+        help="replace common patterns with placeholders and deduplicate events",
+    )
+
     output = parser.add_argument_group("output format options")
     output.add_argument(
         "--output-format",
@@ -4473,7 +4483,6 @@ def parse_args():
         metavar="PATH",
         help="write output to given file. Deactivates color unless explicitly requested. Default: stdout",
     )
-
     default_output = parser.add_argument_group("default output format options")
     default_output.add_argument(
         "--plain", "-p", action="store_true", help="display values only"
@@ -5120,6 +5129,88 @@ def extract_blocks(
         yield current_block, start_line_number, i
 
 
+def normalize_patterns(text: str) -> str:
+    """Replace common patterns with placeholders and return normalized text."""
+    normalized = text
+
+    # Use existing BUILTIN_REGEXES and add placeholder markers
+    # Only normalize the most reliable and specific patterns
+    replacements = {
+        "ipv4": "<ipv4>",  # Very reliable, clear format with dot-separated octets
+        "ipv6": "<ipv6>",  # Clear format with colons/hex digits
+        "email": "<email>",  # Standard format with @ and domain
+        "uuid": "<uuid>",  # Fixed format with specific dash positions
+        "mac": "<mac>",  # Clear format with : or . separators
+        "url": "<url>",  # Reliable due to protocol prefix (http://, etc)
+        "fqdn": "<fqdn>",  # Multi-part domain names
+        "md5": "<md5>",  # Exactly 32 hex chars
+        "sha1": "<sha1>",  # Exactly 40 hex chars
+        "sha256": "<sha256>",  # Exactly 64 hex chars
+        "path": "<path>",  # Unix paths starting with /
+        "oauth": "<oauth>",  # Google OAuth token format
+        "function": "<function>",  # Function calls with parentheses
+        "hexcolor": "<hexcolor>",  # CSS/HTML hex color codes
+        "version": "<version>",  # Version strings starting with v/V
+    }
+
+    for pattern_name, placeholder in replacements.items():
+        if pattern_name in BUILTIN_REGEXES:
+            for regex in BUILTIN_REGEXES[pattern_name]:
+                normalized = re.sub(regex, placeholder, normalized)
+
+    return normalized
+
+
+def normalize_and_deduplicate_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Process a single event, normalizing patterns and checking for duplicates."""
+    global _seen_normalized_events
+
+    # First use reorder() to get only the keys we'll display
+    filtered_event = reorder(event)
+    if not filtered_event:
+        return None
+
+    # Create a normalized version of the filtered event
+    normalized_event = {}
+    for key, value in filtered_event.items():
+        if isinstance(value, str):
+            # Special handling for timestamp keys
+            if key.lower() in TS_KEYS or (args.ts_key and key == args.ts_key):
+                try:
+                    if guess_datetime(value) is not None:
+                        normalized_event[key] = "<timestamp>"
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            # Other patterns for non-timestamp fields
+            normalized_event[key] = normalize_patterns(value)
+        else:
+            normalized_event[key] = value
+
+    # Only store the normalized version of filtered fields
+    event_str = make_greppable(normalized_event)
+
+    # Check if we've seen this normalized event before
+    if event_str not in _seen_normalized_events:
+        _seen_normalized_events.add(event_str)
+        # Update only the keys that were filtered
+        for key in filtered_event:
+            event[key] = normalized_event[key]
+        return event
+    return None
+
+
+def visible_with_normalize(event: Dict[str, Any]) -> bool:
+    """Extended visibility check including pattern normalization."""
+    if not args.normalize:
+        return visible(event)
+
+    if not visible(event):
+        return False
+
+    return normalize_and_deduplicate_event(event) is not None
+
+
 def events_from_linebased(
     filenames: List[str],
     format: str,
@@ -5641,6 +5732,8 @@ def main():
 
     global args
     global is_first_visible_line
+    global _seen_normalized_events
+    _seen_normalized_events = set()
     interrupted = False
     stats = Stats([], [], [], 0, 0, "", "", "")
     try:
@@ -5735,7 +5828,7 @@ def main():
 
             if args.add_ts:
                 event["_klp_ts"] = now_rfc3339()
-            if visible(event):
+            if visible_with_normalize(event):
                 if args.fuse is not None or args.mark_gaps is not None:
                     ts_datetime = get_timestamp_datetime(event)
                     if ts_datetime is None:
