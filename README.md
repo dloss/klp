@@ -114,6 +114,11 @@ Or you can read from a file:
 $ klp log.txt
 ```
 
+> [!NOTE]
+> klp defaults to the [logfmt](https://brandur.org/logfmt) format and will extract any `key=value` patterns it finds, 
+> even if the file is in a different format. 
+> For non-logfmt logs, specify the format explicitly (e.g. `-f syslog`, or `-f line` for plain text).
+
 klp can directly process compressed log files:
 
 ```bash
