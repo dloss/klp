@@ -319,6 +319,32 @@ BUILTIN_REGEXES = {
     "err": [
         r"(?i)\b((error|err|panic|crit|critical|alert|fatal|emerg|failed|failure|exception))\b"
     ],
+    "fail": [
+        r"(?i)\b(?:"
+        r"abnorm(?:al|ally)?|"  # abnormal, abnormally
+        r"err(?:or|r)?|"  # error, err
+        r"fail(?:ure|ed|ing)?|"  # fail, failure, failed, failing
+        r"den(?:y|ied)|"  # deny, denied
+        r"invalid|"  # invalid
+        r"time(?:-?\s*out|d\s*out|out)|"  # timeout, time out, timed out, time-out
+        r"timout|"  # common misspelling of timeout
+        r"exception|"  # exception
+        r"blocked|"  # blocked
+        r"expir(?:ed|ing|ation|e)?|"  # expire, expired, expiring, expiration
+        r"reject(?:ed|ing|ion)?|"  # reject, rejected, rejecting, rejection
+        r"unauthoriz(?:e(?:d|ation)?|ed|ation)?|"  # unauthorize, unauthorized, unauthorization
+        r"unauth|"  # shorthand for unauthorized
+        r"forbidden|"  # forbidden
+        r"corrupt(?:ed|ion)?|"  # corrupt, corrupted, corruption
+        r"malform(?:ed|ation)?|"  # malform, malformed, malformation
+        r"disconnect(?:ed|ion)?|"  # disconnect, disconnected, disconnection
+        r"unreachable|"  # unreachable
+        r"violat(?:ed|ion|e)?|"  # violat, violate, violated, violation
+        r"blacklist(?:ed|ing)?|"  # blacklist, blacklisted, blacklisting
+        r"crash(?:ed|ing)?|"  # crash, crashed, crashing
+        r"abort(?:ed|ing)?"  # abort, aborted, aborting
+        r")\b"
+    ],
     "fqdn": [
         r"\b(((?:[a-z](?:[a-z0-9-]{0,63}[a-z0-9])?\.){2,}[a-z0-9][a-z0-9-]{0,8}))"
     ],
