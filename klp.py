@@ -310,6 +310,9 @@ THEMES = {
     },
 }
 
+# Define the octet pattern for an IPv4 address.
+_octet = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+
 BUILTIN_REGEXES = {
     # https://www.regular-expressions.info/email.html
     "email": [r"\b(([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b))"],
@@ -323,10 +326,40 @@ BUILTIN_REGEXES = {
     "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
     "ipv4": [
-        r"\b((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\b"
+        rf"(?:(?<=^)|(?<=[^0-9.]))"  # Left boundary.
+        rf"(?:"  # Non-capturing group for the IPv4 address.
+        rf"(?:{_octet}\.){{3}}{_octet}"  # IPv4 address.
+        rf")"
+        rf"(?=$|[^0-9.])"  # Right boundary.
+    ],
+    "ipv4_port": [
+        rf"(?:(?<=^)|(?<=[^0-9.]))"  # Left boundary.
+        rf"(?:"  # Non-capturing group for the entire IPv4:port.
+        rf"(?:{_octet}\.){{3}}{_octet}"  # IPv4 address.
+        rf":"  # Colon.
+        rf"(?:0|[1-9]\d{{0,3}}|[1-5]\d{{4}}|6[0-4]\d{{3}}|65[0-4]\d{{2}}|655[0-2]\d|6553[0-5])"  # Port.
+        rf")"
+        rf"(?=$|[^0-9])"  # Right boundary.
     ],
     "ipv6": [
-        r"\b(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\b"
+        r"(?<![0-9A-Fa-f:])("
+        r"(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,7}:|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,5}(?::[0-9A-Fa-f]{1,4}){1,2}|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,4}(?::[0-9A-Fa-f]{1,4}){1,3}|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,3}(?::[0-9A-Fa-f]{1,4}){1,4}|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,2}(?::[0-9A-Fa-f]{1,4}){1,5}|"
+        r"[0-9A-Fa-f]{1,4}:((?::[0-9A-Fa-f]{1,4}){1,6})|"
+        r"fe80:(?::[0-9A-Fa-f]{0,4}){0,4}%[0-9A-Za-z]{1,}|"
+        r"::(?:ffff(?::0{1,4}){0,1}:){0,1}"
+        r"(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}"
+        r"(?:25[0-5]|2[0-4]\d|1?\d?\d)|"
+        r"(?:[0-9A-Fa-f]{1,4}:){1,4}:"
+        r"(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}"
+        r"(?:25[0-5]|2[0-4]\d|1?\d?\d)|"
+        r":((?::[0-9A-Fa-f]{1,4}){1,7}|:)"
+        r")(?![0-9A-Fa-f:])"
     ],
     "isotime": [
         r"\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b)"
@@ -731,7 +764,7 @@ def extract_builtin_regex(regex_name, s):
         pattern = BUILTIN_REGEXES[regex_name][0]
         match = re.search(pattern, s)
         if match:
-            return match.group()
+            return match.group()  # full string
     return None
 
 
@@ -781,6 +814,7 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         "gitcommit": "git commit hash",
         "hexcolor": "hex color code",
         "ipv4": "IPv4 address",
+        "ipv4_port": "IPv4 address:port",
         "ipv6": "IPv6 address",
         "isotime": "ISO 8601 datetime string",
         "json": "JSON string",
@@ -3160,16 +3194,16 @@ def show_extract(event):
     if args.grep_by_key:
         for key, pattern in args.grep_by_key.items():
             if key in event:
-                matches = pattern.findall(event.get(key), "")
+                matches = pattern.finditer(event.get(key), "")
                 if matches:
                     for match in matches:
-                        print(match[0])
+                        print(match.group(0))
     elif args.grep:
         for pattern in args.grep:
-            matches = pattern.findall(make_greppable(event))
+            matches = pattern.finditer(make_greppable(event))
             if matches:
                 for match in matches:
-                    print(match[0])
+                    print(match.group(0))
 
 
 def print_err(*args, **kwargs):
@@ -5136,6 +5170,7 @@ def normalize_patterns(text: str) -> str:
     # Use existing BUILTIN_REGEXES and add placeholder markers
     # Only normalize the most reliable and specific patterns
     replacements = {
+        "ipv4_port": "<ipv4_port>",  # With colon and port number, test before ipv4 alone
         "ipv4": "<ipv4>",  # Very reliable, clear format with dot-separated octets
         "ipv6": "<ipv6>",  # Clear format with colons/hex digits
         "email": "<email>",  # Standard format with @ and domain

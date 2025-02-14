@@ -24,6 +24,7 @@ invalid_ipv6_addresses = [
     "2001:db8:85a3:0000:0000:8a2e:0370",  # only 7 groups
     "2001:db8:85a3:0000:0000:8a2e:0370:7334:1234",  # 9 groups
     "gggg:db8::1",  # invalid hex characters
+    "4",  # Too short for our purposes
 ]
 
 
@@ -37,7 +38,7 @@ def test_valid_ipv6(address):
     assert match is not None, f"Valid IPv6 address '{address}' was not matched."
     # Check that the matched substring equals the entire address.
     assert (
-        match.group(0) == address
+        match.group(1) == address
     ), f"Regex did not capture the full address: {address}"
 
 
@@ -59,7 +60,7 @@ def test_ipv6_in_text():
     expected = "2001:db8:85a3::8a2e:370:7334"
     assert match is not None, "IPv6 address not found in the text."
     assert (
-        match.group(0) == expected
+        match.group(1) == expected
     ), "Regex did not extract the full IPv6 address from text."
 
 
@@ -73,5 +74,5 @@ def test_ipv6_with_adjacent_non_ipv6_characters():
     expected = "2001:db8::1"
     assert match is not None, "IPv6 address not found within the brackets."
     assert (
-        match.group(0) == expected
+        match.group(1) == expected
     ), "Regex did not correctly extract the IPv6 address from within brackets."
