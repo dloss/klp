@@ -1,16 +1,9 @@
 import re
 
-# Duration patterns with stricter boundaries.
-DURATION_PATTERNS = [
-    # Basic and decimal with units (common short forms)
-    r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:us|ms|[smh])(?![A-Za-z0-9.])",
-    # Written out units, including longer time spans
-    r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:\s*(?:microsecond|millisecond|second|minute|hour|day|week|month|year)s?)(?![A-Za-z0-9.])",
-    # Microseconds with μ
-    r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:μs|µs)(?![A-Za-z0-9.])",
-    # Combined units (2 or 3 parts) like 1h30m or 1h30m15s
-    r"(?<![A-Za-z0-9.])(?:\d+h\d+m\d+s|\d+h\d+m|\d+h\d+s|\d+m\d+s)(?![A-Za-z0-9.])",
-]
+from klp import BUILTIN_REGEXES
+
+
+DURATION_PATTERNS = BUILTIN_REGEXES["duration"]
 
 
 def is_duration(text: str) -> bool:

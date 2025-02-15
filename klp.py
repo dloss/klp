@@ -849,9 +849,10 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         return None
 
     doc = {
+        "duration": "duration",
         "email": "email address",
         "fqdn": "fully qualified domain name (FQDN)",
-        "function": "function calls",
+        "function": "function call",
         "gitcommit": "git commit hash",
         "hexnum": "hex number with 0x prefix",
         "hexcolor": "hex color code",
@@ -5265,8 +5266,9 @@ def get_patterns_for_level(level: str) -> Dict[str, str]:
         "version",  # Version strings starting with v/V
     ]
     maximum = default + [
-        "hexnum",  # place this before "number", because it's more specific
-        "num",  # place this before default not to mess with <ipv4>
+        "hexnum",
+        "duration",
+        "num",  # place this last, because it's least specific
     ]
     patterns = {
         "min": minimum,
