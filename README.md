@@ -1145,3 +1145,4 @@ If klp doesn't meet your needs, here are some alternatives:
 - [Graylog](https://github.com/Graylog2/graylog2-server): Free and open log management
 - [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): Horizontally-scalable, highly-available, multi-tenant log aggregation system
 - [qryn](https://qryn.metrico.in/): All-in-one polyglot observability
+- [Kubernetes History Inspector (KHI)](https://github.com/GoogleCloudPlatform/khi): An interactive log visualization tool that transforms Kubernetes logs into comprehensive timelines for efficient troubleshooting and analysis
