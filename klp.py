@@ -355,7 +355,7 @@ BUILTIN_REGEXES = {
     "function": [r"\b(([\w\.]+\([^)]*\)))"],
     "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
-    "hexnumber": [r"0x[0-9a-fA-F]+"],
+    "hexnum": [r"0x[0-9a-fA-F]+"],
     "ipv4": [
         rf"(?:(?<=^)|(?<=[^0-9.]))"  # Left boundary.
         rf"(?:"  # Non-capturing group for the IPv4 address.
@@ -402,7 +402,7 @@ BUILTIN_REGEXES = {
         r"\b(([0-9A-Fa-f]{4}\.){2}([0-9A-Fa-f]{4}))\b",
     ],
     "md5": [r"\b(([a-fA-F0-9]{32}))\b"],
-    "number": [r"[+-]?(?:\d*\.?\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?"],
+    "num": [r"[+-]?(?:\d*\.?\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?"],
     "oauth": [r"\b((ya29\.[0-9A-Za-z_-]+))\b"],
     "path": [r"((^|(?<=[^./\w-]))(/[.\w-]+)+/?)"],
     "sha1": [r"\b(([a-fA-F0-9]{40}))\b"],
@@ -843,7 +843,7 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         "fqdn": "fully qualified domain name (FQDN)",
         "function": "function calls",
         "gitcommit": "git commit hash",
-        "hexnumber": "hex number with 0x prefix",
+        "hexnum": "hex number with 0x prefix",
         "hexcolor": "hex color code",
         "ipv4": "IPv4 address",
         "ipv4_port": "IPv4 address:port",
@@ -853,7 +853,7 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         "jwt": "JSON Web Token (JWT)",
         "mac": "MAC address",
         "md5": "MD5 hash",
-        "number": "number (integer or float)",
+        "num": "number (integer or float)",
         "path": "Unix file path",
         "oauth": "OAuth token",
         "sha1": "SHA-1 hash",
@@ -5255,8 +5255,8 @@ def get_patterns_for_level(level: str) -> Dict[str, str]:
         "version",  # Version strings starting with v/V
     ]
     maximum = default + [
-        "hexnumber",  # place this before "number", because it's more specific
-        "number",
+        "hexnum",  # place this before "number", because it's more specific
+        "num",  # place this before default not to mess with <ipv4>
     ]
     patterns = {
         "min": minimum,
@@ -5276,11 +5276,22 @@ def normalize_patterns(text: str, level: str, patterns: List[str]) -> str:
 
     patterns += get_patterns_for_level(level)
 
-    for pattern_name in patterns:
+    temp_replacements = {}
+
+    # First pass: replace with temporary placeholders using unique markers
+    # so that parts of placeholders are not replaced by other placeholders
+    for i, pattern_name in enumerate(patterns):
         placeholder = f"<{pattern_name}>"
         if pattern_name in BUILTIN_REGEXES:
+            # Create a unique temporary marker
+            temp = chr(0xE000 + i)  # Start at U+E000
+            temp_replacements[temp] = placeholder
             for regex in BUILTIN_REGEXES[pattern_name]:
-                normalized = re.sub(regex, placeholder, normalized)
+                normalized = re.sub(regex, temp, normalized)
+
+    # Second pass: replace temporary placeholders with final ones
+    for temp, final in temp_replacements.items():
+        normalized = normalized.replace(temp, final)
 
     return normalized
 
