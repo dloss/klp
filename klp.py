@@ -355,6 +355,7 @@ BUILTIN_REGEXES = {
     "function": [r"\b(([\w\.]+\([^)]*\)))"],
     "gitcommit": [r"\b(([0-9a-fA-F]{7,40}))\b"],
     "hexcolor": [r"((#[0-9A-Fa-f]{6}))\b"],
+    "hexnumber": [r"0x[0-9a-fA-F]+"],
     "ipv4": [
         rf"(?:(?<=^)|(?<=[^0-9.]))"  # Left boundary.
         rf"(?:"  # Non-capturing group for the IPv4 address.
@@ -401,6 +402,7 @@ BUILTIN_REGEXES = {
         r"\b(([0-9A-Fa-f]{4}\.){2}([0-9A-Fa-f]{4}))\b",
     ],
     "md5": [r"\b(([a-fA-F0-9]{32}))\b"],
+    "number": [r"[+-]?(?:\d*\.?\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?"],
     "oauth": [r"\b((ya29\.[0-9A-Za-z_-]+))\b"],
     "path": [r"((^|(?<=[^./\w-]))(/[.\w-]+)+/?)"],
     "sha1": [r"\b(([a-fA-F0-9]{40}))\b"],
@@ -841,6 +843,7 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         "fqdn": "fully qualified domain name (FQDN)",
         "function": "function calls",
         "gitcommit": "git commit hash",
+        "hexnumber": "hex number with 0x prefix",
         "hexcolor": "hex color code",
         "ipv4": "IPv4 address",
         "ipv4_port": "IPv4 address:port",
@@ -850,6 +853,7 @@ def create_extraction_function(regex_name: str) -> Callable[[str], Optional[str]
         "jwt": "JSON Web Token (JWT)",
         "mac": "MAC address",
         "md5": "MD5 hash",
+        "number": "number (integer or float)",
         "path": "Unix file path",
         "oauth": "OAuth token",
         "sha1": "SHA-1 hash",
@@ -3809,6 +3813,19 @@ def quoting_type(text):
     }.get(text, None)
 
 
+def csv_of_choices(choices):
+    def validate(value):
+        items = value.split(",")  # Convert input into a list
+        for item in items:
+            if item not in choices:
+                raise argparse.ArgumentTypeError(
+                    f"Invalid choice: {item}. Allowed: {choices}"
+                )
+        return items  # Return the validated list
+
+    return validate
+
+
 def csv_type(text):
     return [] if text is None else text.split(",")
 
@@ -4458,6 +4475,19 @@ def parse_args():
         help="replace common patterns with placeholders and deduplicate events",
     )
 
+    processing.add_argument(
+        "--normalize-level",
+        choices=["min", "default", "max"],
+        help="level of normalization (min, default, max)",
+    )
+    processing.add_argument(
+        "--normalize-patterns",
+        metavar="PATTERNS",
+        type=csv_of_choices(sorted(list(BUILTIN_REGEXES) + ["timestamp"])),
+        default=[],
+        help="comma-separated list of builtin regex patterns (or 'timestamp') to use for normalization",
+    )
+
     output = parser.add_argument_group("output format options")
     output.add_argument(
         "--output-format",
@@ -4835,6 +4865,10 @@ def parse_args():
         query = f"CREATE TABLE IF NOT EXISTS {args.output_tablename} ({columns})"
         args.cursor.execute(query)
 
+    # Allow --normalize to be used alone
+    if args.normalize and not (args.normalize_level or args.normalize_patterns):
+        args.normalize_level = "default"
+
     args.add_ts = "_klp_ts" in args.keys
     args.add_ts_delta = "_klp_timedelta" in args.keys
 
@@ -5192,32 +5226,58 @@ def extract_blocks(
         yield current_block, start_line_number, i
 
 
-def normalize_patterns(text: str) -> str:
+def get_patterns_for_level(level: str) -> Dict[str, str]:
+
+    minimum = [
+        "uuid",
+        "md5",
+        "sha1",
+        "sha256",
+        "oauth",
+        "hexcolor",
+    ]
+    default = [
+        "ipv4_port",  # With colon and port number, test before ipv4 alone
+        "ipv4",  # Very reliable, clear format with dot-separated octets
+        "ipv6",  # Clear format with colons/hex digits
+        "email",  # Standard format with @ and domain
+        "uuid",  # Fixed format with specific dash positions
+        "mac",  # Clear format with : or . separators
+        "url",  # Reliable due to protocol prefix (http://, etc)
+        "fqdn",  # Multi-part domain names
+        "md5",  # Exactly 32 hex chars
+        "sha1",  # Exactly 40 hex chars
+        "sha256",  # Exactly 64 hex chars
+        "path",  # Unix paths starting with /
+        "oauth",  # Google OAuth token format
+        "function",  # Function calls with parentheses
+        "hexcolor",  # CSS/HTML hex color codes
+        "version",  # Version strings starting with v/V
+    ]
+    maximum = default + [
+        "hexnumber",  # place this before "number", because it's more specific
+        "number",
+    ]
+    patterns = {
+        "min": minimum,
+        "default": default,
+        "max": maximum,
+    }
+    result = patterns.get(level, [])
+    return result
+
+
+def normalize_patterns(text: str, level: str, patterns: List[str]) -> str:
     """Replace common patterns with placeholders and return normalized text."""
     normalized = text
 
     # Use existing BUILTIN_REGEXES and add placeholder markers
     # Only normalize the most reliable and specific patterns
-    replacements = {
-        "ipv4_port": "<ipv4_port>",  # With colon and port number, test before ipv4 alone
-        "ipv4": "<ipv4>",  # Very reliable, clear format with dot-separated octets
-        "ipv6": "<ipv6>",  # Clear format with colons/hex digits
-        "email": "<email>",  # Standard format with @ and domain
-        "uuid": "<uuid>",  # Fixed format with specific dash positions
-        "mac": "<mac>",  # Clear format with : or . separators
-        "url": "<url>",  # Reliable due to protocol prefix (http://, etc)
-        "fqdn": "<fqdn>",  # Multi-part domain names
-        "md5": "<md5>",  # Exactly 32 hex chars
-        "sha1": "<sha1>",  # Exactly 40 hex chars
-        "sha256": "<sha256>",  # Exactly 64 hex chars
-        "path": "<path>",  # Unix paths starting with /
-        "oauth": "<oauth>",  # Google OAuth token format
-        "function": "<function>",  # Function calls with parentheses
-        "hexcolor": "<hexcolor>",  # CSS/HTML hex color codes
-        "version": "<version>",  # Version strings starting with v/V
-    }
 
-    for pattern_name, placeholder in replacements.items():
+    patterns += get_patterns_for_level(level)
+
+    for pattern_name in patterns:
+        placeholder = f"<{pattern_name}>"
         if pattern_name in BUILTIN_REGEXES:
             for regex in BUILTIN_REGEXES[pattern_name]:
                 normalized = re.sub(regex, placeholder, normalized)
@@ -5225,7 +5285,9 @@ def normalize_patterns(text: str) -> str:
     return normalized
 
 
-def normalize_and_deduplicate_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def normalize_and_deduplicate_event(
+    event: Dict[str, Any], level: str, patterns: List[str]
+) -> Optional[Dict[str, Any]]:
     """Process a single event, normalizing patterns and checking for duplicates."""
     global _seen_normalized_events
 
@@ -5239,7 +5301,14 @@ def normalize_and_deduplicate_event(event: Dict[str, Any]) -> Optional[Dict[str,
     for key, value in filtered_event.items():
         if isinstance(value, str):
             # Special handling for timestamp keys
-            if key.lower() in TS_KEYS or (args.ts_key and key == args.ts_key):
+            normalize_timestamp = "timestamp" in patterns or level in (
+                "default",
+                "max",
+            )
+            is_timestamp_key = key.lower() in TS_KEYS or (
+                args.ts_key and key == args.ts_key
+            )
+            if normalize_timestamp and is_timestamp_key:
                 try:
                     if guess_datetime(value) is not None:
                         normalized_event[key] = "<timestamp>"
@@ -5247,7 +5316,7 @@ def normalize_and_deduplicate_event(event: Dict[str, Any]) -> Optional[Dict[str,
                 except (ValueError, TypeError):
                     pass
             # Other patterns for non-timestamp fields
-            normalized_event[key] = normalize_patterns(value)
+            normalized_event[key] = normalize_patterns(value, level, patterns)
         else:
             normalized_event[key] = value
 
@@ -5264,15 +5333,17 @@ def normalize_and_deduplicate_event(event: Dict[str, Any]) -> Optional[Dict[str,
     return None
 
 
-def visible_with_normalize(event: Dict[str, Any]) -> bool:
+def visible_with_normalize(
+    event: Dict[str, Any], level: str, patterns: List[str]
+) -> bool:
     """Extended visibility check including pattern normalization."""
-    if not args.normalize:
+    if not (level or patterns):
         return visible(event)
 
     if not visible(event):
         return False
 
-    return normalize_and_deduplicate_event(event) is not None
+    return normalize_and_deduplicate_event(event, level, patterns) is not None
 
 
 def events_from_linebased(
@@ -5892,7 +5963,9 @@ def main():
 
             if args.add_ts:
                 event["_klp_ts"] = now_rfc3339()
-            if visible_with_normalize(event):
+            if visible_with_normalize(
+                event, args.normalize_level, args.normalize_patterns
+            ):
                 if args.fuse is not None or args.mark_gaps is not None:
                     ts_datetime = get_timestamp_datetime(event)
                     if ts_datetime is None:
