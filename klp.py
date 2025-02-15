@@ -314,6 +314,16 @@ THEMES = {
 _octet = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
 
 BUILTIN_REGEXES = {
+    "duration": [
+        # Basic and decimal with units (common short forms)
+        r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:us|ms|[smh])(?![A-Za-z0-9.])",
+        # Written out units, including longer time spans
+        r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:\s*(?:microsecond|millisecond|second|minute|hour|day|week|month|year)s?)(?![A-Za-z0-9.])",
+        # Microseconds with μ
+        r"(?<![A-Za-z0-9.])(?:\d+(?:\.\d+)?)(?:μs|µs)(?![A-Za-z0-9.])",
+        # Combined units (2 or 3 parts) like 1h30m or 1h30m15s
+        r"(?<![A-Za-z0-9.])(?:\d+h\d+m\d+s|\d+h\d+m|\d+h\d+s|\d+m\d+s)(?![A-Za-z0-9.])",
+    ],
     # https://www.regular-expressions.info/email.html
     "email": [r"\b(([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b))"],
     "err": [
