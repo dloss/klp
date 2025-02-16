@@ -3321,8 +3321,11 @@ def show_stats(stats: Stats) -> None:
     shown = stats.num_events_shown
     maybe_logical = "logical " if args.logical_lines else ""
     lines_or_rows = "rows" if args.input_format == "sqlite" else "lines"
+    maybe_file_count = ""
+    file_count = len(args.files)
+    maybe_file_count = f" in {file_count} files" if file_count > 1 else ""
     if seen > 0 and shown > 0:
-        percent = f" ({shown / seen:.0%} of {seen} {maybe_logical}{lines_or_rows} seen)"
+        percent = f" ({shown / seen:.0%} of {seen} {maybe_logical}{lines_or_rows} seen{maybe_file_count})"
     else:
         percent = ""
     print_err(f"Events shown: {shown}{percent}")
