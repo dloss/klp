@@ -3320,8 +3320,9 @@ def show_stats(stats: Stats) -> None:
     seen = stats.num_lines_seen
     shown = stats.num_events_shown
     maybe_logical = "logical " if args.logical_lines else ""
+    lines_or_rows = "rows" if args.input_format == "sqlite" else "lines"
     if seen > 0 and shown > 0:
-        percent = f" ({shown / seen:.0%} of {seen} {maybe_logical}lines seen)"
+        percent = f" ({shown / seen:.0%} of {seen} {maybe_logical}{lines_or_rows} seen)"
     else:
         percent = ""
     print_err(f"Events shown: {shown}{percent}")
