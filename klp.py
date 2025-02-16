@@ -5404,7 +5404,10 @@ def events_from_linebased(
     if not filenames:
         filenames = ["-"]
 
+    total_line_count = 0
+    previous_files_line_count = 0
     for filename in filenames:
+        previous_files_line_count = total_line_count
         try:
             with file_opener(filename, encoding=encoding) as f:
                 skip_lines(f, skip)
@@ -5417,11 +5420,12 @@ def events_from_linebased(
                     stop_with=args.stop_with,
                     num_blocks=args.num_blocks,
                 ):
-                    for i, line in enumerate(block, start=start_line):
+                    for lineno, line in enumerate(block, start=start_line):
+                        total_line_count = previous_files_line_count + lineno
                         event = parse_linebased(line, format)
                         events = apply_input_exec(event)
                         for event in events:
-                            yield event, i
+                            yield event, total_line_count
         except UnicodeDecodeError as e:
             print_err(
                 f"Wrong encoding for '{filename}': {e}. Use --input-encoding to specify the correct encoding."
@@ -5503,7 +5507,10 @@ def events_from_sqlitefiles_generator(
     if not filenames:
         filenames = ["-"]
 
+    total_row_count = 0
+    previous_files_row_count = 0
     for filename in filenames:
+        previous_files_row_count = total_row_count
         with file_opener(filename, sqlite_mode=True) as conn:
             cursor = conn.cursor()
             if not tablename:
@@ -5526,8 +5533,9 @@ def events_from_sqlitefiles_generator(
             column_names = [description[0] for description in cursor.description]
 
             # Fetch and yield each row as a dict
-            for i, row in enumerate(cursor, start=1):
-                yield dict(zip(column_names, row)), i
+            for rownum, row in enumerate(cursor, start=1):
+                total_row_count = previous_files_row_count + rownum
+                yield dict(zip(column_names, row)), total_row_count
 
 
 class SelfTests(unittest.TestCase):
@@ -5685,7 +5693,7 @@ def events_from_jsonfiles_generator(
     """
     if not filenames:
         filenames = ["-"]
-    lineno = 0
+    total_line_count = 0
     for filename in filenames:
         with file_opener(filename, encoding=encoding) as f:
             skip_lines(f, skip)
@@ -5696,15 +5704,15 @@ def events_from_jsonfiles_generator(
             else:
                 if isinstance(data, list):
                     for elem in data:
-                        lineno += 1
+                        total_line_count += 1
                         events = apply_input_exec(flatten_object(elem))
                         for event in events:
-                            yield event, lineno
+                            yield event, total_line_count
                 else:
-                    lineno += 1
+                    total_line_count += 1
                     events = apply_input_exec(flatten_object(data))
                     for event in events:
-                        yield event, lineno
+                        yield event, total_line_count
 
 
 @contextlib.contextmanager
@@ -5772,11 +5780,21 @@ def events_from_csvfiles_generator(
     line_gen = logical_line_gen if args.logical_lines else (lambda f: f)
     if not filenames:
         filenames = ["-"]
+    total_row_count = 0
+    previous_files_row_count = 0
     for filename in filenames:
+        previous_files_row_count = total_row_count
         with file_opener(filename, encoding=encoding) as f:
-            yield from process_csv(
-                line_gen(f), delimiter, quoting, has_header, skip, table
-            )
+            for event, row_count in process_csv(
+                line_gen(f),
+                delimiter,
+                quoting,
+                has_header,
+                skip,
+                table,
+            ):
+                total_row_count = previous_files_row_count + row_count
+                yield event, total_row_count
 
 
 def process_csv(
@@ -5827,7 +5845,7 @@ def process_csv(
         headers = [key for key in headers if key]
     else:
         headers = None
-    for i, row in enumerate(reader):
+    for row_count, row in enumerate(reader, start=1 + int(has_header)):
         if headers:
             event = {
                 sanitize_key(key): value for key, value in zip(headers, row) if key
@@ -5835,20 +5853,24 @@ def process_csv(
         else:
             event = {f"col{index}": value for index, value in enumerate(row)}
         for event in apply_input_exec(event):
-            yield event, i + 1
+            yield event, row_count
 
 
 def events_from_datafiles_generator(filenames, encoding="utf-8", skip=None):
     if not filenames:
         filenames = ["-"]
+    total_lines_count = 0
+    previous_files_lines_count = 0
     for filename in filenames:
+        previous_files_lines_count = total_lines_count
         with file_opener(filename, encoding=encoding) as f:
             skip_lines(f, skip)
             data = f.read()
-            numlines = len(data.splitlines())
+            lines_count = len(data.splitlines())
+            total_lines_count = previous_files_lines_count + lines_count
             events = apply_input_exec({"data": data})
             for event in events:
-                yield event, numlines
+                yield event, total_lines_count
 
 
 def get_file_mtime(file_path):
