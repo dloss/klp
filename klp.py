@@ -5750,6 +5750,8 @@ def file_opener(
         ...     content = f.read()
     """
     if filename in ["-", None]:
+        if sqlite_mode:
+            raise ValueError("SQLite databases cannot be read from stdin")
         yield sys.stdin
     elif filename.lower().endswith(".gz"):
         with gzip.open(filename, "rt", encoding=encoding) as f:
