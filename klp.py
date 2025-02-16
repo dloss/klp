@@ -1062,7 +1062,9 @@ def parse_logfmt(text: str) -> Dict[str, str]:
     }
 
 
-def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
+def split_startswith(
+    s: str, pattern: str, keep_all: bool = True, flags: int = 0
+) -> List[str]:
     """
     Split string into parts where each part starts with text matching a regex pattern.
 
@@ -1072,10 +1074,12 @@ def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
     Args:
         s (str): Input string that may contain newlines
         pattern (str): Regular expression pattern that should match the start of each part
+        keep_all (bool): If True, include text before first match. Default True
+        flags (int): Regular expression flags (e.g. re.DOTALL). Default 0
 
     Returns:
         List[str]: List of string parts including:
-            - Text before first match (if non-empty)
+            - Text before first match (if non-empty and keep_all is True)
             - Parts starting with pattern match extending until next match
             - Final part from last match to end of string
         If pattern matches empty string or doesn't match, returns [s]
@@ -1085,9 +1089,11 @@ def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
         ['A', '.\\nB', '.\\nC', '.\\n']
         >>> split_startswith("axbxcx", "x")
         ['a', 'xb', 'xc', 'x']
+        >>> split_startswith("a.\\nb.\\nc", r".", flags=re.DOTALL)
+        ['a', '.\\nb', '.\\nc']
     """
     # Handle empty pattern or patterns that could match empty string
-    if not pattern or re.match(pattern, ""):
+    if not pattern or re.match(pattern, "", flags=flags):
         return [s]
 
     # If string is empty, return list with empty string
@@ -1095,7 +1101,7 @@ def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
         return [""]
 
     # Find all starting positions of the pattern
-    matches = list(re.finditer(pattern, s))
+    matches = list(re.finditer(pattern, s, flags=flags))
 
     if not matches:
         if keep_all:
@@ -1105,7 +1111,7 @@ def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
 
     result = []
 
-    # Add the part before first match only if it's non-empty
+    # Add the part before first match only if it's non-empty and keep_all is True
     if keep_all and matches[0].start() > 0:
         result.append(s[: matches[0].start()])
 
@@ -1123,7 +1129,7 @@ def split_startswith(s: str, pattern: str, keep_all: bool = True) -> List[str]:
     return result
 
 
-def split_endswith(s, pattern, keep_all=True):
+def split_endswith(s, pattern, keep_all=True, flags=0):
     r"""
     Split a string into parts where each part ends with text matching the specified regex pattern.
     Uses greedy (non-overlapping) matching and preserves the pattern in the output.
@@ -1131,12 +1137,14 @@ def split_endswith(s, pattern, keep_all=True):
     Args:
         s (str): Input string that may contain newlines
         pattern (str): Regular expression pattern that should match the end of each part
+        keep_all (bool): If True, include text after last match. Default True
+        flags (int): Regular expression flags (e.g. re.DOTALL). Default 0
 
     Returns:
         List[str]: List of string parts, where each part ends with text matching the pattern.
-                  If pattern matches empty string, returns [s].
-                  If pattern doesn't match anywhere, returns [s].
-                  Includes any remaining text after the last match.
+                  If pattern matches empty string, returns [s] if keep_all is True.
+                  If pattern doesn't match anywhere, returns [s] if keep_all is True.
+                  If keep_all is True, includes any remaining text after the last match.
 
     Examples:
         >>> split_endswith("A.\nB.\nC.\n", r"\.\n")
@@ -1159,9 +1167,12 @@ def split_endswith(s, pattern, keep_all=True):
 
         >>> split_endswith("", r"\.\n")
         ['']
+
+        >>> split_endswith("A.\\nB.\\nC", r".", flags=re.DOTALL)
+        ['A.', '\\nB.', '\\nC']
     """
     # Handle empty pattern or patterns that could match empty string
-    if not pattern or re.match(pattern, ""):
+    if not pattern or re.match(pattern, "", flags=flags):
         return [s]
 
     # If string is empty, return list with empty string
@@ -1170,7 +1181,9 @@ def split_endswith(s, pattern, keep_all=True):
 
     # Add end anchor to ensure we match at the end of each part
     regex = f".*?({pattern})"
-    matches = list(re.finditer(regex, s, re.DOTALL))
+    # Combine user flags with DOTALL since we use .*? in the pattern
+    combined_flags = flags | re.DOTALL
+    matches = list(re.finditer(regex, s, combined_flags))
 
     # If no matches found, return the entire string
     if not matches:
@@ -1187,7 +1200,7 @@ def split_endswith(s, pattern, keep_all=True):
         result.append(s[last_end : match.end()])
         last_end = match.end()
 
-    # Add remaining text if any
+    # Add remaining text if any and keep_all is True
     if keep_all and last_end < len(s):
         result.append(s[last_end:])
 
