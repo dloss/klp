@@ -1,13 +1,14 @@
 - Bug fixes, robustness
+    * Compare datetime parsing against dateutil.parser
+    * Stricter logfmt parser
     * Synthetic fields not shown if no other keys specified
     * Problems with multiple files in ZIP archives
     * Fix grep when used both with and without keys
-    * More robust logfmt parsing: Allow fields (e.g. timestamps) without quotes that have whitespace in them
+    * Let -z transform the event, not only the default output 
 - Input formats
-    * -f rfc5242 (syslog with priority)
-    * -f cef
     * -f mbox
     * -f xml
+    * lnav formats (BSD license)
     * formats from logdissect.py, https://docs.logz.io/docs/user-guide/data-hub/log-parsing/default-parsing/
     * Input format guessing? (probably too error-prone)
 - Output formats
@@ -34,11 +35,21 @@
     * Add common use cases
     * How to use complementary tools: jc, sqlite, jq, ...
     * Add --manual with examples
+    * Demo videos
+    * llms.txt
+    * k9s plugin
+- Distribution
+    * zipapp
+    * Debian package
+    * pyoxy
+    * Docker image (probably overkill)
 - Infrastructure
     * Nice logo
+    * Changelog
     * Autocompletion for bash
     * Standalone executable (e.g. with Nuitka)
 - Performance
+    * Benchmarks, e.g. using hyperfine
     * Use fast string comparison for ISO dates
     * Rewrite in Rust :-)
     
