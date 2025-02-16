@@ -35,10 +35,6 @@ if [ "$CURRENT_BRANCH" != "dev" ]; then
     exit 1
 fi
 
-# Make sure we're up to date
-echo "Pulling latest changes from dev..."
-git pull origin dev || exit 1
-
 # Change to repository root for all operations
 cd "$GIT_ROOT" || exit 1
 
@@ -55,37 +51,7 @@ if ! git diff --quiet klp.py; then
     # Commit the changes
     git add klp.py
     git commit -m "Bump version to $NEW_VERSION"
-    git push origin dev
-    
-    # Create PR
-    echo "Changes pushed to dev. Please:"
-    echo "1. Create a Pull Request from dev to main"
-    echo "2. Wait for tests to pass"
-    echo "3. Merge the PR"
-    echo "4. Press ENTER when the PR is merged to create the tag automatically"
-    read
-
-    # Switch to main and update
-    git checkout main
-    git pull origin main
-
-    # Verify the version change is in main
-    if ! grep -q "__version__ = \"$NEW_VERSION\"" klp.py; then
-        echo "Error: Version change not found in main branch. Has the PR been merged?"
-        exit 1
-    fi
-
-    # Create and push tag
-    git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
-    git push origin "v$NEW_VERSION"
-    
-    echo "Successfully:"
-    echo "- Updated version to $NEW_VERSION in klp.py"
-    echo "- Created and pushed tag v$NEW_VERSION"
-    echo "- Release workflow should now be running"
-    
-    # Switch back to dev
-    git checkout dev
 else
     echo "No changes needed - version already set to $NEW_VERSION"
 fi
+
