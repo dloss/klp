@@ -3256,20 +3256,40 @@ def show_logfmt(event):
     print_output(line)
 
 
-def show_extract(event):
+def show_extract(event: Dict[str, Any]) -> None:
+    """Extract and print specified capture groups from pattern matches."""
+    groups = (
+        args.groups if hasattr(args, "groups") and args.groups else [0]
+    )  # Default to group 0
+
     if args.grep_by_key:
         for key, pattern in args.grep_by_key.items():
             if key in event:
-                matches = pattern.finditer(event.get(key), "")
+                val = event.get(key, "")
+                matches = list(pattern.finditer(val))
                 if matches:
                     for match in matches:
-                        print(match.group(0))
+                        for g in groups:
+                            try:
+                                print(match.group(g))
+                            except IndexError:
+                                handle_error(
+                                    f"Group {g} not found in pattern: {pattern.pattern}"
+                                )
+
     elif args.grep:
         for pattern in args.grep:
-            matches = pattern.finditer(make_greppable(event))
+            text = make_greppable(event)
+            matches = list(pattern.finditer(text))
             if matches:
                 for match in matches:
-                    print(match.group(0))
+                    for g in groups:
+                        try:
+                            print(match.group(g))
+                        except IndexError:
+                            handle_error(
+                                f"Group {g} not found in pattern: {pattern.pattern}"
+                            )
 
 
 def print_err(*args, **kwargs):
@@ -4748,6 +4768,13 @@ def parse_args():
         default=[],
         action="append",
         help=f"extract text matching one of the built-in regexes {list(BUILTIN_REGEXES)}. Use 'key~REGEX' to limit to a specific key. Can be given multiple times. Any of them matching will allow the line to be processed",
+    )
+    output_special.add_argument(
+        "--extract-group",
+        type=int,
+        action="append",
+        dest="groups",
+        help="Specify which grep capture groups to output for the 'extract' output format (can be used multiple times). Group 0 is the entire match and the default.",
     )
     output_special.add_argument(
         "--fuse",

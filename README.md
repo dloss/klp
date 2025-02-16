@@ -537,6 +537,8 @@ To specify lines that should NOT be processed, use `--grep-not`/`-G`/`-v`.
 Search is case-sensitive by default. 
 Use `--ignore-case`/`-i` for case-insensitive matches.
 
+To output only specific parts of the match, see the [extracting capture groups](#extract-capture-groups) section below.
+
 #### Context Lines
 Like with the original UNIX grep, klp can print context lines:
 - `-B N`: Show N lines before match
@@ -564,7 +566,6 @@ $ klp -x ipv4 -x err server.logfmt
 
 Use `klp -x ?` to list all available extraction patterns.
 They are also documented as `extract_*()` functions on the `klp --help-python` screen.
-
 
 ### Select Blocks of Lines
 You can define start and stop conditions to process specific blocks of logs:
@@ -664,6 +665,24 @@ Customize your output with:
 - `--each-key`: Print each field of an event on a separate line, with proper indentation
 
 For advanced formatting, see [Custom Output Formatting using Python](#custom-output-formatting-using-python).
+
+
+#### Extract Capture Groups
+
+Use `--grep` with capture groups and `-F extract` to extract matching text from your logs.
+Use `--extract-group` to specify which capture groups to output (can be used multiple times, group 0 is the entire match and the default):
+
+```bash
+$ echo 'Events #85-653-3234 and #85-653-3560 in file mylogs.txt.' | klp -f line -g '#([\d-]+)' --extract-group 1 -F extract
+85-653-3234
+85-653-3560
+
+$ echo 'Events #85-653-3234 and #85-653-3560 in file mylogs.txt.' | klp -f line -g '#([\d-]+).*file (\w+)' --extract-group 1 --extract-group 2 -F extract
+85-653-3234
+mylogs
+```
+
+Use `key~pattern` to match in specific fields.
 
 #### Output File Control
 Use `--output-file`/`-o` to direct output to a file instead of stdout.
