@@ -1,4 +1,5 @@
 - Bug fixes, robustness
+    * skipping headers not supported in --parallel
     * Synthetic fields not shown if no other keys specified
     * Problems with multiple files in ZIP archives
     * Fix grep when used both with and without keys
