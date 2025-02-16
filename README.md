@@ -1103,10 +1103,12 @@ These tools aren't specialized for log files but are useful to post-process or v
 - [jc](https://github.com/kellyjonbrazil/jc): CLI tool and python library that converts the output of popular command-line tools, file-types, and common strings to JSON, YAML, or Dictionaries
 - [jtbl](https://github.com/kellyjonbrazil/jtbl): CLI tool to convert JSON and JSON Lines to terminal, CSV, HTTP, and markdown tables
 - [evtx2json](https://github.com/vavarachen/evtx2json): convert Windows evtx files (Windows Event Log Files) into JSON
+- [evtx_dump](https://github.com/omerbenamram/evtx): convert Windows evtx files (Windows Event Log Files) into JSON or XML
 - [tailspin](https://github.com/bensadeh/tailspin): A log file highlighter
 - [ov](https://github.com/noborus/ov): Feature-rich terminal-based text viewer. It is a so-called terminal pager.
 - [Visidata](https://www.visidata.org): A terminal spreadsheet multitool for discovering and arranging data
 - [Benthos](https://github.com/benthosdev/benthos.git): High performance and resilient stream processor, able to connect various sources and sinks
+- [Anyquery](https://anyquery.dev): CLI tool to run SQL queries on any data source, no matter if it's a file, an API, logs, or a local app
 
 #### Processing TSV Output
 The TSV format can be processed by spreadsheet software and common Unix tools:
@@ -1164,4 +1166,7 @@ If klp doesn't meet your needs, here are some alternatives:
 - [Graylog](https://github.com/Graylog2/graylog2-server): Free and open log management
 - [Grafana Loki](https://grafana.com/docs/loki/latest/visualize/grafana/): Horizontally-scalable, highly-available, multi-tenant log aggregation system
 - [qryn](https://qryn.metrico.in/): All-in-one polyglot observability
+- [SigNoz](https://github.com/SigNoz/signoz): Open-source observability platform native to OpenTelemetry with logs, traces and metrics in a single application
+- [Quickwit](https://github.com/quickwit-oss/quickwit): Cloud-native search engine for observability. An open-source alternative to Datadog, Elasticsearch, Loki, and Tempo
+- [Sneller](https://github.com/SnellerInc/sneller): High-performance SQL engine built to analyze petabyte-scale un-structured logs and other event data. 
 - [Kubernetes History Inspector (KHI)](https://github.com/GoogleCloudPlatform/khi): An interactive log visualization tool that transforms Kubernetes logs into comprehensive timelines for efficient troubleshooting and analysis
