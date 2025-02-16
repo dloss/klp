@@ -3319,8 +3319,9 @@ def show_stats(stats: Stats) -> None:
     colors = THEMES[args.theme]
     seen = stats.num_lines_seen
     shown = stats.num_events_shown
+    maybe_logical = "logical " if args.logical_lines else ""
     if seen > 0 and shown > 0:
-        percent = f" ({shown / seen:.0%} of {seen} lines seen)"
+        percent = f" ({shown / seen:.0%} of {seen} {maybe_logical}lines seen)"
     else:
         percent = ""
     print_err(f"Events shown: {shown}{percent}")
