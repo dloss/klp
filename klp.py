@@ -961,6 +961,23 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+def process_chunk(
+    data: Tuple[List[str], str, argparse.Namespace]
+) -> List[Tuple[Dict[str, Any], int]]:
+    """Process a chunk of lines into events."""
+    chunk, input_format, input_exec = data
+    results = []
+    for line in chunk:
+        if line.strip():  # Skip empty lines
+            event = parse_linebased(line, input_format)
+            if input_exec:
+                for transformed_event in apply_input_exec(event):
+                    results.append(transformed_event)
+            else:
+                results.append(event)
+    return results
+
+
 def parallel_process(
     file_paths: List[str], args: argparse.Namespace
 ) -> Iterator[Tuple[Dict[str, Any], int]]:
@@ -993,27 +1010,32 @@ def parallel_process(
         - Chunk size is fixed at 10000 lines for memory efficiency
         - Workers ignore SIGINT to allow main process to handle cleanup
     """
+    chunk_size = 10000
 
-    def chunk_file(file_path):
-        chunk_size = 10000
+    def chunk_file(file_path: str) -> Iterator[Tuple[List[str], str, List[str]]]:
         with file_opener(file_path, encoding=args.input_encoding) as f:
-            while True:
-                chunk = list(itertools.islice(f, chunk_size))
-                if not chunk:
-                    break
-                yield chunk
+            # Handle skipping lines
+            if args.skip:
+                for _ in range(args.skip):
+                    next(f, None)
 
-    parse_func = partial(parse_chunk, input_format=args.input_format)
+            chunk = []
+            for line in f:
+                chunk.append(line)
+                if len(chunk) >= chunk_size:
+                    yield (chunk, args.input_format, args.input_exec)
+                    chunk = []
+            if chunk:
+                yield (chunk, args.input_format, args.input_exec)
 
     process_count = args.parallel or get_default_process_count()
     with multiprocessing.Pool(process_count, init_worker) as pool:
+        start_line = 1
         for file_path in file_paths:
-            chunks = chunk_file(file_path)
-            start_line = 1
-            for parsed_chunk in pool.imap(parse_func, chunks):
-                for i, event in enumerate(parsed_chunk, start=start_line):
-                    yield event, i
-                start_line += len(parsed_chunk)
+            for chunk_results in pool.imap(process_chunk, chunk_file(file_path)):
+                for event in chunk_results:
+                    yield event, start_line
+                    start_line += 1
 
 
 def parse_logfmt(text: str) -> Dict[str, str]:
