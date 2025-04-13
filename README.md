@@ -1096,6 +1096,7 @@ These tools aren't specialized for log files but are useful to post-process or v
 
 
 #### CSV Processing
+- [xan](https://github.com/medialab/xan): The CSV magician
 - [qsv](https://github.com/jqnatividad/qsv): CSVs sliced, diced & analyzed
 - [csvlens](https://github.com/YS-L/csvlens): Command line csv viewer
 
