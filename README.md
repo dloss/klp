@@ -2,6 +2,10 @@
 
 _Kool Log Parser_
 
+> **⚠️ This project is no longer actively maintained.**
+>
+> Development has moved to [**Kelora**](https://github.com/dloss/kelora), a complete rewrite in Rust with improved performance and features. Visit [kelora.dev](https://kelora.dev) to learn more.
+
 klp is a lightweight, command-line interface (CLI) tool for analyzing and understanding structured logs in various formats.
 Designed for software developers involved in debugging and troubleshooting.
 
