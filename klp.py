@@ -6171,7 +6171,7 @@ def main():
     except ValueError as exc:
         print(exc, file=sys.stderr)
         sys.exit(1)
-    except FileNotFoundError as exc:
+    except OSError as exc:  # incl. IsADirectoryError/PermissionError, e.g. directory input
         print(exc, file=sys.stderr)
         sys.exit(1)
     except ConfigError as e:
